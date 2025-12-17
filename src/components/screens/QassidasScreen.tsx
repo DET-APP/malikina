@@ -3,18 +3,21 @@ import { motion } from "framer-motion";
 import { Search, Heart, Play, User, ChevronRight } from "lucide-react";
 
 const authors = [
-  { id: 1, name: "Cheikh Ahmadou Bamba", arabic: "الشيخ أحمد بمب", count: 45 },
-  { id: 2, name: "El Hadji Malick Sy", arabic: "الحاج مالك سي", count: 32 },
-  { id: 3, name: "Serigne Babacar Sy", arabic: "سرين باباكر سي", count: 28 },
-  { id: 4, name: "Serigne Mouhamadou Lamine", arabic: "سرين محمدو لامين", count: 15 },
+  { id: 1, name: "Cheikh Ahmadou Bamba", arabic: "الشَّيْخُ أَحْمَدُ بَمْبَا", count: 45 },
+  { id: 2, name: "El Hadji Malick Sy", arabic: "الْحَاجُّ مَالِكْ سِي", count: 32 },
+  { id: 3, name: "Serigne Babacar Sy", arabic: "سِرِينْ بَابَاكَرْ سِي", count: 28 },
+  { id: 4, name: "Serigne Moussa Ka", arabic: "سِرِينْ مُوسَى كَا", count: 15 },
 ];
 
 const qassidas = [
-  { id: 1, title: "Matlaboul Fawzeyni", arabic: "مطلب الفوزين", author: "Cheikh Ahmadou Bamba", isFavorite: true },
-  { id: 2, title: "Jazboul Qouloub", arabic: "جذب القلوب", author: "Cheikh Ahmadou Bamba", isFavorite: false },
-  { id: 3, title: "Moukhaddimatul Khidma", arabic: "مقدمة الخدمة", author: "Cheikh Ahmadou Bamba", isFavorite: true },
-  { id: 4, title: "Faydatou Rabbani", arabic: "فيضة رباني", author: "El Hadji Malick Sy", isFavorite: false },
-  { id: 5, title: "Kifayatou Raghibina", arabic: "كفاية الراغبين", author: "El Hadji Malick Sy", isFavorite: true },
+  { id: 1, title: "Matlaboul Fawzeyni", arabic: "مَطْلَبُ الْفَوْزَيْنِ", author: "Cheikh Ahmadou Bamba", isFavorite: true },
+  { id: 2, title: "Jazboul Qouloub", arabic: "جَذْبُ الْقُلُوبِ", author: "Cheikh Ahmadou Bamba", isFavorite: false },
+  { id: 3, title: "Moukhaddimatul Khidma", arabic: "مُقَدِّمَةُ الْخِدْمَةِ", author: "Cheikh Ahmadou Bamba", isFavorite: true },
+  { id: 4, title: "Massalikoul Jinaan", arabic: "مَسَالِكُ الْجِنَانِ", author: "Cheikh Ahmadou Bamba", isFavorite: false },
+  { id: 5, title: "Mawâhibou Nafih", arabic: "مَوَاهِبُ النَّافِحِ", author: "Cheikh Ahmadou Bamba", isFavorite: true },
+  { id: 6, title: "Kifayatou Raghibina", arabic: "كِفَايَةُ الرَّاغِبِينَ", author: "El Hadji Malick Sy", isFavorite: false },
+  { id: 7, title: "Khilâsou Dhahab", arabic: "خِلَاصُ الذَّهَبِ", author: "El Hadji Malick Sy", isFavorite: true },
+  { id: 8, title: "Fayda Rabbani", arabic: "فَيْضَةٌ رَبَّانِيَّةٌ", author: "El Hadji Malick Sy", isFavorite: false },
 ];
 
 const QassidasScreen = () => {
@@ -42,8 +45,8 @@ const QassidasScreen = () => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <h1 className="text-2xl font-bold text-secondary-foreground">Qassidas</h1>
-          <p className="text-3xl font-arabic text-card mt-1">القصائد</p>
+          <h1 className="text-2xl font-bold text-secondary-foreground">Xassidas</h1>
+          <p className="text-3xl font-arabic text-card mt-1">الْقَصَائِدُ</p>
         </motion.div>
 
         {/* Search */}
@@ -56,7 +59,7 @@ const QassidasScreen = () => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Rechercher une qassida..."
+            placeholder="Rechercher une xassida..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-card rounded-xl pl-12 pr-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
@@ -110,7 +113,8 @@ const QassidasScreen = () => {
                 <User className={`w-6 h-6 ${selectedAuthor === author.id ? "text-primary-foreground" : "text-primary"}`} />
               </div>
               <p className="font-medium text-sm">{author.name}</p>
-              <p className="text-xs opacity-70 mt-1">{author.count} qassidas</p>
+              <p className="text-sm font-arabic opacity-80 mt-0.5">{author.arabic}</p>
+              <p className="text-xs opacity-70 mt-1">{author.count} xassidas</p>
             </motion.button>
           ))}
         </div>

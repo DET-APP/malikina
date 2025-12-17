@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useEffect } from "react";
+import logo from "@/assets/logo.png";
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -47,14 +48,14 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           transition={{ delay: 0.5, duration: 0.8 }}
         />
 
-        {/* Main Logo Circle */}
+        {/* Main Logo */}
         <motion.div
-          className="w-32 h-32 rounded-full bg-card shadow-glow flex items-center justify-center animate-pulse-glow"
+          className="w-36 h-36 rounded-full bg-card shadow-glow flex items-center justify-center animate-pulse-glow overflow-hidden"
           initial={{ y: 20 }}
           animate={{ y: 0 }}
           transition={{ delay: 0.2, duration: 0.6 }}
         >
-          <span className="text-5xl font-arabic text-primary font-bold">الله</span>
+          <img src={logo} alt="Logo Al Moutahabbina Fillahi" className="w-full h-full object-contain p-2" />
         </motion.div>
 
         {/* Text Content */}
