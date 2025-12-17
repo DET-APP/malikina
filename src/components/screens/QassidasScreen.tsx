@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Heart, Play, User, ChevronRight } from "lucide-react";
+import { Search, Heart, Play, ChevronRight } from "lucide-react";
 
 const authors = [
-  { id: 1, name: "Seydi El Hadj Malick Sy", arabic: "سَيِّدِي الْحَاجُّ مَالِكْ سِي", count: 48 },
-  { id: 2, name: "Serigne Babacar Sy", arabic: "سِرِينْ بَابَاكَرْ سِي", count: 35 },
-  { id: 3, name: "Serigne Abdoul Aziz Sy Dabakh", arabic: "سِرِينْ عَبْدُ الْعَزِيزِ سِي دَبَّاخْ", count: 28 },
-  { id: 4, name: "Serigne Moustapha Sy", arabic: "سِرِينْ مُصْطَفَى سِي", count: 22 },
-  { id: 5, name: "Serigne Mansour Sy", arabic: "سِرِينْ مَنْصُورْ سِي", count: 18 },
+  { id: 1, name: "Seydi El Hadj Malick Sy", arabic: "سَيِّدِي الْحَاجُّ مَالِكْ سِي", count: 48, initials: "MS", bgColor: "bg-primary", textColor: "text-primary-foreground" },
+  { id: 2, name: "Serigne Babacar Sy", arabic: "سِرِينْ بَابَاكَرْ سِي", count: 35, initials: "BS", bgColor: "bg-secondary", textColor: "text-secondary-foreground" },
+  { id: 3, name: "Serigne Abdoul Aziz Sy Dabakh", arabic: "سِرِينْ عَبْدُ الْعَزِيزِ سِي دَبَّاخْ", count: 28, initials: "AD", bgColor: "bg-gold", textColor: "text-foreground" },
+  { id: 4, name: "Serigne Moustapha Sy", arabic: "سِرِينْ مُصْطَفَى سِي", count: 22, initials: "MS", bgColor: "bg-primary/80", textColor: "text-primary-foreground" },
+  { id: 5, name: "Serigne Mansour Sy", arabic: "سِرِينْ مَنْصُورْ سِي", count: 18, initials: "MS", bgColor: "bg-secondary/80", textColor: "text-secondary-foreground" },
 ];
 
 const qassidas = [
@@ -123,10 +123,12 @@ const QassidasScreen = () => {
               transition={{ delay: 0.3 + index * 0.1 }}
               whileTap={{ scale: 0.95 }}
             >
-              <div className={`w-12 h-12 rounded-full mb-3 flex items-center justify-center ${
-                selectedAuthor === author.id ? "bg-card/20" : "bg-primary/10"
-              }`}>
-                <User className={`w-6 h-6 ${selectedAuthor === author.id ? "text-primary-foreground" : "text-primary"}`} />
+              <div className={`w-14 h-14 rounded-full mb-3 flex items-center justify-center ${
+                selectedAuthor === author.id ? "bg-card/20" : author.bgColor
+              } shadow-md`}>
+                <span className={`text-lg font-bold ${selectedAuthor === author.id ? "text-primary-foreground" : author.textColor}`}>
+                  {author.initials}
+                </span>
               </div>
               <p className="font-medium text-sm">{author.name}</p>
               <p className="text-sm font-arabic opacity-80 mt-0.5">{author.arabic}</p>
