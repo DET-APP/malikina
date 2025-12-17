@@ -3,21 +3,37 @@ import { motion } from "framer-motion";
 import { Search, Heart, Play, User, ChevronRight } from "lucide-react";
 
 const authors = [
-  { id: 1, name: "Cheikh Ahmadou Bamba", arabic: "الشَّيْخُ أَحْمَدُ بَمْبَا", count: 45 },
-  { id: 2, name: "El Hadji Malick Sy", arabic: "الْحَاجُّ مَالِكْ سِي", count: 32 },
-  { id: 3, name: "Serigne Babacar Sy", arabic: "سِرِينْ بَابَاكَرْ سِي", count: 28 },
-  { id: 4, name: "Serigne Moussa Ka", arabic: "سِرِينْ مُوسَى كَا", count: 15 },
+  { id: 1, name: "Seydi El Hadj Malick Sy", arabic: "سَيِّدِي الْحَاجُّ مَالِكْ سِي", count: 48 },
+  { id: 2, name: "Serigne Babacar Sy", arabic: "سِرِينْ بَابَاكَرْ سِي", count: 35 },
+  { id: 3, name: "Serigne Abdoul Aziz Sy Dabakh", arabic: "سِرِينْ عَبْدُ الْعَزِيزِ سِي دَبَّاخْ", count: 28 },
+  { id: 4, name: "Serigne Moustapha Sy", arabic: "سِرِينْ مُصْطَفَى سِي", count: 22 },
+  { id: 5, name: "Serigne Mansour Sy", arabic: "سِرِينْ مَنْصُورْ سِي", count: 18 },
 ];
 
 const qassidas = [
-  { id: 1, title: "Matlaboul Fawzeyni", arabic: "مَطْلَبُ الْفَوْزَيْنِ", author: "Cheikh Ahmadou Bamba", isFavorite: true },
-  { id: 2, title: "Jazboul Qouloub", arabic: "جَذْبُ الْقُلُوبِ", author: "Cheikh Ahmadou Bamba", isFavorite: false },
-  { id: 3, title: "Moukhaddimatul Khidma", arabic: "مُقَدِّمَةُ الْخِدْمَةِ", author: "Cheikh Ahmadou Bamba", isFavorite: true },
-  { id: 4, title: "Massalikoul Jinaan", arabic: "مَسَالِكُ الْجِنَانِ", author: "Cheikh Ahmadou Bamba", isFavorite: false },
-  { id: 5, title: "Mawâhibou Nafih", arabic: "مَوَاهِبُ النَّافِحِ", author: "Cheikh Ahmadou Bamba", isFavorite: true },
-  { id: 6, title: "Kifayatou Raghibina", arabic: "كِفَايَةُ الرَّاغِبِينَ", author: "El Hadji Malick Sy", isFavorite: false },
-  { id: 7, title: "Khilâsou Dhahab", arabic: "خِلَاصُ الذَّهَبِ", author: "El Hadji Malick Sy", isFavorite: true },
-  { id: 8, title: "Fayda Rabbani", arabic: "فَيْضَةٌ رَبَّانِيَّةٌ", author: "El Hadji Malick Sy", isFavorite: false },
+  // Seydi El Hadj Malick Sy
+  { id: 1, title: "Kifâyatou Râghibîna", arabic: "كِفَايَةُ الرَّاغِبِينَ", author: "Seydi El Hadj Malick Sy", isFavorite: true },
+  { id: 2, title: "Khilâsou Dhahab", arabic: "خِلَاصُ الذَّهَبِ", author: "Seydi El Hadj Malick Sy", isFavorite: true },
+  { id: 3, title: "Fayda Rabbânî", arabic: "فَيْضَةٌ رَبَّانِيَّةٌ", author: "Seydi El Hadj Malick Sy", isFavorite: false },
+  { id: 4, title: "Nourou Darayni", arabic: "نُورُ الدَّارَيْنِ", author: "Seydi El Hadj Malick Sy", isFavorite: true },
+  { id: 5, title: "Rimâhu Hizbi Rahîm", arabic: "رِمَاحُ حِزْبِ الرَّحِيمِ", author: "Seydi El Hadj Malick Sy", isFavorite: false },
+  { id: 6, title: "Ifhâmou Munkir", arabic: "إِفْهَامُ الْمُنْكِرِ", author: "Seydi El Hadj Malick Sy", isFavorite: false },
+  { id: 7, title: "Tayssîrou", arabic: "تَيْسِيرُ الْوُصُولِ", author: "Seydi El Hadj Malick Sy", isFavorite: true },
+  { id: 8, title: "Housnou Maâb", arabic: "حُسْنُ الْمَآبِ", author: "Seydi El Hadj Malick Sy", isFavorite: false },
+  // Serigne Babacar Sy
+  { id: 9, title: "Djawarihoul Maarifah", arabic: "جَوَاهِرُ الْمَعَارِفِ", author: "Serigne Babacar Sy", isFavorite: true },
+  { id: 10, title: "Sakku Minal Hamd", arabic: "سَاكُّ مِنَ الْحَمْدِ", author: "Serigne Babacar Sy", isFavorite: false },
+  { id: 11, title: "Tanwîrou Soukouk", arabic: "تَنْوِيرُ الصُّكُوكِ", author: "Serigne Babacar Sy", isFavorite: true },
+  // Serigne Abdoul Aziz Sy Dabakh
+  { id: 12, title: "Miftâhoul Janna", arabic: "مِفْتَاحُ الْجَنَّةِ", author: "Serigne Abdoul Aziz Sy Dabakh", isFavorite: true },
+  { id: 13, title: "Sabîlou Rachâd", arabic: "سَبِيلُ الرَّشَادِ", author: "Serigne Abdoul Aziz Sy Dabakh", isFavorite: false },
+  { id: 14, title: "Tawassoul", arabic: "التَّوَسُّلُ", author: "Serigne Abdoul Aziz Sy Dabakh", isFavorite: true },
+  // Serigne Moustapha Sy
+  { id: 15, title: "Madâhil", arabic: "مَدَاحِلُ", author: "Serigne Moustapha Sy", isFavorite: false },
+  { id: 16, title: "Burdatul Moukhtar", arabic: "بُرْدَةُ الْمُخْتَارِ", author: "Serigne Moustapha Sy", isFavorite: true },
+  // Serigne Mansour Sy
+  { id: 17, title: "Tuhfatoul Ahbâb", arabic: "تُحْفَةُ الْأَحْبَابِ", author: "Serigne Mansour Sy", isFavorite: true },
+  { id: 18, title: "Hidâyatoul Moustafîd", arabic: "هِدَايَةُ الْمُسْتَفِيدِ", author: "Serigne Mansour Sy", isFavorite: false },
 ];
 
 const QassidasScreen = () => {
