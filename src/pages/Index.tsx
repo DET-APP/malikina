@@ -68,7 +68,7 @@ const Index = () => {
           />
 
           <BottomNavigation
-            activeScreen={["qassidas", "fiqh"].includes(activeScreen) ? "home" : activeScreen as any}
+            activeScreen={["calendar", "fiqh"].includes(activeScreen) ? "home" : activeScreen as any}
             onNavigate={handleNavigate}
           />
         </>

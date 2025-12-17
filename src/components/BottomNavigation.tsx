@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
-import { Home, Clock, BookOpen, Calendar, Newspaper } from "lucide-react";
+import { Home, Clock, BookOpen, BookMarked, Newspaper } from "lucide-react";
 
-type Screen = "home" | "prayer" | "quran" | "calendar" | "news";
+type Screen = "home" | "prayer" | "quran" | "qassidas" | "news";
 
 interface BottomNavigationProps {
   activeScreen: Screen;
@@ -12,7 +12,7 @@ const navItems = [
   { id: "home" as Screen, icon: Home, label: "Accueil" },
   { id: "prayer" as Screen, icon: Clock, label: "Prières" },
   { id: "quran" as Screen, icon: BookOpen, label: "Coran" },
-  { id: "calendar" as Screen, icon: Calendar, label: "Calendrier" },
+  { id: "qassidas" as Screen, icon: BookMarked, label: "Xassidas" },
   { id: "news" as Screen, icon: Newspaper, label: "Actualités" },
 ];
 
