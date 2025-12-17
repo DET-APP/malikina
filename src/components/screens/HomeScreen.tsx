@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Bell, ChevronRight, Clock, BookOpen, Calendar, Users } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 const notifications = [
   { id: 1, type: "prayer", title: "Maghreb dans 30 min", time: "18:30" },
@@ -76,13 +77,13 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
           variants={itemVariants}
         >
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-green-dark flex items-center justify-center shadow-soft">
-              <span className="text-2xl font-arabic text-primary-foreground">الله</span>
+            <div className="w-16 h-16 rounded-full bg-card flex items-center justify-center shadow-soft overflow-hidden">
+              <img src={logo} alt="Logo" className="w-full h-full object-contain" />
             </div>
             <div className="flex-1">
               <h2 className="font-bold text-foreground text-lg">Al Moutahabbina Fillahi</h2>
-              <p className="text-xl font-arabic text-secondary mt-1">المتحابين في الله</p>
-              <p className="text-xs text-muted-foreground mt-1">Dahira des Étudiants Tidianes</p>
+              <p className="text-xl font-arabic text-secondary mt-1">الْمُتَحَابِّينَ فِي اللَّهِ</p>
+              <p className="text-xs text-muted-foreground mt-1">Dahira des Étudiants Tidianes - UAD</p>
             </div>
           </div>
         </motion.div>

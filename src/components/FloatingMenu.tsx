@@ -10,7 +10,7 @@ const FloatingMenu = ({ onNavigate }: FloatingMenuProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
-    { id: "qassidas" as const, icon: BookMarked, label: "Qassidas", color: "bg-secondary" },
+    { id: "qassidas" as const, icon: BookMarked, label: "Xassidas", color: "bg-secondary" },
     { id: "fiqh" as const, icon: Scale, label: "Fiqh", color: "bg-primary" },
   ];
 
