@@ -1,9 +1,21 @@
+// src/components/screens/HomeScreen.tsx
 import { motion } from "framer-motion";
 import { Bell, ChevronRight, Clock, BookOpen, Calendar, Users } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { useState, useEffect } from "react";
+import { Toaster } from "@/components/ui/toaster";
+import { useToast } from "@/components/ui/use-toast";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
+// Types
+interface NextPrayer {
+  name: string;
+  time: string;
+  remaining: string;
+}
+
+// Notifications statiques uniquement (sans la prière)
 const notifications = [
-  { id: 1, type: "prayer", title: "Maghreb dans 30 min", time: "18:30" },
   { id: 2, type: "event", title: "Réunion hebdomadaire", time: "Demain 15h" },
   { id: 3, type: "news", title: "Nouvelle lecture disponible", time: "Il y a 2h" },
 ];
@@ -20,6 +32,101 @@ interface HomeScreenProps {
 }
 
 const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
+  const [nextPrayer, setNextPrayer] = useState<NextPrayer | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  // Coordonnées par défaut (Dakar)
+  const defaultLat = 14.7167;
+  const defaultLon = -17.4677;
+
+  const fetchPrayerTimes = async (lat: number, lon: number) => {
+    try {
+      setLoading(true);
+      const method = 3; // Muslim World League
+      const today = new Date();
+      const dateStr = `${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`;
+
+      const response = await fetch(
+        `https://api.aladhan.com/v1/timings/${dateStr}?latitude=${lat}&longitude=${lon}&method=${method}`
+      );
+
+      if (!response.ok) throw new Error("Erreur lors du chargement");
+
+      const data = await response.json();
+      const timings = data.data.timings;
+
+      calculateNextPrayer(timings);
+
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les horaires de prière",
+        variant: "destructive",
+        duration: 5000,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateNextPrayer = (timings: any) => {
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+
+    const prayers = [
+      { name: "Fajr", time: timings.Fajr },
+      { name: "Dhuhr", time: timings.Dhuhr },
+      { name: "Asr", time: timings.Asr },
+      { name: "Maghrib", time: timings.Maghrib },
+      { name: "Isha", time: timings.Isha },
+    ];
+
+    const prayerTimesInMinutes = prayers.map(p => {
+      const [hours, minutes] = p.time.split(':').map(Number);
+      return { ...p, totalMinutes: hours * 60 + minutes };
+    });
+
+    let next = prayerTimesInMinutes.find(p => p.totalMinutes > currentTime);
+
+    if (!next) {
+      next = prayerTimesInMinutes[0];
+      const remaining = (24 * 60 - currentTime) + next.totalMinutes;
+      const hours = Math.floor(remaining / 60);
+      const mins = remaining % 60;
+      setNextPrayer({
+        name: next.name === "Maghrib" ? "Maghreb" : next.name,
+        time: next.time,
+        remaining: `${hours}h ${mins}`
+      });
+    } else {
+      const remaining = next.totalMinutes - currentTime;
+      const hours = Math.floor(remaining / 60);
+      const mins = remaining % 60;
+      setNextPrayer({
+        name: next.name === "Maghrib" ? "Maghreb" : next.name,
+        time: next.time,
+        remaining: `${hours}h ${mins}`
+      });
+    }
+  };
+
+  // Charger les horaires au montage du composant
+  useEffect(() => {
+    fetchPrayerTimes(defaultLat, defaultLon);
+  }, []);
+
+  // Mettre à jour toutes les minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (nextPrayer) {
+        fetchPrayerTimes(defaultLat, defaultLon);
+      }
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [nextPrayer]);
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -40,6 +147,8 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
       initial="hidden"
       animate="visible"
     >
+      <Toaster />
+
       {/* Header */}
       <motion.header
         className="relative bg-gradient-to-br from-primary via-primary to-green-dark pt-12 pb-20 px-6"
@@ -66,7 +175,7 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
           >
             <Bell className="w-5 h-5 text-primary-foreground" />
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-secondary rounded-full text-xs flex items-center justify-center text-secondary-foreground font-bold">
-              3
+              {notifications.length}
             </span>
           </motion.button>
         </div>
@@ -80,7 +189,7 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
             <div className="w-16 h-16 rounded-full bg-card flex items-center justify-center shadow-soft overflow-hidden">
               <img src={logo} alt="Logo" className="w-full h-full object-contain" />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 text-center"> {/* Ajout de text-center ici */}
               <h2 className="font-bold text-foreground text-lg">Al Moutahabbina Fillahi</h2>
               <p className="text-xl font-arabic text-secondary mt-1">الْمُتَحَابِّينَ فِي اللَّهِ</p>
               <p className="text-xs text-muted-foreground mt-1">Dahira des Étudiants Tidianes - UAD</p>
@@ -117,7 +226,7 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
           </div>
         </motion.section>
 
-        {/* Notifications */}
+        {/* Notifications - Sans la prière */}
         <motion.section variants={itemVariants}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
@@ -137,14 +246,11 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
                 transition={{ delay: 0.5 + index * 0.1 }}
                 whileHover={{ scale: 1.02 }}
               >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  notif.type === "prayer" ? "bg-primary/10 text-primary" :
-                  notif.type === "event" ? "bg-secondary/10 text-secondary" :
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${notif.type === "event" ? "bg-secondary/10 text-secondary" :
                   "bg-muted text-muted-foreground"
-                }`}>
-                  {notif.type === "prayer" ? <Clock className="w-5 h-5" /> :
-                   notif.type === "event" ? <Calendar className="w-5 h-5" /> :
-                   <Bell className="w-5 h-5" />}
+                  }`}>
+                  {notif.type === "event" ? <Calendar className="w-5 h-5" /> :
+                    <Bell className="w-5 h-5" />}
                 </div>
                 <div className="flex-1">
                   <p className="font-medium text-foreground text-sm">{notif.title}</p>
@@ -156,27 +262,39 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
           </div>
         </motion.section>
 
-        {/* Prayer Times Preview */}
+        {/* Prayer Times Preview - Dynamique avec prochaine prière uniquement */}
         <motion.section variants={itemVariants}>
           <div className="bg-gradient-to-br from-primary to-green-dark rounded-2xl p-6 shadow-card">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-primary-foreground/70 text-sm">Prochaine prière</p>
-                <h3 className="text-2xl font-bold text-primary-foreground">Maghreb</h3>
+            {loading ? (
+              <div className="flex justify-center items-center h-32">
+                <LoadingSpinner message="Chargement..." />
               </div>
-              <div className="text-right">
-                <p className="text-3xl font-bold text-secondary">18:45</p>
-                <p className="text-xs text-primary-foreground/70">dans 32 min</p>
-              </div>
-            </div>
-            <motion.button
-              onClick={() => onNavigate("prayer")}
-              className="w-full bg-card/20 text-primary-foreground py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2"
-              whileHover={{ backgroundColor: "rgba(255,255,255,0.25)" }}
-              whileTap={{ scale: 0.98 }}
-            >
-              Voir toutes les prières <ChevronRight className="w-4 h-4" />
-            </motion.button>
+            ) : nextPrayer ? (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-primary-foreground/70 text-sm">Prochaine prière</p>
+                    <h3 className="text-2xl font-bold text-primary-foreground">{nextPrayer.name}</h3>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-3xl font-bold text-secondary">{nextPrayer.time}</p>
+                    <p className="text-xs text-primary-foreground/70">dans {nextPrayer.remaining}</p>
+                  </div>
+                </div>
+                <motion.button
+                  onClick={() => onNavigate("prayer")}
+                  className="w-full bg-card/20 text-primary-foreground py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2"
+                  whileHover={{ backgroundColor: "rgba(255,255,255,0.25)" }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Voir toutes les prières <ChevronRight className="w-4 h-4" />
+                </motion.button>
+              </>
+            ) : (
+              <p className="text-center text-primary-foreground">
+                Impossible de charger les horaires
+              </p>
+            )}
           </div>
         </motion.section>
       </div>

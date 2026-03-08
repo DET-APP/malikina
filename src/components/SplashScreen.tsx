@@ -1,3 +1,4 @@
+// src/components/SplashScreen.tsx
 import { motion } from "framer-motion";
 import { useEffect } from "react";
 import logo from "@/assets/logo.png";

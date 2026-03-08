@@ -1,3 +1,4 @@
+/* src/index.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,7 +9,7 @@
 
 @layer base {
   :root {
-    --background: 45 20% 97%;
+   --background: 45 15% 92%; /* Fond beige clair */
     --foreground: 168 42% 20%;
 
     --card: 0 0% 100%;

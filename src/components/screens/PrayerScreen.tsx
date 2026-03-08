@@ -1,36 +1,132 @@
-import { useState } from "react";
+// src/components/screens/PrayerScreen.tsx
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Bell, BellOff, Sun, Sunrise, Moon, CloudSun } from "lucide-react";
+import { Sunrise, Sun, CloudSun, Moon } from "lucide-react";
+import { Toaster } from "@/components/ui/toaster";
+import { useToast } from "@/components/ui/use-toast";
 
-const cities = ["Dakar", "Bambey"];
+// Vos composants UI
+import { Button } from "@/components/ui/button";
 
-const prayerTimes = {
-  Dakar: [
-    { name: "Fajr", arabic: "الفجر", time: "05:45", icon: Sunrise },
-    { name: "Dhuhr", arabic: "الظهر", time: "13:15", icon: Sun },
-    { name: "Asr", arabic: "العصر", time: "16:30", icon: CloudSun },
-    { name: "Maghreb", arabic: "المغرب", time: "18:45", icon: Sunrise },
-    { name: "Isha", arabic: "العشاء", time: "20:00", icon: Moon },
-  ],
-  Bambey: [
-    { name: "Fajr", arabic: "الفجر", time: "05:40", icon: Sunrise },
-    { name: "Dhuhr", arabic: "الظهر", time: "13:10", icon: Sun },
-    { name: "Asr", arabic: "العصر", time: "16:25", icon: CloudSun },
-    { name: "Maghreb", arabic: "المغرب", time: "18:40", icon: Sunrise },
-    { name: "Isha", arabic: "العشاء", time: "19:55", icon: Moon },
-  ],
-};
+// Composants personnalisés
+import { HeaderWithArabic } from "@/components/shared/HeaderWithArabic";
+import { CitySelector } from "@/components/prayer/CitySelector";
+import { CurrentPrayerCard } from "@/components/prayer/CurrentPrayerCard";
+import { PrayerList } from "@/components/prayer/PrayerList";
+import { AthanSettingsCard } from "@/components/prayer/AthanSettingsCard";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { ErrorState } from "@/components/shared/ErrorState";
+
+// Types et constantes
+import { City, Prayer, NextPrayer, prayerNamesArabic } from "@/components/prayer/types";
+
+const cities: City[] = [
+  { name: "Dakar", lat: 14.7167, lon: -17.4677 },
+  { name: "Bambey", lat: 14.7000, lon: -16.4500 }
+];
 
 const PrayerScreen = () => {
-  const [selectedCity, setSelectedCity] = useState<"Dakar" | "Bambey">("Dakar");
+  const [selectedCity, setSelectedCity] = useState<City>(cities[0]);
+  const [prayerTimes, setPrayerTimes] = useState<Prayer[]>([]);
+  const [nextPrayer, setNextPrayer] = useState<NextPrayer | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<{ [key: string]: boolean }>({
-    Fajr: true, Dhuhr: true, Asr: true, Maghreb: true, Isha: true
+    Fajr: true, Dhuhr: true, Asr: true, Maghrib: true, Isha: true
   });
+  const { toast } = useToast();
 
-  const currentPrayer = "Maghreb";
+  const fetchPrayerTimes = async (lat: number, lon: number) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const method = 3;
+      const today = new Date();
+      const dateStr = `${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`;
+      
+      const response = await fetch(
+        `https://api.aladhan.com/v1/timings/${dateStr}?latitude=${lat}&longitude=${lon}&method=${method}`
+      );
+      
+      if (!response.ok) throw new Error("Erreur lors du chargement");
+      
+      const data = await response.json();
+      const timings = data.data.timings;
+      
+      const prayersList: Prayer[] = [
+        { name: "Fajr", arabic: prayerNamesArabic.Fajr, time: timings.Fajr, icon: Sunrise },
+        { name: "Sunrise", arabic: prayerNamesArabic.Sunrise, time: timings.Sunrise, icon: Sun },
+        { name: "Dhuhr", arabic: prayerNamesArabic.Dhuhr, time: timings.Dhuhr, icon: Sun },
+        { name: "Asr", arabic: prayerNamesArabic.Asr, time: timings.Asr, icon: CloudSun },
+        { name: "Maghrib", arabic: prayerNamesArabic.Maghrib, time: timings.Maghrib, icon: Sunrise },
+        { name: "Isha", arabic: prayerNamesArabic.Isha, time: timings.Isha, icon: Moon },
+      ];
+      
+      setPrayerTimes(prayersList);
+      calculateNextPrayer(prayersList);
+      
+      // TOAST SUPPRIMÉ ICI - Plus de notification à l'entrée
+      
+    } catch (error) {
+      setError("Impossible de charger les horaires");
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les horaires de prière",
+        variant: "destructive",
+        duration: 5000,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateNextPrayer = (prayers: Prayer[]) => {
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    
+    const prayerTimesInMinutes = prayers.map(p => {
+      const [hours, minutes] = p.time.split(':').map(Number);
+      return { ...p, totalMinutes: hours * 60 + minutes };
+    });
+    
+    let next = prayerTimesInMinutes.find(p => p.totalMinutes > currentTime);
+    
+    if (!next) {
+      next = prayerTimesInMinutes[0];
+      const remaining = (24 * 60 - currentTime) + next.totalMinutes;
+      const hours = Math.floor(remaining / 60);
+      const mins = remaining % 60;
+      setNextPrayer({ name: next.name, time: next.time, remaining: `${hours}h ${mins}` });
+    } else {
+      const remaining = next.totalMinutes - currentTime;
+      const hours = Math.floor(remaining / 60);
+      const mins = remaining % 60;
+      setNextPrayer({ name: next.name, time: next.time, remaining: `${hours}h ${mins}` });
+    }
+  };
+
+  useEffect(() => {
+    fetchPrayerTimes(selectedCity.lat, selectedCity.lon);
+  }, [selectedCity]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (prayerTimes.length > 0) calculateNextPrayer(prayerTimes);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [prayerTimes]);
 
   const toggleNotification = (prayer: string) => {
-    setNotifications(prev => ({ ...prev, [prayer]: !prev[prayer] }));
+    setNotifications(prev => {
+      const newState = { ...prev, [prayer]: !prev[prayer] };
+      toast({
+        title: newState[prayer] ? "Notification activée" : "Notification désactivée",
+        description: `Vous serez ${newState[prayer] ? "notifié" : "plus notifié"} pour ${prayer}`,
+        duration: 2000,
+      });
+      return newState;
+    });
   };
 
   return (
@@ -39,135 +135,42 @@ const PrayerScreen = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >
-      {/* Header */}
-      <header className="bg-gradient-to-br from-primary via-primary to-green-dark pt-12 pb-8 px-6">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <h1 className="text-2xl font-bold text-primary-foreground">Horaires de Prière</h1>
-          <p className="text-3xl font-arabic text-secondary mt-1">أوقات الصلاة</p>
-        </motion.div>
+      <Toaster />
+      
+      <HeaderWithArabic 
+        title="Horaires de Prière" 
+        arabicText="أوقات الصلاة" 
+      />
 
-        {/* City Selector */}
-        <motion.div
-          className="flex gap-3 mt-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          {cities.map((city) => (
-            <motion.button
-              key={city}
-              onClick={() => setSelectedCity(city as "Dakar" | "Bambey")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
-                selectedCity === city
-                  ? "bg-card text-foreground shadow-soft"
-                  : "bg-card/20 text-primary-foreground"
-              }`}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <MapPin className="w-4 h-4" />
-              <span className="font-medium">{city}</span>
-            </motion.button>
-          ))}
-        </motion.div>
-      </header>
+      <CitySelector 
+        cities={cities}
+        selectedCity={selectedCity}
+        onSelectCity={setSelectedCity}
+      />
 
-      {/* Current Prayer Highlight */}
-      <div className="px-6 -mt-4">
-        <motion.div
-          className="bg-card rounded-2xl p-6 shadow-card border-2 border-secondary"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-            <span className="text-xs font-medium text-secondary uppercase tracking-wider">
-              Prochaine prière
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-bold text-foreground">{currentPrayer}</h2>
-              <p className="text-xl font-arabic text-muted-foreground">المغرب</p>
-            </div>
-            <div className="text-right">
-              <p className="text-4xl font-bold text-primary">
-                {prayerTimes[selectedCity].find(p => p.name === currentPrayer)?.time}
-              </p>
-              <p className="text-sm text-muted-foreground">dans 32 minutes</p>
-            </div>
-          </div>
-        </motion.div>
-      </div>
+      {loading && <LoadingSpinner />}
+      
+      {error && !loading && (
+        <ErrorState 
+          error={error} 
+          onRetry={() => fetchPrayerTimes(selectedCity.lat, selectedCity.lon)} 
+        />
+      )}
 
-      {/* Prayer Times List */}
-      <div className="px-6 mt-6 space-y-3">
-        {prayerTimes[selectedCity].map((prayer, index) => {
-          const isCurrentPrayer = prayer.name === currentPrayer;
-          const Icon = prayer.icon;
+      {!loading && !error && nextPrayer && (
+        <>
+          <CurrentPrayerCard nextPrayer={nextPrayer} />
+          
+          <PrayerList 
+            prayers={prayerTimes}
+            currentPrayerName={nextPrayer.name}
+            notifications={notifications}
+            onToggleNotification={toggleNotification}
+          />
 
-          return (
-            <motion.div
-              key={prayer.name}
-              className={`bg-card rounded-xl p-4 shadow-soft flex items-center ${
-                isCurrentPrayer ? "ring-2 ring-secondary" : ""
-              }`}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 + index * 0.1 }}
-            >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                isCurrentPrayer ? "bg-secondary" : "bg-primary/10"
-              }`}>
-                <Icon className={`w-6 h-6 ${isCurrentPrayer ? "text-secondary-foreground" : "text-primary"}`} />
-              </div>
-              <div className="flex-1 ml-4">
-                <h3 className={`font-semibold ${isCurrentPrayer ? "text-primary" : "text-foreground"}`}>
-                  {prayer.name}
-                </h3>
-                <p className="text-lg font-arabic text-muted-foreground">{prayer.arabic}</p>
-              </div>
-              <p className={`text-xl font-bold mr-4 ${isCurrentPrayer ? "text-primary" : "text-foreground"}`}>
-                {prayer.time}
-              </p>
-              <motion.button
-                onClick={() => toggleNotification(prayer.name)}
-                className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  notifications[prayer.name]
-                    ? "bg-primary/10 text-primary"
-                    : "bg-muted text-muted-foreground"
-                }`}
-                whileTap={{ scale: 0.9 }}
-              >
-                {notifications[prayer.name] ? (
-                  <Bell className="w-5 h-5" />
-                ) : (
-                  <BellOff className="w-5 h-5" />
-                )}
-              </motion.button>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Athan Settings */}
-      <div className="px-6 mt-6">
-        <motion.div
-          className="bg-gradient-to-br from-secondary/20 to-secondary/5 rounded-2xl p-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-        >
-          <h3 className="font-semibold text-foreground mb-2">Notifications Athan</h3>
-          <p className="text-sm text-muted-foreground">
-            Recevez une notification avant chaque prière pour ne jamais manquer l'heure.
-          </p>
-        </motion.div>
-      </div>
+          <AthanSettingsCard />
+        </>
+      )}
     </motion.div>
   );
 };
