@@ -14,27 +14,62 @@ import CommunityScreen from "@/components/screens/CommunityScreen";
 
 type Screen = "home" | "prayer" | "quran" | "calendar" | "news" | "qassidas" | "fiqh" | "community";
 
+// Interface pour les paramètres de navigation du Coran
+interface QuranNavigationParams {
+  surahId?: number;
+  verseNumber?: number;
+}
+
 const Index = () => {
   const [showSplash, setShowSplash] = useState(true);
   const [activeScreen, setActiveScreen] = useState<Screen>("home");
+
+  // États pour stocker les paramètres de navigation du Coran
+  const [quranParams, setQuranParams] = useState<QuranNavigationParams>({});
 
   useEffect(() => {
     // Meta tags for SEO
     document.title = "Al Moutahabbina Fillahi - Dahira des Étudiants Tidianes";
   }, []);
 
-  const handleNavigate = (screen: Screen | string) => {
+  // Fonction de navigation pour les écrans simples (BottomNavigation et FloatingMenu)
+  const handleSimpleNavigate = (screen: Screen | string) => {
     setActiveScreen(screen as Screen);
+    setQuranParams({}); // Réinitialiser les paramètres
+  };
+
+  // Fonction de navigation complète avec paramètres (pour HomeScreen)
+  const handleNavigateWithParams = (screen: string, surahId?: number, verseNumber?: number) => {
+    setActiveScreen(screen as Screen);
+
+    // Si on navigue vers le Coran avec des paramètres, on les stocke
+    if (screen === "quran" && surahId) {
+      setQuranParams({ surahId, verseNumber });
+    } else {
+      setQuranParams({});
+    }
+  };
+
+  // Fonction pour revenir à l'accueil depuis le Coran
+  const handleBackFromQuran = () => {
+    setActiveScreen("home");
+    setQuranParams({});
   };
 
   const renderScreen = () => {
     switch (activeScreen) {
       case "home":
-        return <HomeScreen onNavigate={handleNavigate} />;
+        return <HomeScreen onNavigate={handleNavigateWithParams} />;
       case "prayer":
         return <PrayerScreen />;
       case "quran":
-        return <QuranScreen />;
+        return (
+          <QuranScreen
+            initialSurahId={quranParams.surahId}
+            initialVerseNumber={quranParams.verseNumber}
+            onBack={handleBackFromQuran}
+          />
+        );
       case "qassidas":
         return <QassidasScreen />;
       case "fiqh":
@@ -43,10 +78,10 @@ const Index = () => {
         return <CalendarScreen />;
       case "news":
         return <NewsScreen />;
-      case "community": // NOUVEAU : Cas pour l'écran Communauté
+      case "community":
         return <CommunityScreen />;
       default:
-        return <HomeScreen onNavigate={handleNavigate} />;
+        return <HomeScreen onNavigate={handleNavigateWithParams} />;
     }
   };
 
@@ -67,13 +102,12 @@ const Index = () => {
           </main>
 
           <FloatingMenu
-            onNavigate={(screen) => setActiveScreen(screen)}
+            onNavigate={handleSimpleNavigate}
           />
 
           <BottomNavigation
-            // MISE À JOUR : Gestion des écrans spéciaux dans la navigation
             activeScreen={["calendar", "fiqh"].includes(activeScreen) ? "home" : activeScreen as any}
-            onNavigate={handleNavigate}
+            onNavigate={handleSimpleNavigate}
           />
         </>
       )}
