@@ -1,156 +1,269 @@
-import { useState } from "react";
+// src/components/screens/QuranScreen.tsx
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Play, BookOpen, CheckCircle } from "lucide-react";
+import { Loader2 } from "lucide-react"; // AJOUTER CET IMPORT
+import { Toaster } from "@/components/ui/toaster";
+import { useToast } from "@/components/ui/use-toast";
+import QuranHeader from "@/components/quran/QuranHeader";
+import SurahList from "@/components/quran/SurahList";
+import SurahDetail from "@/components/quran/SurahDetail";
+import { frenchSurahNames } from "@/data/frenchSurahNames";
 
-const juzzList = Array.from({ length: 30 }, (_, i) => ({
-  number: i + 1,
-  arabicName: `الجزء ${i + 1}`,
-  progress: Math.floor(Math.random() * 100),
-  completed: i < 5,
-}));
+// Types
+export interface Chapter {
+  id: number;
+  name: string;
+  frenchName: string;
+  frenchNameTranslation: string;
+  numberOfAyahs: number;
+  revelationType: string;
+}
+
+export interface Verse {
+  number: number;
+  text: string;
+  textHafs?: string;
+  textWarsh?: string;
+  translation: string;
+  numberInSurah: number;
+}
+
+export type RecitationStyle = 'hafs' | 'warsh';
 
 const QuranScreen = () => {
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [filteredChapters, setFilteredChapters] = useState<Chapter[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [selectedSurah, setSelectedSurah] = useState<Chapter | null>(null);
+  const [verses, setVerses] = useState<Verse[]>([]);
+  const [loadingVerses, setLoadingVerses] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [recitationStyle, setRecitationStyle] = useState<RecitationStyle>('hafs');
+  const { toast } = useToast();
 
-  const filteredJuzz = juzzList.filter(juzz =>
-    juzz.number.toString().includes(searchQuery) ||
-    juzz.arabicName.includes(searchQuery)
-  );
+  // Charger toutes les sourates
+  useEffect(() => {
+    const fetchChapters = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('https://api.alquran.cloud/v1/surah');
+        
+        if (!response.ok) {
+          throw new Error('Erreur lors du chargement des sourates');
+        }
+        
+        const data = await response.json();
+        
+        const formattedChapters = data.data.map((surah: any) => ({
+          id: surah.number,
+          name: frenchSurahNames[surah.number]?.name || surah.name,
+          frenchName: frenchSurahNames[surah.number]?.translation || surah.englishName,
+          frenchNameTranslation: frenchSurahNames[surah.number]?.translation || surah.englishNameTranslation,
+          numberOfAyahs: surah.numberOfAyahs,
+          revelationType: surah.revelationType
+        }));
+        
+        setChapters(formattedChapters);
+        setFilteredChapters(formattedChapters);
+      } catch (error) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger la liste des sourates",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const completedCount = juzzList.filter(j => j.completed).length;
+    fetchChapters();
+  }, []);
+
+  // Charger les versets d'une sourate avec le style choisi
+  const fetchVerses = async (chapterId: number, style: RecitationStyle) => {
+    try {
+      setLoadingVerses(true);
+      
+      // Récupérer le texte en fonction du style
+      let arabicEndpoint = `https://api.alquran.cloud/v1/surah/${chapterId}`;
+      if (style === 'warsh') {
+        arabicEndpoint = `https://api.alquran.cloud/v1/surah/${chapterId}/quran-warsh`;
+      }
+      
+      const arabicResponse = await fetch(arabicEndpoint);
+      if (!arabicResponse.ok) {
+        throw new Error(`Erreur lors du chargement du texte ${style}`);
+      }
+      const arabicData = await arabicResponse.json();
+      
+      // Récupérer la traduction française
+      const translationResponse = await fetch(
+        `https://api.alquran.cloud/v1/surah/${chapterId}/fr.hamidullah`
+      );
+      
+      if (!translationResponse.ok) {
+        throw new Error('Erreur lors du chargement de la traduction');
+      }
+      
+      const translationData = await translationResponse.json();
+      
+      // Fusionner les données
+      const combinedVerses = arabicData.data.ayahs.map((ayah: any, index: number) => {
+        const baseVerse = {
+          number: ayah.number,
+          numberInSurah: ayah.numberInSurah,
+          translation: translationData.data.ayahs[index]?.text || '',
+        };
+        
+        if (style === 'hafs') {
+          return {
+            ...baseVerse,
+            text: ayah.text,
+            textHafs: ayah.text,
+          };
+        } else {
+          return {
+            ...baseVerse,
+            text: ayah.text,
+            textWarsh: ayah.text,
+          };
+        }
+      });
+      
+      setVerses(combinedVerses);
+    } catch (error) {
+      console.error('Erreur détaillée:', error);
+      toast({
+        title: "Erreur",
+        description: `Impossible de charger les versets en ${style === 'hafs' ? 'Hafs' : 'Warsh'}.`,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingVerses(false);
+    }
+  };
+
+  // Quand une sourate est sélectionnée
+  const handleSurahSelect = (chapter: Chapter) => {
+    setSelectedSurah(chapter);
+    fetchVerses(chapter.id, recitationStyle);
+  };
+
+  // Changer de style de récitation
+  const toggleRecitationStyle = () => {
+    const newStyle = recitationStyle === 'hafs' ? 'warsh' : 'hafs';
+    setRecitationStyle(newStyle);
+    
+    if (selectedSurah) {
+      fetchVerses(selectedSurah.id, newStyle);
+    }
+    
+    toast({
+      title: "Style de récitation changé",
+      description: `Vous lisez maintenant en ${newStyle === 'hafs' ? 'Hafs' : 'Warsh'}.`,
+    });
+  };
+
+  // Retour à la liste
+  const handleBackToList = () => {
+    setSelectedSurah(null);
+    setVerses([]);
+  };
+
+  // Filtrer les sourates lors de la recherche
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredChapters(chapters);
+    } else {
+      const filtered = chapters.filter(chapter => 
+        chapter.frenchName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        chapter.frenchNameTranslation.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        chapter.name.includes(searchQuery)
+      );
+      setFilteredChapters(filtered);
+    }
+  }, [searchQuery, chapters]);
 
   return (
     <motion.div
-      className="min-h-screen pb-24 bg-background"
+      className="min-h-screen bg-background"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >
-      {/* Header */}
-      <header className="bg-gradient-to-br from-primary via-primary to-green-dark pt-12 pb-8 px-6">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <h1 className="text-2xl font-bold text-primary-foreground">Le Saint Coran</h1>
-          <p className="text-3xl font-arabic text-secondary mt-1">القرآن الكريم</p>
-        </motion.div>
+      <Toaster />
 
-        {/* Progress */}
-        <motion.div
-          className="mt-6 bg-card/20 rounded-xl p-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-primary-foreground/80 text-sm">Progression</span>
-            <span className="text-secondary font-bold">{completedCount}/30 Juzz</span>
-          </div>
-          <div className="h-2 bg-card/30 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-secondary rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${(completedCount / 30) * 100}%` }}
-              transition={{ delay: 0.4, duration: 0.8 }}
-            />
-          </div>
-        </motion.div>
-
-        {/* Search */}
-        <motion.div
-          className="mt-4 relative"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Rechercher un Juzz..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-card rounded-xl pl-12 pr-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary"
+      {selectedSurah ? (
+        <SurahDetail
+          selectedSurah={selectedSurah}
+          verses={verses}
+          loadingVerses={loadingVerses}
+          recitationStyle={recitationStyle}
+          onBack={handleBackToList}
+          onToggleStyle={toggleRecitationStyle}
+        />
+      ) : (
+        <>
+          <QuranHeader
+            chaptersCount={chapters.length}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
           />
-        </motion.div>
-      </header>
+          
+          <div className="h-40" />
 
-      {/* Juzz Grid */}
-      <div className="px-6 py-6">
-        <div className="grid grid-cols-3 gap-3">
-          {filteredJuzz.map((juzz, index) => (
-            <motion.button
-              key={juzz.number}
-              className="relative bg-card rounded-2xl p-4 shadow-soft text-left overflow-hidden"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 + index * 0.02 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {/* Progress Bar */}
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted">
-                <div
-                  className="h-full bg-secondary"
-                  style={{ width: `${juzz.progress}%` }}
-                />
-              </div>
-
-              {/* Completed Badge */}
-              {juzz.completed && (
-                <div className="absolute top-2 right-2">
-                  <CheckCircle className="w-4 h-4 text-secondary" />
-                </div>
-              )}
-
-              <div className="flex flex-col items-center">
-                <span className="text-2xl font-bold text-primary">{juzz.number}</span>
-                <span className="text-xs font-arabic text-muted-foreground mt-1">
-                  {juzz.arabicName}
-                </span>
-              </div>
-
-              {/* Play Button on Hover */}
-              <motion.div
-                className="absolute inset-0 bg-primary/90 flex items-center justify-center opacity-0"
-                whileHover={{ opacity: 1 }}
-              >
-                <div className="w-10 h-10 rounded-full bg-card flex items-center justify-center">
-                  <Play className="w-5 h-5 text-primary ml-0.5" />
-                </div>
-              </motion.div>
-            </motion.button>
-          ))}
-        </div>
-      </div>
-
-      {/* Continue Reading Card */}
-      <div className="px-6 pb-6">
-        <motion.div
-          className="bg-gradient-to-br from-secondary/20 to-secondary/5 rounded-2xl p-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center">
-              <BookOpen className="w-7 h-7 text-secondary-foreground" />
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-foreground">Continuer la lecture</h3>
-              <p className="text-sm text-muted-foreground">Juzz 6 - Sourate Al-Ma'idah</p>
-            </div>
-            <motion.button
-              className="w-12 h-12 rounded-full bg-primary flex items-center justify-center"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <Play className="w-5 h-5 text-primary-foreground ml-0.5" />
-            </motion.button>
-          </div>
-        </motion.div>
-      </div>
+          ) : (
+            <SurahList
+              chapters={filteredChapters}
+              viewMode={viewMode}
+              onSurahSelect={handleSurahSelect}
+              getJuzForSurah={getJuzForSurah}
+            />
+          )}
+        </>
+      )}
     </motion.div>
   );
+};
+
+// Fonction utilitaire pour obtenir le Juz d'une sourate
+const getJuzForSurah = (surahId: number): number => {
+  if (surahId <= 1) return 1;
+  if (surahId <= 2) return 2;
+  if (surahId <= 3) return 3;
+  if (surahId <= 4) return 4;
+  if (surahId <= 5) return 5;
+  if (surahId <= 6) return 6;
+  if (surahId <= 7) return 7;
+  if (surahId <= 8) return 8;
+  if (surahId <= 9) return 9;
+  if (surahId <= 11) return 10;
+  if (surahId <= 12) return 11;
+  if (surahId <= 13) return 12;
+  if (surahId <= 14) return 13;
+  if (surahId <= 15) return 14;
+  if (surahId <= 16) return 15;
+  if (surahId <= 17) return 16;
+  if (surahId <= 18) return 17;
+  if (surahId <= 20) return 18;
+  if (surahId <= 21) return 19;
+  if (surahId <= 22) return 20;
+  if (surahId <= 23) return 21;
+  if (surahId <= 25) return 22;
+  if (surahId <= 26) return 23;
+  if (surahId <= 27) return 24;
+  if (surahId <= 29) return 25;
+  if (surahId <= 33) return 26;
+  if (surahId <= 36) return 27;
+  if (surahId <= 39) return 28;
+  if (surahId <= 46) return 29;
+  return 30;
 };
 
 export default QuranScreen;
