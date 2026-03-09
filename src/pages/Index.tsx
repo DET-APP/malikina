@@ -10,8 +10,9 @@ import QassidasScreen from "@/components/screens/QassidasScreen";
 import FiqhScreen from "@/components/screens/FiqhScreen";
 import CalendarScreen from "@/components/screens/CalendarScreen";
 import NewsScreen from "@/components/screens/NewsScreen";
+import CommunityScreen from "@/components/screens/CommunityScreen";
 
-type Screen = "home" | "prayer" | "quran" | "calendar" | "news" | "qassidas" | "fiqh";
+type Screen = "home" | "prayer" | "quran" | "calendar" | "news" | "qassidas" | "fiqh" | "community";
 
 const Index = () => {
   const [showSplash, setShowSplash] = useState(true);
@@ -42,6 +43,8 @@ const Index = () => {
         return <CalendarScreen />;
       case "news":
         return <NewsScreen />;
+      case "community": // NOUVEAU : Cas pour l'écran Communauté
+        return <CommunityScreen />;
       default:
         return <HomeScreen onNavigate={handleNavigate} />;
     }
@@ -68,6 +71,7 @@ const Index = () => {
           />
 
           <BottomNavigation
+            // MISE À JOUR : Gestion des écrans spéciaux dans la navigation
             activeScreen={["calendar", "fiqh"].includes(activeScreen) ? "home" : activeScreen as any}
             onNavigate={handleNavigate}
           />

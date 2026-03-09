@@ -1,7 +1,8 @@
+// src/components/navigation/BottomNavigation.tsx
 import { motion } from "framer-motion";
-import { Home, Clock, BookOpen, BookMarked, Newspaper } from "lucide-react";
+import { Home, Clock, BookOpen, BookMarked, Newspaper, Users } from "lucide-react";
 
-type Screen = "home" | "prayer" | "quran" | "qassidas" | "news";
+type Screen = "home" | "prayer" | "quran" | "qassidas" | "news" | "community";
 
 interface BottomNavigationProps {
   activeScreen: Screen;
@@ -13,7 +14,8 @@ const navItems = [
   { id: "prayer" as Screen, icon: Clock, label: "Prières" },
   { id: "quran" as Screen, icon: BookOpen, label: "Coran" },
   { id: "qassidas" as Screen, icon: BookMarked, label: "Xassidas" },
-  { id: "news" as Screen, icon: Newspaper, label: "Actualités" },
+  { id: "news" as Screen, icon: Newspaper, label: "Actus" },
+  { id: "community" as Screen, icon: Users, label: "Communauté" },
 ];
 
 const BottomNavigation = ({ activeScreen, onNavigate }: BottomNavigationProps) => {
@@ -24,15 +26,17 @@ const BottomNavigation = ({ activeScreen, onNavigate }: BottomNavigationProps) =
       animate={{ y: 0 }}
       transition={{ delay: 0.3, duration: 0.5 }}
     >
-      <div className="max-w-lg mx-auto px-2 py-2">
-        <div className="flex items-center justify-around">
+      <div className="max-w-lg mx-auto px-1 py-2">
+        <div className="flex items-center justify-between">
           {navItems.map((item) => {
+            // Vérifier si cet item est l'écran actif
             const isActive = activeScreen === item.id;
+            
             return (
               <motion.button
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
-                className={`relative flex flex-col items-center py-2 px-4 rounded-xl transition-all duration-300 ${
+                className={`relative flex flex-col items-center py-2 px-2 rounded-xl transition-all duration-300 flex-1 ${
                   isActive
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"

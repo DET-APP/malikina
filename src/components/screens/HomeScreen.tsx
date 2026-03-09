@@ -1,6 +1,6 @@
 // src/components/screens/HomeScreen.tsx
 import { motion } from "framer-motion";
-import { Bell, ChevronRight, Clock, BookOpen, Calendar, Users } from "lucide-react";
+import { Bell, ChevronRight, Clock, BookOpen, Calendar, Users, Newspaper } from "lucide-react"; // Ajout de Newspaper
 import logo from "@/assets/logo.png";
 import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
@@ -14,17 +14,18 @@ interface NextPrayer {
   remaining: string;
 }
 
-// Notifications statiques uniquement (sans la prière)
+// Notifications statiques
 const notifications = [
   { id: 2, type: "event", title: "Réunion hebdomadaire", time: "Demain 15h" },
   { id: 3, type: "news", title: "Nouvelle lecture disponible", time: "Il y a 2h" },
 ];
 
+// CORRECTION : Suppression de la virgule en trop et ajout de l'icône Newspaper pour les actualités
 const quickActions = [
   { icon: Clock, label: "Prière", color: "bg-primary", screen: "prayer" },
   { icon: BookOpen, label: "Coran", color: "bg-secondary", screen: "quran" },
-  { icon: Calendar, label: "Événements", color: "bg-primary", screen: "calendar" },
-  { icon: Users, label: "Communauté", color: "bg-secondary", screen: "news" },
+  { icon: Newspaper, label: "Actus", color: "bg-primary", screen: "news" }, // Ajout des actualités
+  { icon: Users, label: "Communauté", color: "bg-secondary", screen: "community" }, // CORRECTION : virgule enlevée
 ];
 
 interface HomeScreenProps {
@@ -189,7 +190,7 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
             <div className="w-16 h-16 rounded-full bg-card flex items-center justify-center shadow-soft overflow-hidden">
               <img src={logo} alt="Logo" className="w-full h-full object-contain" />
             </div>
-            <div className="flex-1 text-center"> {/* Ajout de text-center ici */}
+            <div className="flex-1 text-center">
               <h2 className="font-bold text-foreground text-lg">Al Moutahabbina Fillahi</h2>
               <p className="text-xl font-arabic text-secondary mt-1">الْمُتَحَابِّينَ فِي اللَّهِ</p>
               <p className="text-xs text-muted-foreground mt-1">Dahira des Étudiants Tidianes - UAD</p>
@@ -226,7 +227,7 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
           </div>
         </motion.section>
 
-        {/* Notifications - Sans la prière */}
+        {/* Notifications */}
         <motion.section variants={itemVariants}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
@@ -262,7 +263,7 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
           </div>
         </motion.section>
 
-        {/* Prayer Times Preview - Dynamique avec prochaine prière uniquement */}
+        {/* Prayer Times Preview */}
         <motion.section variants={itemVariants}>
           <div className="bg-gradient-to-br from-primary to-green-dark rounded-2xl p-6 shadow-card">
             {loading ? (
