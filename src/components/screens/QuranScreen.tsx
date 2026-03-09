@@ -1,5 +1,5 @@
 // src/components/screens/QuranScreen.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Search, Play, ChevronLeft, ChevronRight, Headphones, Bookmark, Share2, Loader2, BookOpen } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
@@ -23,9 +23,9 @@ interface Verse {
 }
 
 interface QuranScreenProps {
-  initialSurahId?: number;      // Nouveau prop
-  initialVerseNumber?: number;  // Nouveau prop
-  onBack?: () => void;          // Nouveau prop pour revenir à l'accueil
+  initialSurahId?: number;
+  initialVerseNumber?: number;
+  onBack?: () => void;
 }
 
 const QuranScreen = ({ initialSurahId, initialVerseNumber, onBack }: QuranScreenProps) => {
@@ -40,12 +40,17 @@ const QuranScreen = ({ initialSurahId, initialVerseNumber, onBack }: QuranScreen
   const [recitationStyle, setRecitationStyle] = useState<'hafs' | 'warsh'>('hafs');
   const { toast } = useToast();
 
+  // Ref pour savoir si on a déjà tenté de charger la sourate initiale
+  const hasInitialLoadAttempted = useRef(false);
+
   // Effet pour charger automatiquement une sourate si initialSurahId est fourni
   useEffect(() => {
-    if (initialSurahId && chapters.length > 0) {
+    if (initialSurahId && chapters.length > 0 && !hasInitialLoadAttempted.current) {
       const surah = chapters.find(c => c.id === initialSurahId);
       if (surah) {
+        console.log("Chargement automatique de la sourate:", initialSurahId);
         handleSurahSelect(surah, initialVerseNumber);
+        hasInitialLoadAttempted.current = true;
       }
     }
   }, [initialSurahId, chapters, initialVerseNumber]);
@@ -122,6 +127,16 @@ const QuranScreen = ({ initialSurahId, initialVerseNumber, onBack }: QuranScreen
       }));
 
       setVerses(combinedVerses);
+
+      // Si un numéro de verset est fourni, scroller vers ce verset après chargement
+      if (initialVerseNumber) {
+        setTimeout(() => {
+          const verseElement = document.getElementById(`verse-${initialVerseNumber}`);
+          if (verseElement) {
+            verseElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 500);
+      }
     } catch (error) {
       console.error('Erreur détaillée:', error);
       toast({
@@ -136,24 +151,15 @@ const QuranScreen = ({ initialSurahId, initialVerseNumber, onBack }: QuranScreen
 
   // Quand une sourate est sélectionnée
   const handleSurahSelect = (chapter: Chapter, verseNumber?: number) => {
+    console.log("Sourate sélectionnée:", chapter.id);
     setSelectedSurah(chapter);
     fetchVerses(chapter.id, recitationStyle);
-
-    // Si un numéro de verset est fourni, on pourra scroller vers ce verset après chargement
-    if (verseNumber) {
-      setTimeout(() => {
-        const verseElement = document.getElementById(`verse-${verseNumber}`);
-        if (verseElement) {
-          verseElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 1000); // Délai pour laisser le temps au chargement
-    }
   };
 
   // Retour à la liste
   const handleBackToList = () => {
     if (onBack) {
-      onBack(); // Si onBack est fourni, on retourne à l'accueil
+      onBack();
     } else {
       setSelectedSurah(null);
       setVerses([]);
@@ -175,7 +181,6 @@ const QuranScreen = ({ initialSurahId, initialVerseNumber, onBack }: QuranScreen
   }, [searchQuery, chapters]);
 
   const getJuzForSurah = (surahId: number): number => {
-    // ... votre fonction existante
     if (surahId <= 1) return 1;
     if (surahId <= 2) return 2;
     if (surahId <= 3) return 3;
@@ -283,8 +288,8 @@ const QuranScreen = ({ initialSurahId, initialVerseNumber, onBack }: QuranScreen
               {verses.map((verse) => (
                 <motion.div
                   key={verse.number}
-                  id={`verse-${verse.numberInSurah}`} // Ajout de l'ID pour le scroll
-                  className="mb-6 pb-6 border-b border-border scroll-mt-32" // Ajout de scroll-mt pour compenser le header
+                  id={`verse-${verse.numberInSurah}`}
+                  className="mb-6 pb-6 border-b border-border scroll-mt-32"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: verse.numberInSurah * 0.02 }}
@@ -312,7 +317,7 @@ const QuranScreen = ({ initialSurahId, initialVerseNumber, onBack }: QuranScreen
     );
   }
 
-  // Vue liste des sourates (votre code existant)
+  // Vue liste des sourates
   return (
     <motion.div
       className="min-h-screen bg-background"
@@ -338,17 +343,140 @@ const QuranScreen = ({ initialSurahId, initialVerseNumber, onBack }: QuranScreen
           </div>
         </div>
 
-        {/* Statistiques et recherche (votre code existant) */}
-        {/* ... */}
+        {/* Statistiques */}
+        <div className="absolute -bottom-16 left-6 right-6">
+          <div className="bg-card rounded-2xl p-6 shadow-xl">
+            <div className="flex justify-between items-center">
+              <div className="text-center flex-1">
+                <p className="text-2xl font-bold text-primary">{chapters.length}</p>
+                <p className="text-xs text-muted-foreground">Sourates</p>
+              </div>
+              <div className="w-px h-10 bg-border" />
+              <div className="text-center flex-1">
+                <p className="text-2xl font-bold text-primary">6236</p>
+                <p className="text-xs text-muted-foreground">Versets</p>
+              </div>
+              <div className="w-px h-10 bg-border" />
+              <div className="text-center flex-1">
+                <p className="text-2xl font-bold text-primary">30</p>
+                <p className="text-xs text-muted-foreground">Juz</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Barre de recherche */}
+        <div className="absolute -bottom-32 left-6 right-6">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Rechercher une sourate..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-card rounded-xl pl-12 pr-4 py-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary shadow-lg"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Espace pour compenser le header */}
       <div className="h-40" />
 
-      {/* Liste des sourates (votre code existant) */}
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        </div>
+      )}
+
+      {/* Liste des sourates */}
       {!loading && (
         <div className="px-6 py-6">
-          {/* ... votre code pour la liste des sourates ... */}
+          {filteredChapters.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              Aucune sourate trouvée
+            </p>
+          ) : viewMode === "grid" ? (
+            // Vue en grille
+            <div className="grid grid-cols-2 gap-4">
+              {filteredChapters.map((chapter) => (
+                <motion.button
+                  key={chapter.id}
+                  className="bg-card rounded-xl p-4 shadow-soft relative overflow-hidden hover:shadow-lg transition-shadow"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleSurahSelect(chapter)}
+                >
+                  <div className="absolute -right-4 -top-4 w-16 h-16 bg-primary/5 rounded-full" />
+                  <div className="absolute -right-2 -top-2 w-10 h-10 bg-primary/10 rounded-full" />
+
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                    <span className="text-sm font-bold text-primary">{chapter.id}</span>
+                  </div>
+
+                  <div className="text-left">
+                    <p className="text-lg font-arabic text-primary mb-1">{chapter.name}</p>
+                    <p className="font-semibold text-foreground text-sm">{chapter.englishNameTranslation}</p>
+                    <div className="flex items-center gap-1 mt-2">
+                      <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                        Juz {getJuzForSurah(chapter.id)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        • {chapter.numberOfAyahs} versets
+                      </span>
+                    </div>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          ) : (
+            // Vue en liste
+            <div className="space-y-3">
+              {filteredChapters.map((chapter) => (
+                <motion.button
+                  key={chapter.id}
+                  className="bg-card rounded-xl p-4 shadow-soft flex items-center gap-4 w-full hover:shadow-lg transition-shadow"
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={() => handleSurahSelect(chapter)}
+                >
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-lg font-bold text-primary">{chapter.id}</span>
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-secondary/20 flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-secondary">{getJuzForSurah(chapter.id)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 text-left">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-foreground">
+                        {chapter.englishNameTranslation}
+                      </h3>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${chapter.revelationType === "Meccan"
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                          : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                        }`}>
+                        {chapter.revelationType === "Meccan" ? "Mecquoise" : "Médinoise"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-lg font-arabic text-muted-foreground">
+                        {chapter.name}
+                      </p>
+                      <span className="text-xs text-muted-foreground">
+                        • {chapter.numberOfAyahs} versets
+                      </span>
+                    </div>
+                  </div>
+
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </motion.button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </motion.div>
