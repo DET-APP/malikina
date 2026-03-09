@@ -1,6 +1,6 @@
 // src/components/quran/QuranHeader.tsx
 import { motion } from "framer-motion";
-import { Search } from "lucide-react";
+import { Search, Volume2, VolumeX } from "lucide-react";
 
 interface QuranHeaderProps {
     chaptersCount: number;
@@ -8,6 +8,8 @@ interface QuranHeaderProps {
     onSearchChange: (query: string) => void;
     viewMode: "grid" | "list";
     onViewModeChange: (mode: "grid" | "list") => void;
+    showGlobalPhonetic: boolean;
+    onTogglePhonetic: () => void;
 }
 
 const QuranHeader = ({
@@ -16,6 +18,8 @@ const QuranHeader = ({
     onSearchChange,
     viewMode,
     onViewModeChange,
+    showGlobalPhonetic,
+    onTogglePhonetic,
 }: QuranHeaderProps) => {
     return (
         <div className="relative bg-gradient-to-b from-primary to-primary/90 pt-12 pb-32 px-6">
@@ -30,6 +34,22 @@ const QuranHeader = ({
                         <h1 className="text-3xl font-bold text-white mt-1">Al-Quran</h1>
                     </div>
                     <div className="flex gap-2">
+                        {/* Bouton phonétique */}
+                        <button
+                            onClick={onTogglePhonetic}
+                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${showGlobalPhonetic
+                                    ? "bg-secondary text-white"
+                                    : "bg-white/20 text-white hover:bg-white/30"
+                                }`}
+                            title={showGlobalPhonetic ? "Désactiver la phonétique" : "Activer la phonétique"}
+                        >
+                            {showGlobalPhonetic ? (
+                                <Volume2 className="w-5 h-5" />
+                            ) : (
+                                <VolumeX className="w-5 h-5" />
+                            )}
+                        </button>
+
                         <button
                             onClick={() => onViewModeChange("grid")}
                             className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${viewMode === "grid"
@@ -101,6 +121,19 @@ const QuranHeader = ({
                     />
                 </div>
             </motion.div>
+
+            {/* Indicateur phonétique */}
+            {showGlobalPhonetic && (
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="absolute -bottom-44 left-6 right-6 text-center"
+                >
+                    <span className="text-xs bg-secondary/20 text-secondary-foreground px-3 py-1 rounded-full">
+                        Phonétique activée pour tous les versets
+                    </span>
+                </motion.div>
+            )}
         </div>
     );
 };

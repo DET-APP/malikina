@@ -1,12 +1,12 @@
 // src/data/frenchSurahNames.ts
 export const frenchSurahNames: { [key: number]: { name: string; translation: string } } = {
-    1: { name: "الفاتحة", translation: "Al-Fatiha" },
+    1: { name: "الفاتحة", translation: "L'Ouverture" }, // Au lieu de "Al-Fatiha"
     2: { name: "البقرة", translation: "La Vache" },
     3: { name: "آل عمران", translation: "La Famille d'Imran" },
     4: { name: "النساء", translation: "Les Femmes" },
     5: { name: "المائدة", translation: "La Table Servie" },
     6: { name: "الأنعام", translation: "Les Bestiaux" },
-    7: { name: "الأعراف", translation: "Al-Araf" },
+    7: { name: "الأعراف", translation: "Les Murailles" }, // Correction
     8: { name: "الأنفال", translation: "Le Butin" },
     9: { name: "التوبة", translation: "Le Repentir" },
     10: { name: "يونس", translation: "Jonas" },
