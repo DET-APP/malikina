@@ -18,10 +18,48 @@
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
     
     <meta name="theme-color" content="#28655c" />
+    
+    <!-- PWA Configuration -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Al Moutahabbina" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
   </head>
 
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- PWA Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js', {
+            scope: '/',
+            type: 'module',
+          })
+            .then((registration) => {
+              console.log('[PWA] Service Worker registered:', registration);
+              
+              // Check for updates periodically
+              setInterval(() => {
+                registration.update();
+              }, 60000); // Check every minute
+            })
+            .catch((error) => {
+              console.error('[PWA] Service Worker registration failed:', error);
+            });
+        });
+
+        // Handle service worker updates
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          console.log('[PWA] Service Worker updated, app will refresh');
+          // Optionally trigger a page reload or show update notification
+        });
+      }
+    </script>
   </body>
 </html>
