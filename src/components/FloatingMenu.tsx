@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Calendar, Scale } from "lucide-react";
+import { Menu, X, Calendar, Scale, Settings } from "lucide-react";
 
 interface FloatingMenuProps {
-  onNavigate: (screen: "calendar" | "fiqh") => void;
+  onNavigate: (screen: "calendar" | "fiqh" | "admin-xassidas") => void;
 }
 
 const FloatingMenu = ({ onNavigate }: FloatingMenuProps) => {
@@ -12,6 +12,7 @@ const FloatingMenu = ({ onNavigate }: FloatingMenuProps) => {
   const menuItems = [
     { id: "calendar" as const, icon: Calendar, label: "Calendrier", color: "bg-secondary" },
     { id: "fiqh" as const, icon: Scale, label: "Fiqh", color: "bg-primary" },
+    { id: "admin-xassidas" as const, icon: Settings, label: "Admin Xassidas", color: "bg-amber-600" },
   ];
 
   return (

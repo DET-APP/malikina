@@ -1,0 +1,31 @@
+{
+  "name": "malikina-api",
+  "version": "1.0.0",
+  "description": "Xassida REST API for Malikina",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "db:migrate": "tsx db/migrate.ts"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "sqlite3": "^5.1.6",
+    "multer": "^1.4.5-lts.1",
+    "pdfjs-dist": "^4.0.0",
+    "uuid": "^9.0.0",
+    "sharp": "^0.33.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.6",
+    "@types/multer": "^1.4.11",
+    "@types/uuid": "^9.0.7"
+  }
+}

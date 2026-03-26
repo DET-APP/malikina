@@ -1,8 +1,8 @@
 // src/components/navigation/BottomNavigation.tsx
 import { motion } from "framer-motion";
-import { Home, Clock, BookOpen, BookMarked, Newspaper, Users } from "lucide-react";
+import { Home, Clock, BookOpen, BookMarked, Users } from "lucide-react";
 
-type Screen = "home" | "prayer" | "quran" | "qassidas" | "news" | "community";
+type Screen = "home" | "prayer" | "quran" | "qassidas" | "community";
 
 interface BottomNavigationProps {
   activeScreen: Screen;
@@ -11,10 +11,9 @@ interface BottomNavigationProps {
 
 const navItems = [
   { id: "home" as Screen, icon: Home, label: "Accueil" },
-  { id: "prayer" as Screen, icon: Clock, label: "Prières" },
-  { id: "quran" as Screen, icon: BookOpen, label: "Coran" },
   { id: "qassidas" as Screen, icon: BookMarked, label: "Xassidas" },
-  { id: "news" as Screen, icon: Newspaper, label: "Actus" },
+  { id: "quran" as Screen, icon: BookOpen, label: "Coran" },
+  { id: "prayer" as Screen, icon: Clock, label: "Prières" },
   { id: "community" as Screen, icon: Users, label: "Communauté" },
 ];
 
