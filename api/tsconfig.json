@@ -16,7 +16,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "allowJs": true,
-    "types": ["node"]
+    "noEmit": false
   },
   "include": ["./**/*.ts"],
   "exclude": ["node_modules", "dist"]
