@@ -18,8 +18,9 @@ cat > /tmp/render-service.json << 'JSONEOF'
   "ownerId": "tea-d72maobuibrs73fnso7g",
   "repo": "https://github.com/DET-APP/malikina",
   "branch": "dev",
-  "buildCommand": "cd api && npm install --legacy-peer-deps && npm run build",
-  "startCommand": "cd api && npm start",
+  "rootDir": "api",
+  "buildCommand": "npm install --legacy-peer-deps && npm run build",
+  "startCommand": "npm start",
   "envVars": [
     {
       "key": "NODE_ENV",
@@ -41,7 +42,11 @@ cat > /tmp/render-service.json << 'JSONEOF'
 JSONEOF
 
 echo "📝 JSON préparé. Validation..."
-jq empty /tmp/render-service.json && echo "✅ JSON valide" || echo "❌ JSON invalide"
+if grep -q '"name"' /tmp/render-service.json && grep -q '"repo"' /tmp/render-service.json; then
+  echo "✅ JSON valide"
+else
+  echo "❌ JSON invalide"
+fi
 
 echo ""
 echo "📤 Envoi à Render API..."
@@ -55,9 +60,9 @@ RESPONSE=$(curl -s -X POST https://api.render.com/v1/services \
 echo "Réponse: $RESPONSE"
 echo ""
 
-# Vérifier le succès
-if echo "$RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
-  SERVICE_ID=$(echo "$RESPONSE" | jq -r '.id')
+# Vérifier le succès (cherche "id" dans la réponse)
+if echo "$RESPONSE" | grep -q '"id"'; then
+  SERVICE_ID=$(echo "$RESPONSE" | grep -o '"id":"[^"]*' | head -1 | cut -d'"' -f4)
   echo "✅ Service créé avec succès!"
   echo "🆔 Service ID: $SERVICE_ID"
   echo ""
@@ -67,7 +72,8 @@ if echo "$RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
   echo "🔗 API URL (après déploiement):"
   echo "   https://$SERVICE_ID.onrender.com/api"
 else
-  echo "❌ Erreur: $(echo "$RESPONSE" | jq -r '.message // .error // "Erreur inconnue"')"
+  ERROR_MSG=$(echo "$RESPONSE" | grep -o '"message":"[^"]*' | head -1 | cut -d'"' -f4)
+  echo "❌ Erreur: $ERROR_MSG"
   echo ""
   echo "🆘 Troubleshooting:"
   echo "1. Vérifie que le repo GitHub est connecté à Render"
