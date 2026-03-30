@@ -1,54 +1,83 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Heart, Play, ChevronRight } from "lucide-react";
-
-const authors = [
-  { id: 1, name: "Seydi El Hadj Malick Sy", arabic: "سَيِّدِي الْحَاجُّ مَالِكْ سِي", count: 48, initials: "MS", bgColor: "bg-primary", textColor: "text-primary-foreground" },
-  { id: 2, name: "Serigne Babacar Sy", arabic: "سِرِينْ بَابَاكَرْ سِي", count: 35, initials: "BS", bgColor: "bg-secondary", textColor: "text-secondary-foreground" },
-  { id: 3, name: "Serigne Abdoul Aziz Sy Dabakh", arabic: "سِرِينْ عَبْدُ الْعَزِيزِ سِي دَبَّاخْ", count: 28, initials: "AD", bgColor: "bg-gold", textColor: "text-foreground" },
-  { id: 4, name: "Serigne Moustapha Sy", arabic: "سِرِينْ مُصْطَفَى سِي", count: 22, initials: "MS", bgColor: "bg-primary/80", textColor: "text-primary-foreground" },
-  { id: 5, name: "Serigne Mansour Sy", arabic: "سِرِينْ مَنْصُورْ سِي", count: 18, initials: "MS", bgColor: "bg-secondary/80", textColor: "text-secondary-foreground" },
-];
-
-const qassidas = [
-  // Seydi El Hadj Malick Sy
-  { id: 1, title: "Kifâyatou Râghibîna", arabic: "كِفَايَةُ الرَّاغِبِينَ", author: "Seydi El Hadj Malick Sy", isFavorite: true },
-  { id: 2, title: "Khilâsou Dhahab", arabic: "خِلَاصُ الذَّهَبِ", author: "Seydi El Hadj Malick Sy", isFavorite: true },
-  { id: 3, title: "Fayda Rabbânî", arabic: "فَيْضَةٌ رَبَّانِيَّةٌ", author: "Seydi El Hadj Malick Sy", isFavorite: false },
-  { id: 4, title: "Nourou Darayni", arabic: "نُورُ الدَّارَيْنِ", author: "Seydi El Hadj Malick Sy", isFavorite: true },
-  { id: 5, title: "Rimâhu Hizbi Rahîm", arabic: "رِمَاحُ حِزْبِ الرَّحِيمِ", author: "Seydi El Hadj Malick Sy", isFavorite: false },
-  { id: 6, title: "Ifhâmou Munkir", arabic: "إِفْهَامُ الْمُنْكِرِ", author: "Seydi El Hadj Malick Sy", isFavorite: false },
-  { id: 7, title: "Tayssîrou", arabic: "تَيْسِيرُ الْوُصُولِ", author: "Seydi El Hadj Malick Sy", isFavorite: true },
-  { id: 8, title: "Housnou Maâb", arabic: "حُسْنُ الْمَآبِ", author: "Seydi El Hadj Malick Sy", isFavorite: false },
-  // Serigne Babacar Sy
-  { id: 9, title: "Djawarihoul Maarifah", arabic: "جَوَاهِرُ الْمَعَارِفِ", author: "Serigne Babacar Sy", isFavorite: true },
-  { id: 10, title: "Sakku Minal Hamd", arabic: "سَاكُّ مِنَ الْحَمْدِ", author: "Serigne Babacar Sy", isFavorite: false },
-  { id: 11, title: "Tanwîrou Soukouk", arabic: "تَنْوِيرُ الصُّكُوكِ", author: "Serigne Babacar Sy", isFavorite: true },
-  // Serigne Abdoul Aziz Sy Dabakh
-  { id: 12, title: "Miftâhoul Janna", arabic: "مِفْتَاحُ الْجَنَّةِ", author: "Serigne Abdoul Aziz Sy Dabakh", isFavorite: true },
-  { id: 13, title: "Sabîlou Rachâd", arabic: "سَبِيلُ الرَّشَادِ", author: "Serigne Abdoul Aziz Sy Dabakh", isFavorite: false },
-  { id: 14, title: "Tawassoul", arabic: "التَّوَسُّلُ", author: "Serigne Abdoul Aziz Sy Dabakh", isFavorite: true },
-  // Serigne Moustapha Sy
-  { id: 15, title: "Madâhil", arabic: "مَدَاحِلُ", author: "Serigne Moustapha Sy", isFavorite: false },
-  { id: 16, title: "Burdatul Moukhtar", arabic: "بُرْدَةُ الْمُخْتَارِ", author: "Serigne Moustapha Sy", isFavorite: true },
-  // Serigne Mansour Sy
-  { id: 17, title: "Tuhfatoul Ahbâb", arabic: "تُحْفَةُ الْأَحْبَابِ", author: "Serigne Mansour Sy", isFavorite: true },
-  { id: 18, title: "Hidâyatoul Moustafîd", arabic: "هِدَايَةُ الْمُسْتَفِيدِ", author: "Serigne Mansour Sy", isFavorite: false },
-];
+import { Search } from "lucide-react";
+import { qassidasDataWithExtended, authorsData } from "@/data/qassidasData";
+import { useQassidasHistory } from "@/hooks/useQassidasHistory";
+import { useFavorites } from "@/hooks/useFavorites";
+import XassidasList from "@/components/qassidas/XassidasList";
+import XassidasDetail from "@/components/qassidas/XassidasDetail";
+import type { Qassida } from "@/data/qassidasData";
 
 const QassidasScreen = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedAuthor, setSelectedAuthor] = useState<number | null>(null);
+  const [selectedAuthorId, setSelectedAuthorId] = useState<number | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [selectedQassida, setSelectedQassida] = useState<Qassida | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const { addToHistory } = useQassidasHistory();
+  const { isFavorite } = useFavorites();
 
-  const filteredQassidas = qassidas.filter(q => {
+  // Use extended data (111-174 + original)
+  const allQassidas = qassidasDataWithExtended;
+
+  const filteredQassidas = allQassidas.filter(q => {
     const matchesSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           q.arabic.includes(searchQuery);
-    const matchesAuthor = selectedAuthor ? authors.find(a => a.id === selectedAuthor)?.name === q.author : true;
-    const matchesFavorite = showFavorites ? q.isFavorite : true;
+    const matchesAuthor = selectedAuthorId 
+      ? authorsData.find(a => a.id === selectedAuthorId)?.fullName === q.author 
+      : true;
+    const matchesFavorite = showFavorites ? isFavorite(q.id) : true;
     return matchesSearch && matchesAuthor && matchesFavorite;
   });
 
+  const handleQassidasClick = (qassida: Qassida) => {
+    addToHistory({
+      id: qassida.id,
+      title: qassida.title,
+      arabic: qassida.arabic,
+      author: qassida.author,
+    });
+    setSelectedQassida(qassida);
+  };
+
+  const handleNext = () => {
+    if (!selectedQassida) return;
+    const currentIndex = filteredQassidas.findIndex(q => q.id === selectedQassida.id);
+    if (currentIndex < filteredQassidas.length - 1) {
+      handleQassidasClick(filteredQassidas[currentIndex + 1]);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (!selectedQassida) return;
+    const currentIndex = filteredQassidas.findIndex(q => q.id === selectedQassida.id);
+    if (currentIndex > 0) {
+      handleQassidasClick(filteredQassidas[currentIndex - 1]);
+    }
+  };
+
+  // If a qassida is selected, show detail view
+  if (selectedQassida) {
+    return (
+      <XassidasDetail
+        selectedQassida={selectedQassida}
+        onBack={() => setSelectedQassida(null)}
+        onNext={
+          filteredQassidas.findIndex(q => q.id === selectedQassida.id) <
+          filteredQassidas.length - 1
+            ? handleNext
+            : undefined
+        }
+        onPrevious={
+          filteredQassidas.findIndex(q => q.id === selectedQassida.id) > 0
+            ? handlePrevious
+            : undefined
+        }
+      />
+    );
+  }
+
+  // Show list view
   return (
     <motion.div
       className="min-h-screen pb-24 bg-background"
@@ -61,8 +90,11 @@ const QassidasScreen = () => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <h1 className="text-2xl font-bold text-secondary-foreground">Xassidas</h1>
-          <p className="text-3xl font-arabic text-card mt-1">الْقَصَائِدُ</p>
+          <h1 className="text-3xl font-bold text-secondary-foreground">Xassidas</h1>
+          <p className="text-4xl font-arabic text-card mt-2">الْقَصَائِدُ</p>
+          <p className="text-sm text-secondary-foreground/70 mt-2">
+            {filteredQassidas.length} xassidas
+          </p>
         </motion.div>
 
         {/* Search */}
@@ -82,7 +114,7 @@ const QassidasScreen = () => {
           />
         </motion.div>
 
-        {/* Filter Buttons */}
+        {/* View Mode Toggle */}
         <motion.div
           className="mt-4 flex gap-2"
           initial={{ opacity: 0, y: 20 }}
@@ -90,91 +122,79 @@ const QassidasScreen = () => {
           transition={{ delay: 0.3 }}
         >
           <button
-            onClick={() => setShowFavorites(!showFavorites)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
-              showFavorites
+            onClick={() => setViewMode("grid")}
+            className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+              viewMode === "grid"
                 ? "bg-card text-foreground"
-                : "bg-card/20 text-secondary-foreground"
+                : "bg-card/30 text-secondary-foreground/70"
             }`}
           >
-            <Heart className={`w-4 h-4 ${showFavorites ? "fill-secondary text-secondary" : ""}`} />
-            <span className="text-sm font-medium">Favoris</span>
+            ⊞ Grille
+          </button>
+          <button
+            onClick={() => setViewMode("list")}
+            className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+              viewMode === "list"
+                ? "bg-card text-foreground"
+                : "bg-card/30 text-secondary-foreground/70"
+            }`}
+          >
+            ☰ Liste
+          </button>
+          <button
+            onClick={() => setShowFavorites(!showFavorites)}
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              showFavorites
+                ? "bg-card text-foreground"
+                : "bg-card/30 text-secondary-foreground/70"
+            }`}
+          >
+            {showFavorites ? "❤️" : "♡"}
           </button>
         </motion.div>
       </header>
 
-      {/* Authors */}
-      <div className="px-6 py-6">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-          Par Auteur
-        </h3>
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-2 px-2">
-          {authors.map((author, index) => (
-            <motion.button
-              key={author.id}
-              onClick={() => setSelectedAuthor(selectedAuthor === author.id ? null : author.id)}
-              className={`flex-shrink-0 p-4 rounded-2xl transition-all ${
-                selectedAuthor === author.id
-                  ? "bg-primary text-primary-foreground shadow-soft"
-                  : "bg-card text-foreground shadow-soft"
-              }`}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 + index * 0.1 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <div className={`w-14 h-14 rounded-full mb-3 flex items-center justify-center ${
-                selectedAuthor === author.id ? "bg-card/20" : author.bgColor
-              } shadow-md`}>
-                <span className={`text-lg font-bold ${selectedAuthor === author.id ? "text-primary-foreground" : author.textColor}`}>
-                  {author.initials}
-                </span>
-              </div>
-              <p className="font-medium text-sm">{author.name}</p>
-              <p className="text-sm font-arabic opacity-80 mt-0.5">{author.arabic}</p>
-              <p className="text-xs opacity-70 mt-1">{author.count} xassidas</p>
-            </motion.button>
-          ))}
-        </div>
-      </div>
+      {/* Author Filter */}
+      {authorsData.length > 0 && (
+        <motion.div
+          className="px-6 py-6 border-b border-border/20"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+        >
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            Par Auteur
+          </h3>
+          <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2">
+            {authorsData.map((author) => {
+              const qassidasCount = allQassidas.filter(q => q.author === author.fullName).length;
+              if (qassidasCount === 0) return null;
 
-      {/* Qassidas List */}
-      <div className="px-6 space-y-3">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-          Bibliothèque
-        </h3>
-        {filteredQassidas.map((qassida, index) => (
-          <motion.div
-            key={qassida.id}
-            className="bg-card rounded-xl p-4 shadow-soft flex items-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 + index * 0.1 }}
-            whileHover={{ scale: 1.02 }}
-          >
-            <motion.button
-              className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <Play className="w-5 h-5 text-secondary-foreground ml-0.5" />
-            </motion.button>
-            <div className="flex-1 ml-4 min-w-0">
-              <h4 className="font-semibold text-foreground truncate">{qassida.title}</h4>
-              <p className="text-lg font-arabic text-muted-foreground truncate">{qassida.arabic}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{qassida.author}</p>
-            </div>
-            <button className="ml-2">
-              <Heart
-                className={`w-5 h-5 transition-colors ${
-                  qassida.isFavorite ? "fill-secondary text-secondary" : "text-muted-foreground"
-                }`}
-              />
-            </button>
-            <ChevronRight className="w-4 h-4 text-muted-foreground ml-2" />
-          </motion.div>
-        ))}
-      </div>
+              return (
+                <motion.button
+                  key={author.id}
+                  onClick={() => setSelectedAuthorId(selectedAuthorId === author.id ? null : author.id)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full transition-all text-sm font-medium ${
+                    selectedAuthorId === author.id
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {author.shortName}
+                </motion.button>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Xassidas List */}
+      <XassidasList
+        qassidas={filteredQassidas}
+        viewMode={viewMode}
+        onQassidasSelect={handleQassidasClick}
+      />
     </motion.div>
   );
 };

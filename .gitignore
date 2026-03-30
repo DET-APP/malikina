@@ -12,6 +12,21 @@ dist
 dist-ssr
 *.local
 
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# API
+api/node_modules
+api/dist
+api/.env
+api/.env.local
+
+# Frontend
+.env.local
+.env.*.local
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +37,33 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Claude & AI generated files
+.github/copilot-instructions.md
+AGENTS.md
+.agent.md
+.prompt.md
+
+# Build outputs
+/dist
+/build
+*.tsbuildinfo
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Testing
+coverage
+.nyc_output

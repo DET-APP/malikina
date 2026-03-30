@@ -1,0 +1,84 @@
+{
+  "name": "Al Moutahabbina Fillahi",
+  "short_name": "Al Moutahabbina",
+  "description": "Application officielle de la Dahira Al Moutahabbina Fillahi. Accédez aux horaires de prière, au Coran, aux Qassidas, et aux actualités de la communauté Tidiane.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#28655c",
+  "background_color": "#ffffff",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["religion", "lifestyle"],
+  "screenshots": [
+    {
+      "src": "/icons/screenshot-1.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/screenshot-2.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "purpose": "any"
+    }
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Horaires de prière",
+      "short_name": "Prière",
+      "description": "Consultez les horaires de prière",
+      "url": "/?screen=prayer",
+      "icons": [
+        {
+          "src": "/icons/prayer-icon.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Coran",
+      "short_name": "Coran",
+      "description": "Lisez le Coran",
+      "url": "/?screen=quran",
+      "icons": [
+        {
+          "src": "/icons/quran-icon.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

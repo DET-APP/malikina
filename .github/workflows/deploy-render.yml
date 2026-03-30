@@ -1,0 +1,90 @@
+name: Deploy API to Render
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Render via API
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          # Get owner ID
+          OWNER_RESPONSE=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" \
+            https://api.render.com/v1/owners)
+          
+          OWNER_ID=$(echo "$OWNER_RESPONSE" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+          
+          echo "Owner ID: $OWNER_ID"
+          
+          # Check if service already exists
+          SERVICE_RESPONSE=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" \
+            "https://api.render.com/v1/services?name=malikina-api")
+          
+          SERVICE_ID=$(echo "$SERVICE_RESPONSE" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+          
+          if [ -z "$SERVICE_ID" ]; then
+            echo "Creating new service..."
+            
+            DEPLOY_RESPONSE=$(curl -s -X POST https://api.render.com/v1/services \
+              -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "type": "web_service",
+                "name": "malikina-api",
+                "ownerId": "'$OWNER_ID'",
+                "repo": "https://github.com/DET-APP/malikina",
+                "branch": "dev",
+                "runtime": "node",
+                "buildCommand": "cd api && npm install --legacy-peer-deps && npm run build",
+                "startCommand": "cd api && npm start",
+                "envVars": [
+                  {"key": "NODE_ENV", "value": "production"},
+                  {"key": "PORT", "value": "5000"},
+                  {"key": "FRONTEND_URL", "value": "https://malikina.vercel.app"}
+                ],
+                "plan": "free",
+                "serviceDetails": {"runtime": "node"}
+              }')
+            
+            echo "Response: $DEPLOY_RESPONSE"
+            
+            SERVICE_ID=$(echo "$DEPLOY_RESPONSE" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+            
+            if [ -z "$SERVICE_ID" ]; then
+              echo "❌ Failed to create service. See dashboard: https://dashboard.render.com/"
+              exit 1
+            fi
+            
+            echo "✅ Service created: $SERVICE_ID"
+          else
+            echo "✅ Service already exists: $SERVICE_ID"
+            echo "Triggering redeploy..."
+            
+            curl -s -X POST "https://api.render.com/v1/services/$SERVICE_ID/deploys" \
+              -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{}'
+          fi
+          
+          echo "Dashboard: https://dashboard.render.com/services/$SERVICE_ID"
+
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 API deployment triggered! Check [Render Dashboard](https://dashboard.render.com) for status.'
+            })

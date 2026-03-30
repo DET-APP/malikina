@@ -4,16 +4,16 @@ import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/components/ui/use-toast";
 import HomeHeader from "@/components/home/HomeHeader";
-import QuickActions from "@/components/home/QuickActions";
-import NotificationsPreview from "@/components/home/NotificationsPreview";
+import RecentQassidas from "@/components/home/RecentQassidas";
 import PrayerPreview from "@/components/home/PrayerPreview";
 import VerseOfTheDay from "@/components/home/VerseOfTheDay";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import { useVerseOfTheDay } from "@/hooks/useVerseOfTheDay";
+import { qassidasData } from "@/data/qassidasData";
 
 interface HomeScreenProps {
-  onNavigate: (screen: string, surahId?: number, verseNumber?: number) => void; // Modifié
+  onNavigate: (screen: string, surahId?: number, verseNumber?: number) => void;
 }
 
 const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
@@ -23,7 +23,6 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
     unreadCount,
     showNotifications,
     setShowNotifications,
-    markAsRead,
     markAllAsRead,
     deleteNotification,
     handleNotificationClick,
@@ -64,22 +63,17 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
         onNotificationClick={handleNotificationClick}
         onMarkAllAsRead={markAllAsRead}
         onDeleteNotification={deleteNotification}
-        onViewAll={() => onNavigate("news")}
+        onViewAll={() => {}}
         getNotificationIcon={getNotificationIcon}
         getNotificationColor={getNotificationColor}
       />
 
       <div className="mt-20 px-6 space-y-6">
-        <QuickActions onNavigate={onNavigate} itemVariants={itemVariants} />
-
-        <NotificationsPreview
-          notifications={notifications}
-          unreadCount={unreadCount}
-          onShowAll={() => setShowNotifications(true)}
-          onNotificationClick={handleNotificationClick}
-          getNotificationIcon={getNotificationIcon}
-          getNotificationColor={getNotificationColor}
+        {/* Xassidas récemment écoutées */}
+        <RecentQassidas
+          onNavigate={onNavigate}
           itemVariants={itemVariants}
+          allQassidas={qassidasData}
         />
 
         {/* Verset du Jour */}

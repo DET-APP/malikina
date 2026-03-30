@@ -9,10 +9,10 @@ import QuranScreen from "@/components/screens/QuranScreen";
 import QassidasScreen from "@/components/screens/QassidasScreen";
 import FiqhScreen from "@/components/screens/FiqhScreen";
 import CalendarScreen from "@/components/screens/CalendarScreen";
-import NewsScreen from "@/components/screens/NewsScreen";
 import CommunityScreen from "@/components/screens/CommunityScreen";
+import AdminXassidaScreen from "@/components/screens/AdminXassidaScreen";
 
-type Screen = "home" | "prayer" | "quran" | "calendar" | "news" | "qassidas" | "fiqh" | "community";
+type Screen = "home" | "prayer" | "quran" | "calendar" | "qassidas" | "fiqh" | "community" | "admin-xassidas";
 
 // Interface pour les paramètres de navigation du Coran
 interface QuranNavigationParams {
@@ -76,10 +76,10 @@ const Index = () => {
         return <FiqhScreen />;
       case "calendar":
         return <CalendarScreen />;
-      case "news":
-        return <NewsScreen />;
       case "community":
         return <CommunityScreen />;
+      case "admin-xassidas":
+        return <AdminXassidaScreen />;
       default:
         return <HomeScreen onNavigate={handleNavigateWithParams} />;
     }

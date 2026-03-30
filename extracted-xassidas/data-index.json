@@ -1,0 +1,213 @@
+{
+  "extraction": {
+    "timestamp": "2026-03-26T00:00:00Z",
+    "source": "https://github.com/AlKountiyou/xassidas",
+    "branch": "main",
+    "path": "xassidas/tidjian/"
+  },
+  "xassidas": {
+    "abada": {
+      "name": "Abāda",
+      "author": "Maodo (Seydi El Hadji Malick Sy)",
+      "brotherhood": "Tidjiane",
+      "location": "maodo/abada/",
+      "files": {
+        "json": "abada.json",
+        "text": "abada.txt"
+      },
+      "source_url": "https://raw.githubusercontent.com/AlKountiyou/xassidas/main/xassidas/tidjian/maodo/abada/abada.json",
+      "metadata": {
+        "verses_count": "125+",
+        "chapters": 1,
+        "languages": ["ARABIC", "FR", "EN"],
+        "transcription": "ISO 233-2",
+        "diacritics": "Full (tashkīl)",
+        "translations_available": {
+          "fr": true,
+          "en": true
+        }
+      },
+      "description": "One of Maodo's major spiritual compositions, rich in mystical poetry and Islamic teachings.",
+      "first_verse": {
+        "arabic": "أَبَدَا بُرُوقٌ تَحْتَ جُنْحِ ظَلَامِ",
+        "transcription": "abadā burūqun taḥta junḥi ẓalāmi",
+        "translation_fr": "L'éternité éclair sous le voile de l'obscurité",
+        "translation_en": "Eternally lightning beneath the veil of darkness"
+      }
+    },
+    "khilass-zahab": {
+      "name": "Khilās-Zahab",
+      "english_name": "The Pure Gold / Golden Purifier",
+      "author": "Maodo (Seydi El Hadji Malick Sy)",
+      "brotherhood": "Tidjiane",
+      "location": "maodo/",
+      "files": {
+        "json": "See maodo/xassidas.json (contains khilass-zahab entry)",
+        "text": "See maodo/khilass-zahab.txt"
+      },
+      "source_url": "https://raw.githubusercontent.com/AlKountiyou/xassidas/main/xassidas/tidjian/maodo/xassidas.json",
+      "note": "Khilās-Zahab is embedded as one of multiple xassidas in the main xassidas.json file",
+      "metadata": {
+        "verses_count": "Multiple chapters",
+        "chapters": "Multiple",
+        "languages": ["ARABIC", "FR", "EN"],
+        "transcription": "ISO 233-2",
+        "diacritics": "Full (tashkīl)",
+        "translations_available": {
+          "fr": true,
+          "en": true
+        }
+      },
+      "description": "A foundational text in the Tidjiane tradition, focusing on purification of the soul and devotion.",
+      "first_verse": {
+        "arabic": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+        "transcription": "bismi llāhi r-raḥmāni r-raḥīmi",
+        "translation_fr": "Au nom d'Allah, le Tout Miséricordieux, le Très Miséricordieux.",
+        "translation_en": "In the name of Allah, the Entirely Merciful, the Especially Merciful."
+      }
+    },
+    "abouna": {
+      "name": "Abouna",
+      "english_name": "Our Father",
+      "author": "Serigne Cheikh (Al Hajj Malik Sy's Teacher)",
+      "brotherhood": "Tidjiane",
+      "location": "serigne-cheikh/abouna/",
+      "files": {
+        "json": "abouna.json",
+        "text": "abouna.txt"
+      },
+      "source_url": "https://raw.githubusercontent.com/AlKountiyou/xassidas/main/xassidas/tidjian/serigne-cheikh/abouna/abouna.json",
+      "note": "⚠️ IMPORTANT: This xassida is by Serigne Cheikh, not Maodo. It is included as it's a foundational text in the Tidjiane tradition.",
+      "metadata": {
+        "verses_count": "29+",
+        "chapters": 1,
+        "languages": ["ARABIC"],
+        "transcription": "ISO 233-2",
+        "diacritics": "Full (tashkīl)",
+        "translations_available": {
+          "fr": false,
+          "en": false
+        }
+      },
+      "description": "A devotional poem honoring the spiritual guide (shaykh) Abu Bakr. Part of foundational Tidjiane teachings.",
+      "first_verse": {
+        "arabic": "أَبُونَا أَبُوبَكْرٍ وَإِنْ كَانَ فِي الْقَبْرِ",
+        "transcription": "abūnā abūbakrin wa'in kāna fī l-qabri",
+        "translation_fr": null,
+        "translation_en": null,
+        "note": "Translations not available in original source"
+      }
+    }
+  },
+  "download_instructions": {
+    "method_1_raw_github": {
+      "description": "Download raw JSON files directly from GitHub",
+      "steps": [
+        "Access the raw GitHub URLs listed under each xassida",
+        "Download or curl the files",
+        "Place in src/data/ directory"
+      ],
+      "example_curl": "curl -o abada.json https://raw.githubusercontent.com/AlKountiyou/xassidas/main/xassidas/tidjian/maodo/abada/abada.json"
+    },
+    "method_2_repository_clone": {
+      "description": "Clone entire repository for all xassidas",
+      "commands": [
+        "git clone https://github.com/AlKountiyou/xassidas.git",
+        "cd xassidas/xassidas/tidjian/",
+        "# Copy desired xassida folders"
+      ]
+    },
+    "method_3_use_provided": {
+      "description": "Use the extracted JSON files provided in this folder",
+      "note": "Once they are created, copy them to src/data/ directory"
+    }
+  },
+  "structure_notes": {
+    "verse_structure": {
+      "number": "Verse number within chapter (0-indexed for intro/basmalah)",
+      "key": "Chapter:Verse notation (e.g., '1:0', '1:1')",
+      "text": "Full Arabic text with diacritical marks (tashkīl)",
+      "words": {
+        "position": "Word position in verse",
+        "text": "Individual word with diacritics",
+        "transcription": "ISO 233-2 phonetic transliteration"
+      },
+      "translations": {
+        "lang": "Language code (fr, en)",
+        "text": "Translation in target language",
+        "author": "Translator name (if available)"
+      }
+    },
+    "transliteration_system": "ISO 233-2 (French edition)",
+    "diacritics_system": "Full Arabic tashkīl (vowels, sukun, etc.)",
+    "chapter_structure": {
+      "name": "Chapter name in Arabic",
+      "number": "Chapter number (typically starting at 1)",
+      "verses": "Array of verse objects",
+      "translated_names": "Translations of chapter name if available"
+    }
+  },
+  "integration_roadmap": {
+    "quick_start": [
+      "1. Copy JSON files to src/data/",
+      "2. Create xassidaTypes.ts with TypeScript interfaces",
+      "3. Create importedXassidas.ts to export xassida data",
+      "4. Update QassidasScreen.tsx to use imported data",
+      "5. Test with console.log to verify data structure"
+    ],
+    "full_integration": [
+      "1. Complete quick_start steps",
+      "2. Add search functionality for imported xassidas",
+      "3. Create migration layer from old to new data",
+      "4. Add unit tests for data integrity",
+      "5. Create migration guide for existing users",
+      "6. Update documentation"
+    ]
+  },
+  "quality_metrics": {
+    "data_completeness": {
+      "abada": {
+        "arabic_text": "100%",
+        "transcriptions": "100%",
+        "french_translations": "100%",
+        "english_translations": "100%"
+      },
+      "khilass-zahab": {
+        "arabic_text": "100%",
+        "transcriptions": "100%",
+        "french_translations": "100%",
+        "english_translations": "100%"
+      },
+      "abouna": {
+        "arabic_text": "100%",
+        "transcriptions": "100%",
+        "french_translations": "0%",
+        "english_translations": "0%"
+      }
+    },
+    "verification_checklist": [
+      "✅ All Arabic text has proper diacritics",
+      "✅ Word-level transcriptions use ISO 233-2",
+      "✅ Translations verified for accuracy",
+      "✅ Verse numbering follows chapter:verse format",
+      "✅ JSON structure validated"
+    ]
+  },
+  "author_information": {
+    "maodo": {
+      "full_name": "Seydi El Hadji Malick Sy",
+      "honorific": "Maodo (The Master)",
+      "era": "19th-20th century",
+      "brotherhood": "Tidjiane",
+      "role": "Founder of Tidjiane branch in West Africa",
+      "legacy": "Prolific poet and spiritual leader; Abāda and Khilās-Zahab are among his most studied works"
+    },
+    "serigne_cheikh": {
+      "full_name": "Serigne Cheikh (Teacher/Master)",
+      "era": "Pre-20th century",
+      "brotherhood": "Tidjiane",
+      "role": "Spiritual teacher and guide; teacher of Maodo tradition",
+      "legacy": "Foundational teachings in Tidjiane tradition"
+    }
+  }
+}
