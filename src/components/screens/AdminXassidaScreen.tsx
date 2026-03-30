@@ -43,6 +43,7 @@ export function XassidasAdmin() {
   const [uploadedVerses, setUploadedVerses] = useState<Verse[]>([]);
   const [showAuthorDialog, setShowAuthorDialog] = useState(false);
   const [showXassidaDialog, setShowXassidaDialog] = useState(false);
+  const [createNewAuthorMode, setCreateNewAuthorMode] = useState(false); // Toggle for new author mode
 
   // Fetch authors
   const { data: authors = [] } = useQuery({
@@ -72,19 +73,43 @@ export function XassidasAdmin() {
     }
   });
 
-  // Create xassida
+  // Create xassida (with optional author creation)
   const xassidaForm = useForm();
   const createXassidaMutation = useMutation({
-    mutationFn: (data: any) =>
-      fetch(`${API_URL}/xassidas`, {
+    mutationFn: async (data: any) => {
+      let authorId = data.author_id;
+      
+      // If creating new author, create it first
+      if (createNewAuthorMode && data.author_name) {
+        const authorResponse = await fetch(`${API_URL}/authors`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: data.author_name,
+            description: data.author_description || ''
+          })
+        }).then(r => r.json());
+        
+        authorId = authorResponse.id;
+      }
+      
+      // Create xassida with the author ID
+      return fetch(`${API_URL}/xassidas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      }).then(r => r.json()),
+        body: JSON.stringify({
+          title: data.title,
+          author_id: authorId,
+          description: data.description || ''
+        })
+      }).then(r => r.json());
+    },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['authors'] });
       queryClient.invalidateQueries({ queryKey: ['xassidas'] });
       xassidaForm.reset();
       setShowXassidaDialog(false);
+      setCreateNewAuthorMode(false);
     }
   });
 
@@ -206,29 +231,82 @@ export function XassidasAdmin() {
                 </DialogHeader>
                 <form onSubmit={xassidaForm.handleSubmit((data) => createXassidaMutation.mutate(data))} className="space-y-4">
                   <FormItem>
-                    <FormLabel>Titre</FormLabel>
+                    <FormLabel>Titre de la xassida</FormLabel>
                     <FormControl>
-                      <Input {...xassidaForm.register('title')} />
+                      <Input {...xassidaForm.register('title')} placeholder="Ex: Abāda..." />
                     </FormControl>
                   </FormItem>
+                  
+                  {/* Author mode toggle */}
+                  <div className="border-t pt-4">
+                    <div className="flex gap-2 mb-3">
+                      <button
+                        type="button"
+                        onClick={() => setCreateNewAuthorMode(false)}
+                        className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-all ${
+                          !createNewAuthorMode
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        Auteur existant
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCreateNewAuthorMode(true)}
+                        className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-all ${
+                          createNewAuthorMode
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        Nouvel auteur
+                      </button>
+                    </div>
+
+                    {/* Existing author select */}
+                    {!createNewAuthorMode && (
+                      <FormItem>
+                        <FormLabel>Sélectionner un auteur</FormLabel>
+                        <FormControl>
+                          <select {...xassidaForm.register('author_id')} className="border rounded px-3 py-2 w-full">
+                            <option value="">-- Choisir un auteur --</option>
+                            {authors.map((a: Author) => (
+                              <option key={a.id} value={a.id}>{a.name}</option>
+                            ))}
+                          </select>
+                        </FormControl>
+                      </FormItem>
+                    )}
+
+                    {/* New author form */}
+                    {createNewAuthorMode && (
+                      <>
+                        <FormItem>
+                          <FormLabel>Nom de l'auteur</FormLabel>
+                          <FormControl>
+                            <Input {...xassidaForm.register('author_name')} placeholder="Ex: Maodo..." />
+                          </FormControl>
+                        </FormItem>
+                        <FormItem>
+                          <FormLabel>Description de l'auteur</FormLabel>
+                          <FormControl>
+                            <Textarea {...xassidaForm.register('author_description')} placeholder="Biographie..." />
+                          </FormControl>
+                        </FormItem>
+                      </>
+                    )}
+                  </div>
+                  
                   <FormItem>
-                    <FormLabel>Auteur</FormLabel>
+                    <FormLabel>Description de la xassida</FormLabel>
                     <FormControl>
-                      <select {...xassidaForm.register('author_id')} className="border rounded px-3 py-2 w-full">
-                        <option value="">-- Sélectionner --</option>
-                        {authors.map((a: Author) => (
-                          <option key={a.id} value={a.id}>{a.name}</option>
-                        ))}
-                      </select>
+                      <Textarea {...xassidaForm.register('description')} placeholder="Optionnel" />
                     </FormControl>
                   </FormItem>
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea {...xassidaForm.register('description')} />
-                    </FormControl>
-                  </FormItem>
-                  <Button type="submit" className="w-full">Créer</Button>
+                  <Button type="submit" className="w-full">
+                    Créer la xassida
+                  </Button>
                 </form>
               </DialogContent>
             </Dialog>
