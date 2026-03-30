@@ -18,7 +18,7 @@ Repo: `https://github.com/DET-APP/malikina`
 | **Name** | `malikina-api` |
 | **Branch** | `dev` |
 | **Root Dir** | `api` |
-| **Build** | `npm install --legacy-peer-deps && npm run build` |
+| **Build** | `npm install --include=dev --legacy-peer-deps && npm run build` |
 | **Start** | `npm start` |
 | **Plan** | Free |
 
