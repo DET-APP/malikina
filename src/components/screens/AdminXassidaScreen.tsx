@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
@@ -222,30 +221,22 @@ export function XassidasAdmin() {
                   <DialogTitle>Créer un auteur</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={authorForm.handleSubmit((data) => createAuthorMutation.mutate(data))} className="space-y-4">
-                  <FormItem>
-                    <FormLabel>Nom</FormLabel>
-                    <FormControl>
-                      <Input {...authorForm.register('name')} />
-                    </FormControl>
-                  </FormItem>
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea {...authorForm.register('description')} />
-                    </FormControl>
-                  </FormItem>
-                  <FormItem>
-                    <FormLabel>URL Photo</FormLabel>
-                    <FormControl>
-                      <Input {...authorForm.register('photo_url')} type="url" />
-                    </FormControl>
-                  </FormItem>
-                  <FormItem>
-                    <FormLabel>Tradition</FormLabel>
-                    <FormControl>
-                      <Input {...authorForm.register('tradition')} placeholder="Tidjiane, Qadiriyyah, etc." />
-                    </FormControl>
-                  </FormItem>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Nom</label>
+                    <Input {...authorForm.register('name')} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Description</label>
+                    <Textarea {...authorForm.register('description')} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">URL Photo</label>
+                    <Input {...authorForm.register('photo_url')} type="url" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Tradition</label>
+                    <Input {...authorForm.register('tradition')} placeholder="Tidjiane, Qadiriyyah, etc." />
+                  </div>
                   <Button type="submit" className="w-full">Créer</Button>
                 </form>
               </DialogContent>
@@ -290,19 +281,17 @@ export function XassidasAdmin() {
                   createXassidaMutation.mutate(data);
                 })} className="space-y-4">
                   {/* Title field */}
-                  <FormItem>
-                    <FormLabel className="required">Titre de la xassida *</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...xassidaForm.register('title', { required: 'Titre requis' })} 
-                        placeholder="Ex: Abāda, Khilāsa-Zahab..." 
-                        disabled={createXassidaMutation.isPending}
-                      />
-                    </FormControl>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Titre de la xassida *</label>
+                    <Input 
+                      {...xassidaForm.register('title', { required: 'Titre requis' })} 
+                      placeholder="Ex: Abāda, Khilāsa-Zahab..." 
+                      disabled={createXassidaMutation.isPending}
+                    />
                     {xassidaForm.formState.errors.title && (
                       <p className="text-red-500 text-sm">{xassidaForm.formState.errors.title.message}</p>
                     )}
-                  </FormItem>
+                  </div>
                   
                   {/* Author mode toggle */}
                   <div className="border-t pt-4">
@@ -340,73 +329,65 @@ export function XassidasAdmin() {
 
                     {/* Existing author select */}
                     {!createNewAuthorMode && (
-                      <FormItem>
-                        <FormLabel>Sélectionner un auteur *</FormLabel>
-                        <FormControl>
-                          <select 
-                            {...xassidaForm.register('author_id', { required: !createNewAuthorMode ? 'Auteur requis' : false })} 
-                            className="border rounded px-3 py-2 w-full"
-                            disabled={createXassidaMutation.isPending}
-                          >
-                            <option value="">-- Choisir un auteur --</option>
-                            {authors.length > 0 ? (
-                              authors.map((a: Author) => (
-                                <option key={a.id} value={a.id}>{a.name}</option>
-                              ))
-                            ) : (
-                              <option disabled>Aucun auteur disponible</option>
-                            )}
-                          </select>
-                        </FormControl>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Sélectionner un auteur *</label>
+                        <select 
+                          {...xassidaForm.register('author_id', { required: !createNewAuthorMode ? 'Auteur requis' : false })} 
+                          className="border rounded px-3 py-2 w-full"
+                          disabled={createXassidaMutation.isPending}
+                        >
+                          <option value="">-- Choisir un auteur --</option>
+                          {authors.length > 0 ? (
+                            authors.map((a: Author) => (
+                              <option key={a.id} value={a.id}>{a.name}</option>
+                            ))
+                          ) : (
+                            <option disabled>Aucun auteur disponible</option>
+                          )}
+                        </select>
                         {xassidaForm.formState.errors.author_id && (
                           <p className="text-red-500 text-sm">{xassidaForm.formState.errors.author_id.message}</p>
                         )}
-                      </FormItem>
+                      </div>
                     )}
 
                     {/* New author form */}
                     {createNewAuthorMode && (
                       <>
-                        <FormItem>
-                          <FormLabel className="required">Nom de l'auteur *</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...xassidaForm.register('author_name', { required: 'Nom requis' })} 
-                              placeholder="Ex: Maodo, Cheikh Ahmadou Bamba..." 
-                              disabled={createXassidaMutation.isPending}
-                            />
-                          </FormControl>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Nom de l'auteur *</label>
+                          <Input 
+                            {...xassidaForm.register('author_name', { required: 'Nom requis' })} 
+                            placeholder="Ex: Maodo, Cheikh Ahmadou Bamba..." 
+                            disabled={createXassidaMutation.isPending}
+                          />
                           {xassidaForm.formState.errors.author_name && (
                             <p className="text-red-500 text-sm">{xassidaForm.formState.errors.author_name.message}</p>
                           )}
-                        </FormItem>
-                        <FormItem>
-                          <FormLabel>Description de l'auteur</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              {...xassidaForm.register('author_description')} 
-                              placeholder="Biographie, tradition, période..." 
-                              disabled={createXassidaMutation.isPending}
-                              rows={3}
-                            />
-                          </FormControl>
-                        </FormItem>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Description de l'auteur</label>
+                          <Textarea 
+                            {...xassidaForm.register('author_description')} 
+                            placeholder="Biographie, tradition, période..." 
+                            disabled={createXassidaMutation.isPending}
+                            rows={3}
+                          />
+                        </div>
                       </>
                     )}
                   </div>
                   
                   {/* Xassida Description */}
-                  <FormItem>
-                    <FormLabel>Description de la xassida</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        {...xassidaForm.register('description')} 
-                        placeholder="Contexte, thème, notes..." 
-                        disabled={createXassidaMutation.isPending}
-                        rows={2}
-                      />
-                    </FormControl>
-                  </FormItem>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Description de la xassida</label>
+                    <Textarea 
+                      {...xassidaForm.register('description')} 
+                      placeholder="Contexte, thème, notes..." 
+                      disabled={createXassidaMutation.isPending}
+                      rows={2}
+                    />
+                  </div>
 
                   {/* Error message */}
                   {createXassidaMutation.isError && (
