@@ -2,7 +2,7 @@ import { run, getDb } from './schema.js';
 import { v4 as uuid } from 'uuid';
 
 // Import depuis le fichier existant
-import { abada, khilassZahab, abouna } from '../../src/data/maodoXassidas.js';
+import { abada, khilassZahab } from '../../src/data/maodoXassidas.js';
 
 const xassidas = [
   {
@@ -20,14 +20,6 @@ const xassidas = [
     tradition: 'Tidjiane',
     birthYear: 1883,
     deathYear: 1968
-  },
-  {
-    data: abouna,
-    authorName: 'Serigne Cheikh',
-    authorDesc: 'Fondateur de la tradition tidjiane en Afrique de l\'Ouest',
-    tradition: 'Tidjiane',
-    birthYear: 1838,
-    deathYear: 1914
   }
 ];
 
