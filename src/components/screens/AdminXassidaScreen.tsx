@@ -74,42 +74,92 @@ export function XassidasAdmin() {
   });
 
   // Create xassida (with optional author creation)
-  const xassidaForm = useForm();
+  const xassidaForm = useForm({
+    defaultValues: {
+      title: '',
+      author_id: '',
+      author_name: '',
+      author_description: '',
+      description: ''
+    }
+  });
+
   const createXassidaMutation = useMutation({
     mutationFn: async (data: any) => {
-      let authorId = data.author_id;
-      
-      // If creating new author, create it first
-      if (createNewAuthorMode && data.author_name) {
-        const authorResponse = await fetch(`${API_URL}/authors`, {
+      try {
+        let authorId = data.author_id;
+        
+        // If creating new author, create it first
+        if (createNewAuthorMode && data.author_name) {
+          if (!data.author_name.trim()) {
+            throw new Error('Le nom de l\'auteur est requis');
+          }
+
+          const authorResponse = await fetch(`${API_URL}/authors`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: data.author_name.trim(),
+              description: data.author_description?.trim() || ''
+            })
+          });
+
+          if (!authorResponse.ok) {
+            throw new Error(`Erreur lors de la création de l'auteur: ${authorResponse.statusText}`);
+          }
+
+          const authorData = await authorResponse.json();
+          authorId = authorData.id;
+          console.log('✅ Auteur créé:', authorData.name);
+        } else if (!createNewAuthorMode && !authorId) {
+          throw new Error('Veuillez sélectionner un auteur');
+        }
+
+        // Validate xassida title
+        if (!data.title?.trim()) {
+          throw new Error('Le titre de la xassida est requis');
+        }
+
+        // Create xassida with the author ID
+        const xassidaResponse = await fetch(`${API_URL}/xassidas`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name: data.author_name,
-            description: data.author_description || ''
+            title: data.title.trim(),
+            author_id: authorId,
+            description: data.description?.trim() || ''
           })
-        }).then(r => r.json());
-        
-        authorId = authorResponse.id;
+        });
+
+        if (!xassidaResponse.ok) {
+          throw new Error(`Erreur lors de la création de la xassida: ${xassidaResponse.statusText}`);
+        }
+
+        const xassidaData = await xassidaResponse.json();
+        console.log('✅ Xassida créée:', xassidaData.title);
+        return xassidaData;
+      } catch (error) {
+        console.error('❌ Erreur:', error);
+        throw error;
       }
-      
-      // Create xassida with the author ID
-      return fetch(`${API_URL}/xassidas`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: data.title,
-          author_id: authorId,
-          description: data.description || ''
-        })
-      }).then(r => r.json());
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('✅ Succès! Xassida ajoutée:', data);
       queryClient.invalidateQueries({ queryKey: ['authors'] });
       queryClient.invalidateQueries({ queryKey: ['xassidas'] });
-      xassidaForm.reset();
+      xassidaForm.reset({
+        title: '',
+        author_id: '',
+        author_name: '',
+        author_description: '',
+        description: ''
+      });
       setShowXassidaDialog(false);
       setCreateNewAuthorMode(false);
+    },
+    onError: (error: any) => {
+      console.error('❌ Erreur mutation:', error.message || error);
+      alert('Erreur: ' + (error.message || 'Impossible de créer la xassida'));
     }
   });
 
@@ -225,57 +275,86 @@ export function XassidasAdmin() {
               <DialogTrigger asChild>
                 <Button><Plus className="w-4 h-4 mr-2" /> Nouvelle xassida</Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-lg">
                 <DialogHeader>
                   <DialogTitle>Créer une xassida</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={xassidaForm.handleSubmit((data) => createXassidaMutation.mutate(data))} className="space-y-4">
+                <form onSubmit={xassidaForm.handleSubmit((data) => {
+                  console.log('📝 Formulaire soumis:', { createNewAuthorMode, ...data });
+                  createXassidaMutation.mutate(data);
+                })} className="space-y-4">
+                  {/* Title field */}
                   <FormItem>
-                    <FormLabel>Titre de la xassida</FormLabel>
+                    <FormLabel className="required">Titre de la xassida *</FormLabel>
                     <FormControl>
-                      <Input {...xassidaForm.register('title')} placeholder="Ex: Abāda..." />
+                      <Input 
+                        {...xassidaForm.register('title', { required: 'Titre requis' })} 
+                        placeholder="Ex: Abāda, Khilāsa-Zahab..." 
+                        disabled={createXassidaMutation.isPending}
+                      />
                     </FormControl>
+                    {xassidaForm.formState.errors.title && (
+                      <p className="text-red-500 text-sm">{xassidaForm.formState.errors.title.message}</p>
+                    )}
                   </FormItem>
                   
                   {/* Author mode toggle */}
                   <div className="border-t pt-4">
+                    <p className="text-sm font-medium mb-2">Auteur</p>
                     <div className="flex gap-2 mb-3">
                       <button
                         type="button"
-                        onClick={() => setCreateNewAuthorMode(false)}
+                        onClick={() => {
+                          setCreateNewAuthorMode(false);
+                          xassidaForm.setValue('author_id', '');
+                        }}
                         className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-all ${
                           !createNewAuthorMode
                             ? 'bg-primary text-primary-foreground'
                             : 'bg-muted text-muted-foreground'
                         }`}
                       >
-                        Auteur existant
+                        Existant
                       </button>
                       <button
                         type="button"
-                        onClick={() => setCreateNewAuthorMode(true)}
+                        onClick={() => {
+                          setCreateNewAuthorMode(true);
+                          xassidaForm.setValue('author_name', '');
+                        }}
                         className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-all ${
                           createNewAuthorMode
                             ? 'bg-primary text-primary-foreground'
                             : 'bg-muted text-muted-foreground'
                         }`}
                       >
-                        Nouvel auteur
+                        Nouveau
                       </button>
                     </div>
 
                     {/* Existing author select */}
                     {!createNewAuthorMode && (
                       <FormItem>
-                        <FormLabel>Sélectionner un auteur</FormLabel>
+                        <FormLabel>Sélectionner un auteur *</FormLabel>
                         <FormControl>
-                          <select {...xassidaForm.register('author_id')} className="border rounded px-3 py-2 w-full">
+                          <select 
+                            {...xassidaForm.register('author_id', { required: !createNewAuthorMode ? 'Auteur requis' : false })} 
+                            className="border rounded px-3 py-2 w-full"
+                            disabled={createXassidaMutation.isPending}
+                          >
                             <option value="">-- Choisir un auteur --</option>
-                            {authors.map((a: Author) => (
-                              <option key={a.id} value={a.id}>{a.name}</option>
-                            ))}
+                            {authors.length > 0 ? (
+                              authors.map((a: Author) => (
+                                <option key={a.id} value={a.id}>{a.name}</option>
+                              ))
+                            ) : (
+                              <option disabled>Aucun auteur disponible</option>
+                            )}
                           </select>
                         </FormControl>
+                        {xassidaForm.formState.errors.author_id && (
+                          <p className="text-red-500 text-sm">{xassidaForm.formState.errors.author_id.message}</p>
+                        )}
                       </FormItem>
                     )}
 
@@ -283,29 +362,60 @@ export function XassidasAdmin() {
                     {createNewAuthorMode && (
                       <>
                         <FormItem>
-                          <FormLabel>Nom de l'auteur</FormLabel>
+                          <FormLabel className="required">Nom de l'auteur *</FormLabel>
                           <FormControl>
-                            <Input {...xassidaForm.register('author_name')} placeholder="Ex: Maodo..." />
+                            <Input 
+                              {...xassidaForm.register('author_name', { required: 'Nom requis' })} 
+                              placeholder="Ex: Maodo, Cheikh Ahmadou Bamba..." 
+                              disabled={createXassidaMutation.isPending}
+                            />
                           </FormControl>
+                          {xassidaForm.formState.errors.author_name && (
+                            <p className="text-red-500 text-sm">{xassidaForm.formState.errors.author_name.message}</p>
+                          )}
                         </FormItem>
                         <FormItem>
                           <FormLabel>Description de l'auteur</FormLabel>
                           <FormControl>
-                            <Textarea {...xassidaForm.register('author_description')} placeholder="Biographie..." />
+                            <Textarea 
+                              {...xassidaForm.register('author_description')} 
+                              placeholder="Biographie, tradition, période..." 
+                              disabled={createXassidaMutation.isPending}
+                              rows={3}
+                            />
                           </FormControl>
                         </FormItem>
                       </>
                     )}
                   </div>
                   
+                  {/* Xassida Description */}
                   <FormItem>
                     <FormLabel>Description de la xassida</FormLabel>
                     <FormControl>
-                      <Textarea {...xassidaForm.register('description')} placeholder="Optionnel" />
+                      <Textarea 
+                        {...xassidaForm.register('description')} 
+                        placeholder="Contexte, thème, notes..." 
+                        disabled={createXassidaMutation.isPending}
+                        rows={2}
+                      />
                     </FormControl>
                   </FormItem>
-                  <Button type="submit" className="w-full">
-                    Créer la xassida
+
+                  {/* Error message */}
+                  {createXassidaMutation.isError && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+                      {createXassidaMutation.error instanceof Error ? createXassidaMutation.error.message : 'Une erreur est survenue'}
+                    </div>
+                  )}
+
+                  {/* Submit button */}
+                  <Button 
+                    type="submit" 
+                    className="w-full"
+                    disabled={createXassidaMutation.isPending}
+                  >
+                    {createXassidaMutation.isPending ? 'Création en cours...' : 'Créer la xassida'}
                   </Button>
                 </form>
               </DialogContent>
