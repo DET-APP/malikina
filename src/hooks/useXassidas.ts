@@ -21,7 +21,7 @@ export interface APIAuthor {
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? 'http://localhost:5000/api' : '/api');
+  (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://malikina-api.onrender.com/api');
 
 /**
  * Convert API xassida format to local format
