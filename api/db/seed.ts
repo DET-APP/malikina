@@ -1,8 +1,8 @@
-import { run, getDb } from './db/schema.js';
+import { run, getDb } from './schema.js';
 import { v4 as uuid } from 'uuid';
 
 // Import depuis le fichier existant
-import { abada, khilassZahab, abouna } from '../src/data/maodoXassidas.js';
+import { abada, khilassZahab, abouna } from '../../src/data/maodoXassidas.js';
 
 const xassidas = [
   {
