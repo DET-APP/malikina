@@ -55,9 +55,18 @@ export const useXassidas = () => {
     queryKey: ['xassidas-api'],
     queryFn: async () => {
       try {
+        console.log('Fetching xassidas from:', `${API_URL}/xassidas`);
         const response = await fetch(`${API_URL}/xassidas`);
-        if (!response.ok) throw new Error('API offline');
-        return response.json();
+        
+        console.log('API Response status:', response.status);
+        if (!response.ok) {
+          console.warn(`API returned ${response.status}: ${response.statusText}`);
+          throw new Error(`API offline: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('API Xassidas count:', Array.isArray(data) ? data.length : 0);
+        return data;
       } catch (error) {
         console.warn('Could not fetch xassidas from API, using local data:', error);
         return null;
@@ -72,6 +81,7 @@ export const useXassidas = () => {
   
   if (xassidasQuery.data && Array.isArray(xassidasQuery.data) && xassidasQuery.data.length > 0) {
     // Use API data and merge with local data for enrichment
+    console.log('Using API data for xassidas');
     const apiXassidas = xassidasQuery.data as APIXassida[];
     const convertedXassidas = apiXassidas.map(apiX => 
       convertAPIXassidaToLocal(apiX, apiX.author_name || 'Unknown')
