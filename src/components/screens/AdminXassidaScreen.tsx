@@ -198,7 +198,13 @@ export function XassidasAdmin() {
   };
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="min-h-screen bg-background pb-24 space-y-8 p-6">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-foreground">Gestion des Xassidas</h1>
+        <p className="text-sm text-muted-foreground mt-2">Créer et gérer les auteurs et xassidas</p>
+      </div>
+
       {/* Authors Section */}
       <Card>
         <CardHeader>
