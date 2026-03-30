@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "Xassida REST API for Malikina",
   "type": "module",
-  "main": "dist/server.js",
+  "main": "dist/api/server.js",
   "scripts": {
     "dev": "tsx watch server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/api/server.js",
     "db:migrate": "tsx db/migrate.ts"
   },
   "dependencies": {
