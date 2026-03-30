@@ -60,7 +60,7 @@ Import: `DET-APP/malikina`
 
 Env var:
 ```
-VITE_API_URL=https://malikina-api-xxxxxx.onrender.com/api
+VITE_API_URL=https://malikina-api.onrender.com/api
 ```
 
 Deploy!

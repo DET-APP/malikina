@@ -15,14 +15,9 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      strategies: "injectManifest",
-      srcDir: "public",
+      strategies: "generateSW",
       filename: "service-worker.js",
       manifest: false,
-      injectManifest: {
-        swSrc: "public/service-worker.js",
-        swDest: "service-worker.js",
-      },
       devOptions: {
         enabled: mode === "development",
         type: "module",

@@ -67,3 +67,5 @@ AGENTS.md
 # Testing
 coverage
 .nyc_output
+.vercel
+.env*.local

@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Search } from "lucide-react";
-import { qassidasDataWithExtended, authorsData } from "@/data/qassidasData";
+import { useXassidas } from "@/hooks/useXassidas";
 import { useQassidasHistory } from "@/hooks/useQassidasHistory";
 import { useFavorites } from "@/hooks/useFavorites";
 import XassidasList from "@/components/qassidas/XassidasList";
 import XassidasDetail from "@/components/qassidas/XassidasDetail";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { ErrorState } from "@/components/shared/ErrorState";
 import type { Qassida } from "@/data/qassidasData";
 
 const QassidasScreen = () => {
@@ -17,8 +19,18 @@ const QassidasScreen = () => {
   const { addToHistory } = useQassidasHistory();
   const { isFavorite } = useFavorites();
 
-  // Use extended data (111-174 + original)
-  const allQassidas = qassidasDataWithExtended;
+  // Fetch xassidas from API (with local data fallback)
+  const { xassidas: allQassidas, authors: authorsData, isLoading, error, isFromAPI } = useXassidas();
+
+  // Show loading state
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  // Show error state
+  if (error) {
+    return <ErrorState message="Erreur lors du chargement des xassidas" />;
+  }
 
   const filteredQassidas = allQassidas.filter(q => {
     const matchesSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -90,11 +102,16 @@ const QassidasScreen = () => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <h1 className="text-3xl font-bold text-secondary-foreground">Xassidas</h1>
-          <p className="text-4xl font-arabic text-card mt-2">الْقَصَائِدُ</p>
-          <p className="text-sm text-secondary-foreground/70 mt-2">
-            {filteredQassidas.length} xassidas
-          </p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-secondary-foreground">Xassidas</h1>
+              <p className="text-4xl font-arabic text-card mt-2">الْقَصَائِدُ</p>
+              <p className="text-sm text-secondary-foreground/70 mt-2">
+                {filteredQassidas.length} xassidas
+                {isFromAPI && <span className="ml-2 inline-block text-xs bg-green-500/20 text-green-700 px-2 py-1 rounded">API</span>}
+              </p>
+            </div>
+          </div>
         </motion.div>
 
         {/* Search */}
