@@ -164,10 +164,13 @@ async function seedDatabase() {
           const chapter = item.data.chapters[chIdx];
           if (chapter.verses) {
             for (let vIdx = 0; vIdx < chapter.verses.length; vIdx++) {
-              const verse = chapter.verses[vIdx];
+              const verse = chapter.verses[vIdx] as any;
+              const transcription = verse.transliteration || verse.transcription || '';
+              const translationFr = verse.translation_fr || verse.translations?.fr || '';
+              const translationEn = verse.translation_en || verse.translations?.en || '';
               await run(
                 `INSERT INTO verses (id, xassida_id, chapter_number, verse_number, verse_key, text_arabic, transcription, translation_fr, translation_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [uuid(), xassidaId, chIdx + 1, vIdx + 1, `${title}:${chIdx + 1}:${vIdx + 1}`, verse.text || '', verse.transliteration || '', verse.translation_fr || '', verse.translation_en || '']
+                [uuid(), xassidaId, chIdx + 1, vIdx + 1, `${title}:${chIdx + 1}:${vIdx + 1}`, verse.text || '', transcription, translationFr, translationEn]
               );
               verseCount++;
             }
