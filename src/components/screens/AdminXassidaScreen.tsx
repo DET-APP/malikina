@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,8 @@ import { Plus, Edit2, Trash2, Upload, Save } from 'lucide-react';
 const API_URL =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://malikina-api.onrender.com/api');
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
+const ADMIN_SESSION_KEY = 'malikina-admin-unlocked';
 
 interface Author {
   id: string;
@@ -43,6 +45,20 @@ export function XassidasAdmin() {
   const [showAuthorDialog, setShowAuthorDialog] = useState(false);
   const [showXassidaDialog, setShowXassidaDialog] = useState(false);
   const [createNewAuthorMode, setCreateNewAuthorMode] = useState(false); // Toggle for new author mode
+  const [passwordInput, setPasswordInput] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [isUnlocked, setIsUnlocked] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true';
+  });
+  const [uploadingByXassida, setUploadingByXassida] = useState<Record<string, boolean>>({});
+  const [uploadProgressByXassida, setUploadProgressByXassida] = useState<Record<string, number>>({});
+  const [uploadErrorByXassida, setUploadErrorByXassida] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.sessionStorage.setItem(ADMIN_SESSION_KEY, isUnlocked ? 'true' : 'false');
+  }, [isUnlocked]);
 
   // Fetch authors
   const { data: authors = [] } = useQuery({
@@ -177,31 +193,140 @@ export function XassidasAdmin() {
     }
   });
 
-  // Handle PDF upload
+  // Handle PDF upload with progress
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>, xassidaId: string) => {
     if (!e.target.files?.[0]) return;
 
+    const file = e.target.files[0];
     const formData = new FormData();
-    formData.append('file', e.target.files[0]);
+    formData.append('file', file);
+
+    setUploadErrorByXassida(prev => ({ ...prev, [xassidaId]: '' }));
+    setUploadProgressByXassida(prev => ({ ...prev, [xassidaId]: 0 }));
+    setUploadingByXassida(prev => ({ ...prev, [xassidaId]: true }));
 
     try {
-      const response = await fetch(`${API_URL}/xassidas/${xassidaId}/upload-pdf`, {
-        method: 'POST',
-        body: formData
+      const data = await new Promise<any>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${API_URL}/xassidas/${xassidaId}/upload-pdf`);
+
+        xhr.upload.onprogress = (event) => {
+          if (!event.lengthComputable) return;
+          const percent = Math.round((event.loaded / event.total) * 100);
+          setUploadProgressByXassida(prev => ({ ...prev, [xassidaId]: percent }));
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(JSON.parse(xhr.responseText));
+            } catch {
+              reject(new Error('Réponse serveur invalide après upload PDF'));
+            }
+            return;
+          }
+          reject(new Error(`Upload échoué (${xhr.status})`));
+        };
+
+        xhr.onerror = () => reject(new Error('Erreur réseau pendant l\'upload PDF'));
+        xhr.send(formData);
       });
-      const data = await response.json();
+
+      setSelectedXassida(xassidas.find((x: Xassida) => x.id === xassidaId) || null);
       setUploadedVerses(data.verses);
     } catch (error) {
       console.error('PDF upload error:', error);
+      setUploadErrorByXassida(prev => ({
+        ...prev,
+        [xassidaId]: error instanceof Error ? error.message : 'Erreur inconnue pendant upload'
+      }));
+    } finally {
+      setUploadingByXassida(prev => ({ ...prev, [xassidaId]: false }));
+      setUploadProgressByXassida(prev => ({ ...prev, [xassidaId]: 100 }));
+      e.target.value = '';
     }
   };
+
+  const totalVerses = xassidas.reduce((sum: number, x: Xassida) => sum + (Number(x.verse_count) || 0), 0);
+
+  const handleUnlockAdmin = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (passwordInput === ADMIN_PASSWORD) {
+      setIsUnlocked(true);
+      setAuthError('');
+      setPasswordInput('');
+      return;
+    }
+    setAuthError('Mot de passe incorrect');
+  };
+
+  const handleLockAdmin = () => {
+    setIsUnlocked(false);
+    setAuthError('');
+    setPasswordInput('');
+  };
+
+  if (!isUnlocked) {
+    return (
+      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Accès Admin Xassidas</CardTitle>
+            <CardDescription>Entrez le mot de passe pour accéder au panneau d'administration.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleUnlockAdmin} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Mot de passe</label>
+                <Input
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </div>
+              {authError && (
+                <p className="text-sm text-red-600">{authError}</p>
+              )}
+              <Button type="submit" className="w-full">Déverrouiller</Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-24 space-y-8 p-6">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Gestion des Xassidas</h1>
-        <p className="text-sm text-muted-foreground mt-2">Créer et gérer les auteurs et xassidas</p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Gestion des Xassidas</h1>
+          <p className="text-sm text-muted-foreground mt-2">Créer et gérer les auteurs et xassidas</p>
+        </div>
+        <Button variant="outline" onClick={handleLockAdmin}>Verrouiller</Button>
+      </div>
+
+      {/* Dashboard */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Auteurs</CardDescription>
+            <CardTitle>{authors.length}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Xassidas</CardDescription>
+            <CardTitle>{xassidas.length}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Versets (total)</CardDescription>
+            <CardTitle>{totalVerses}</CardTitle>
+          </CardHeader>
+        </Card>
       </div>
 
       {/* Authors Section */}
@@ -439,7 +564,24 @@ export function XassidasAdmin() {
                                 accept=".pdf"
                                 onChange={(e) => handlePdfUpload(e, x.id)}
                                 className="border rounded px-3 py-2 w-full"
+                                disabled={!!uploadingByXassida[x.id]}
                               />
+                              {uploadingByXassida[x.id] && (
+                                <div className="mt-2 space-y-1">
+                                  <div className="w-full h-2 bg-muted rounded overflow-hidden">
+                                    <div
+                                      className="h-full bg-primary transition-all"
+                                      style={{ width: `${uploadProgressByXassida[x.id] || 0}%` }}
+                                    />
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    Upload en cours: {uploadProgressByXassida[x.id] || 0}%
+                                  </p>
+                                </div>
+                              )}
+                              {uploadErrorByXassida[x.id] && (
+                                <p className="text-xs text-red-600 mt-2">{uploadErrorByXassida[x.id]}</p>
+                              )}
                             </div>
                             
                             {uploadedVerses.length > 0 && (
