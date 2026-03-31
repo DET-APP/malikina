@@ -4,21 +4,33 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = path.join(__dirname, '../xassidas.db');
+const dbPath = process.env.DATABASE_PATH ||
+  (process.env.NODE_ENV === 'production'
+    ? '/var/data/xassidas.db'
+    : path.join(__dirname, '../xassidas.db'));
 
 let db: sqlite3.Database;
 
+async function ensureDatabaseDirectory() {
+  await fs.mkdir(path.dirname(dbPath), { recursive: true });
+}
+
 export function getDb(): Promise<sqlite3.Database> {
   return new Promise((resolve, reject) => {
-    if (db) {
-      resolve(db);
-      return;
-    }
+    const open = async () => {
+      if (db) {
+        resolve(db);
+        return;
+      }
 
-    db = new sqlite3.Database(dbPath, (err) => {
-      if (err) reject(err);
-      else resolve(db);
-    });
+      await ensureDatabaseDirectory();
+      db = new sqlite3.Database(dbPath, (err) => {
+        if (err) reject(err);
+        else resolve(db);
+      });
+    };
+
+    open().catch(reject);
   });
 }
 
@@ -84,10 +96,14 @@ export async function initDatabase() {
           return;
         }
         console.log('✅ Database tables initialized');
+        console.log(`🗄️  Database path: ${dbPath}`);
         
         // Check if database is empty and seed if needed
         const count = await count_authors();
-        if (count === 0) {
+        const shouldAutoSeed = process.env.AUTO_SEED_DB === 'true' ||
+          (process.env.NODE_ENV !== 'production' && process.env.AUTO_SEED_DB !== 'false');
+
+        if (count === 0 && shouldAutoSeed) {
           console.log('📊 Database is empty, auto-seeding...');
           try {
             await seedDatabase();
@@ -97,7 +113,7 @@ export async function initDatabase() {
             resolve(); // Don't fail if seed fails
           }
         } else {
-          console.log(`📊 Database has ${count} authors`);
+          console.log(`📊 Database has ${count} authors${shouldAutoSeed ? '' : ' (auto-seed disabled)'}`);
           resolve();
         }
       });

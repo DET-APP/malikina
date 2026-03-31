@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuid } from 'uuid';
 import { all, get, run } from '../db/schema.js';
 import multer from 'multer';
-import * as pdfjs from 'pdfjs-dist';
+import { pdf } from 'pdf-parse';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -194,19 +194,20 @@ router.post('/:id/verses', async (req: Request, res: Response) => {
 // Helper functions
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
-    // Simple PDF text extraction using pdfjs
-    const pdf = await pdfjs.getDocument({ data: buffer }).promise;
-    let text = '';
-    
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      text += content.items.map((item: any) => item.str).join(' ') + '\n';
+    const parsed = await pdf(buffer);
+    const text = (parsed.text || '').trim();
+
+    // Scanned PDFs (image-only) often have no extractable text without OCR.
+    if (!text) {
+      throw new Error('Aucun texte détecté dans le PDF (document probablement scanné/image)');
     }
-    
+
     return text;
   } catch (error) {
     console.error('PDF extraction error:', error);
+    if (error instanceof Error) {
+      throw new Error(error.message);
+    }
     throw new Error('Failed to extract text from PDF');
   }
 }
