@@ -2,7 +2,6 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuid } from 'uuid';
 import { all, get, run } from '../db/schema.js';
 import multer from 'multer';
-import * as pdfjs from 'pdfjs-dist';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -134,7 +133,7 @@ router.post('/:id/upload-pdf', upload.single('file'), async (req: Request, res: 
     res.json({
       message: 'PDF processed',
       verses_extracted: verses.length,
-      verses: verses.slice(0, 10) // Return first 10 for preview
+      verses
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -193,22 +192,56 @@ router.post('/:id/verses', async (req: Request, res: Response) => {
 
 // Helper functions
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
+  const errors: string[] = [];
+
+  // Strategy 1: pdf-parse (optional, loaded dynamically to avoid startup crash on older Node)
   try {
-    // Simple PDF text extraction using pdfjs
-    const pdf = await pdfjs.getDocument({ data: buffer }).promise;
-    let text = '';
-    
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      text += content.items.map((item: any) => item.str).join(' ') + '\n';
+    const pdfParseModule = await import('pdf-parse');
+    const parsed = await pdfParseModule.pdf(buffer);
+    const text = (parsed?.text || '').trim();
+
+    // Scanned PDFs (image-only) often have no extractable text without OCR.
+    if (!text) {
+      throw new Error('Aucun texte détecté dans le PDF (document probablement scanné/image)');
     }
-    
+
     return text;
   } catch (error) {
-    console.error('PDF extraction error:', error);
-    throw new Error('Failed to extract text from PDF');
+    errors.push(error instanceof Error ? error.message : 'Erreur extraction pdf-parse');
   }
+
+  // Strategy 2: pdfjs-dist legacy fallback for compatibility edge-cases
+  try {
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
+    const pdfDoc = await loadingTask.promise;
+    let text = '';
+
+    for (let pageNumber = 1; pageNumber <= pdfDoc.numPages; pageNumber++) {
+      const page = await pdfDoc.getPage(pageNumber);
+      const textContent = await page.getTextContent();
+      const pageText = (textContent.items as Array<{ str?: string }>)
+        .map((item) => item?.str || '')
+        .join(' ')
+        .trim();
+
+      if (pageText) {
+        text += `${pageText}\n`;
+      }
+    }
+
+    const finalText = text.trim();
+    if (!finalText) {
+      throw new Error('Aucun texte détecté dans le PDF avec fallback pdfjs (probablement scanné/image)');
+    }
+
+    return finalText;
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : 'Erreur extraction pdfjs fallback');
+  }
+
+  console.error('PDF extraction error (all strategies failed):', errors);
+  throw new Error(`Extraction PDF impossible. Détails: ${errors.join(' | ')}`);
 }
 
 function parseVerses(text: string): any[] {
