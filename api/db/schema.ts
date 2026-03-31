@@ -4,15 +4,27 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = process.env.DATABASE_PATH ||
+const defaultLocalDbPath = path.join(__dirname, '../xassidas.db');
+let dbPath = process.env.DATABASE_PATH ||
   (process.env.NODE_ENV === 'production'
     ? '/var/data/xassidas.db'
-    : path.join(__dirname, '../xassidas.db'));
+    : defaultLocalDbPath);
 
 let db: sqlite3.Database;
 
 async function ensureDatabaseDirectory() {
-  await fs.mkdir(path.dirname(dbPath), { recursive: true });
+  try {
+    await fs.mkdir(path.dirname(dbPath), { recursive: true });
+  } catch (error) {
+    // Fallback to local path when persistent disk path is unavailable.
+    if (dbPath !== defaultLocalDbPath) {
+      console.warn(`⚠️  Cannot use DB path ${dbPath}. Falling back to ${defaultLocalDbPath}`);
+      dbPath = defaultLocalDbPath;
+      await fs.mkdir(path.dirname(dbPath), { recursive: true });
+      return;
+    }
+    throw error;
+  }
 }
 
 export function getDb(): Promise<sqlite3.Database> {
