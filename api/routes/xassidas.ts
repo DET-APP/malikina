@@ -193,6 +193,9 @@ router.post('/:id/verses', async (req: Request, res: Response) => {
 
 // Helper functions
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
+  const errors: string[] = [];
+
+  // Strategy 1: pdf-parse (fast path)
   try {
     const parsed = await pdf(buffer);
     const text = (parsed.text || '').trim();
@@ -204,12 +207,41 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
 
     return text;
   } catch (error) {
-    console.error('PDF extraction error:', error);
-    if (error instanceof Error) {
-      throw new Error(error.message);
-    }
-    throw new Error('Failed to extract text from PDF');
+    errors.push(error instanceof Error ? error.message : 'Erreur extraction pdf-parse');
   }
+
+  // Strategy 2: pdfjs-dist legacy fallback for compatibility edge-cases
+  try {
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
+    const pdfDoc = await loadingTask.promise;
+    let text = '';
+
+    for (let pageNumber = 1; pageNumber <= pdfDoc.numPages; pageNumber++) {
+      const page = await pdfDoc.getPage(pageNumber);
+      const textContent = await page.getTextContent();
+      const pageText = (textContent.items as Array<{ str?: string }>)
+        .map((item) => item?.str || '')
+        .join(' ')
+        .trim();
+
+      if (pageText) {
+        text += `${pageText}\n`;
+      }
+    }
+
+    const finalText = text.trim();
+    if (!finalText) {
+      throw new Error('Aucun texte détecté dans le PDF avec fallback pdfjs (probablement scanné/image)');
+    }
+
+    return finalText;
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : 'Erreur extraction pdfjs fallback');
+  }
+
+  console.error('PDF extraction error (all strategies failed):', errors);
+  throw new Error(`Extraction PDF impossible. Détails: ${errors.join(' | ')}`);
 }
 
 function parseVerses(text: string): any[] {
