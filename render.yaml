@@ -5,10 +5,18 @@ services:
     plan: free
     buildCommand: cd api && npm install --legacy-peer-deps && npm run build
     startCommand: cd api && npm start
+    disk:
+      name: malikina-data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 5000
+      - key: DATABASE_PATH
+        value: /var/data/xassidas.db
+      - key: AUTO_SEED_DB
+        value: false
     autoDeploy: true
     branch: main
