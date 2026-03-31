@@ -2,7 +2,6 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuid } from 'uuid';
 import { all, get, run } from '../db/schema.js';
 import multer from 'multer';
-import { pdf } from 'pdf-parse';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -195,10 +194,11 @@ router.post('/:id/verses', async (req: Request, res: Response) => {
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   const errors: string[] = [];
 
-  // Strategy 1: pdf-parse (fast path)
+  // Strategy 1: pdf-parse (optional, loaded dynamically to avoid startup crash on older Node)
   try {
-    const parsed = await pdf(buffer);
-    const text = (parsed.text || '').trim();
+    const pdfParseModule = await import('pdf-parse');
+    const parsed = await pdfParseModule.pdf(buffer);
+    const text = (parsed?.text || '').trim();
 
     // Scanned PDFs (image-only) often have no extractable text without OCR.
     if (!text) {

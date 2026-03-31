@@ -57,6 +57,15 @@ export function XassidasAdmin() {
   const [newXassidaPdf, setNewXassidaPdf] = useState<File | null>(null);
   const [newXassidaPdfProgress, setNewXassidaPdfProgress] = useState(0);
   const [newXassidaPdfError, setNewXassidaPdfError] = useState('');
+  const [showEditXassidaDialog, setShowEditXassidaDialog] = useState(false);
+  const [editingXassida, setEditingXassida] = useState<Xassida | null>(null);
+
+  const editXassidaForm = useForm({
+    defaultValues: {
+      title: '',
+      description: ''
+    }
+  });
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -251,6 +260,72 @@ export function XassidasAdmin() {
       setSelectedXassida(null);
     }
   });
+
+  const updateXassidaMutation = useMutation({
+    mutationFn: async (data: { id: string; title: string; description?: string }) => {
+      const response = await fetch(`${API_URL}/xassidas/${data.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: data.title, description: data.description || '' })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || 'Impossible de modifier la xassida');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['xassidas'] });
+      setShowEditXassidaDialog(false);
+      setEditingXassida(null);
+      editXassidaForm.reset({ title: '', description: '' });
+    },
+    onError: (error: any) => {
+      alert(`Erreur modification: ${error?.message || 'Impossible de modifier la xassida'}`);
+    }
+  });
+
+  const deleteXassidaMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`${API_URL}/xassidas/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || 'Impossible de supprimer la xassida');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['xassidas'] });
+      if (selectedXassida) {
+        setSelectedXassida(null);
+        setUploadedVerses([]);
+      }
+    },
+    onError: (error: any) => {
+      alert(`Erreur suppression: ${error?.message || 'Impossible de supprimer la xassida'}`);
+    }
+  });
+
+  const openEditDialog = (xassida: Xassida) => {
+    setEditingXassida(xassida);
+    editXassidaForm.reset({
+      title: xassida.title || '',
+      description: xassida.description || ''
+    });
+    setShowEditXassidaDialog(true);
+  };
+
+  const handleDeleteXassida = async (xassida: Xassida) => {
+    const confirmed = window.confirm(`Supprimer la xassida "${xassida.title}" ? Cette action est irréversible.`);
+    if (!confirmed) return;
+    await deleteXassidaMutation.mutateAsync(xassida.id);
+  };
 
   // Handle PDF upload with progress
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>, xassidaId: string) => {
@@ -633,6 +708,47 @@ export function XassidasAdmin() {
           </div>
         </CardHeader>
         <CardContent>
+          <Dialog open={showEditXassidaDialog} onOpenChange={setShowEditXassidaDialog}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Modifier la xassida</DialogTitle>
+              </DialogHeader>
+              <form
+                className="space-y-4"
+                onSubmit={editXassidaForm.handleSubmit((values) => {
+                  if (!editingXassida) return;
+                  updateXassidaMutation.mutate({
+                    id: editingXassida.id,
+                    title: values.title,
+                    description: values.description
+                  });
+                })}
+              >
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Titre</label>
+                  <Input
+                    {...editXassidaForm.register('title', { required: 'Titre requis' })}
+                    disabled={updateXassidaMutation.isPending}
+                  />
+                  {editXassidaForm.formState.errors.title && (
+                    <p className="text-xs text-red-600">{editXassidaForm.formState.errors.title.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Description</label>
+                  <Textarea
+                    {...editXassidaForm.register('description')}
+                    rows={3}
+                    disabled={updateXassidaMutation.isPending}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={updateXassidaMutation.isPending}>
+                  {updateXassidaMutation.isPending ? 'Mise à jour...' : 'Sauvegarder les modifications'}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+
           <div className="space-y-4">
             {xassidas.map((x: Xassida) => (
               <Card key={x.id} className="border">
@@ -722,10 +838,20 @@ export function XassidasAdmin() {
                           </div>
                         </DialogContent>
                       </Dialog>
-                      <Button size="sm" variant="outline">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openEditDialog(x)}
+                        disabled={updateXassidaMutation.isPending || deleteXassidaMutation.isPending}
+                      >
                         <Edit2 className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" variant="destructive">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDeleteXassida(x)}
+                        disabled={deleteXassidaMutation.isPending || updateXassidaMutation.isPending}
+                      >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
