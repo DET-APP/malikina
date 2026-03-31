@@ -134,7 +134,7 @@ router.post('/:id/upload-pdf', upload.single('file'), async (req: Request, res: 
     res.json({
       message: 'PDF processed',
       verses_extracted: verses.length,
-      verses: verses.slice(0, 10) // Return first 10 for preview
+      verses
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

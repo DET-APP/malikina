@@ -54,6 +54,9 @@ export function XassidasAdmin() {
   const [uploadingByXassida, setUploadingByXassida] = useState<Record<string, boolean>>({});
   const [uploadProgressByXassida, setUploadProgressByXassida] = useState<Record<string, number>>({});
   const [uploadErrorByXassida, setUploadErrorByXassida] = useState<Record<string, string>>({});
+  const [newXassidaPdf, setNewXassidaPdf] = useState<File | null>(null);
+  const [newXassidaPdfProgress, setNewXassidaPdfProgress] = useState(0);
+  const [newXassidaPdfError, setNewXassidaPdfError] = useState('');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -151,6 +154,58 @@ export function XassidasAdmin() {
         }
 
         const xassidaData = await xassidaResponse.json();
+
+        // Optional: upload PDF during xassida creation and auto-save extracted verses
+        if (newXassidaPdf) {
+          setNewXassidaPdfError('');
+          setNewXassidaPdfProgress(0);
+
+          const uploadData = await new Promise<any>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            const formData = new FormData();
+            formData.append('file', newXassidaPdf);
+
+            xhr.open('POST', `${API_URL}/xassidas/${xassidaData.id}/upload-pdf`);
+
+            xhr.upload.onprogress = (event) => {
+              if (!event.lengthComputable) return;
+              const percent = Math.round((event.loaded / event.total) * 100);
+              setNewXassidaPdfProgress(percent);
+            };
+
+            xhr.onload = () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                  resolve(JSON.parse(xhr.responseText));
+                } catch {
+                  reject(new Error('Réponse invalide après upload PDF'));
+                }
+                return;
+              }
+              reject(new Error(`Upload PDF échoué (${xhr.status})`));
+            };
+
+            xhr.onerror = () => reject(new Error('Erreur réseau pendant l\'upload PDF'));
+            xhr.send(formData);
+          });
+
+          const extractedVerses = Array.isArray(uploadData?.verses) ? uploadData.verses : [];
+
+          if (extractedVerses.length > 0) {
+            const saveVersesResponse = await fetch(`${API_URL}/xassidas/${xassidaData.id}/verses`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ verses: extractedVerses })
+            });
+
+            if (!saveVersesResponse.ok) {
+              throw new Error('Xassida créée, mais impossible de sauvegarder les vers extraits');
+            }
+          }
+
+          setNewXassidaPdfProgress(100);
+        }
+
         console.log('✅ Xassida créée:', xassidaData.title);
         return xassidaData;
       } catch (error) {
@@ -169,11 +224,15 @@ export function XassidasAdmin() {
         author_description: '',
         description: ''
       });
+      setNewXassidaPdf(null);
+      setNewXassidaPdfProgress(0);
+      setNewXassidaPdfError('');
       setShowXassidaDialog(false);
       setCreateNewAuthorMode(false);
     },
     onError: (error: any) => {
       console.error('❌ Erreur mutation:', error.message || error);
+      setNewXassidaPdfError(error?.message || 'Erreur pendant création + import PDF');
       alert('Erreur: ' + (error.message || 'Impossible de créer la xassida'));
     }
   });
@@ -512,6 +571,45 @@ export function XassidasAdmin() {
                       disabled={createXassidaMutation.isPending}
                       rows={2}
                     />
+                  </div>
+
+                  {/* Optional PDF upload at creation time */}
+                  <div className="space-y-2 border-t pt-4">
+                    <label className="text-sm font-medium">PDF de la xassida (optionnel)</label>
+                    <Input
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      disabled={createXassidaMutation.isPending}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        setNewXassidaPdf(file);
+                        setNewXassidaPdfError('');
+                        setNewXassidaPdfProgress(0);
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Si vous ajoutez un PDF, ses vers seront extraits et sauvegardés automatiquement après création.
+                    </p>
+
+                    {newXassidaPdf && (
+                      <p className="text-xs text-foreground">Fichier sélectionné: {newXassidaPdf.name}</p>
+                    )}
+
+                    {createXassidaMutation.isPending && newXassidaPdf && (
+                      <div className="space-y-1">
+                        <div className="w-full h-2 bg-muted rounded overflow-hidden">
+                          <div
+                            className="h-full bg-primary transition-all"
+                            style={{ width: `${newXassidaPdfProgress}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">Import PDF: {newXassidaPdfProgress}%</p>
+                      </div>
+                    )}
+
+                    {newXassidaPdfError && (
+                      <p className="text-xs text-red-600">{newXassidaPdfError}</p>
+                    )}
                   </div>
 
                   {/* Error message */}
