@@ -38,6 +38,8 @@ interface Xassida {
   verse_count: number;
 }
 
+const VERSES_CHUNK_SIZE = 100;
+
 export function XassidasAdmin() {
   const queryClient = useQueryClient();
   const [selectedXassida, setSelectedXassida] = useState<Xassida | null>(null);
@@ -57,6 +59,30 @@ export function XassidasAdmin() {
   const [newXassidaPdf, setNewXassidaPdf] = useState<File | null>(null);
   const [newXassidaPdfProgress, setNewXassidaPdfProgress] = useState(0);
   const [newXassidaPdfError, setNewXassidaPdfError] = useState('');
+    const saveVersesInChunks = async (xassidaId: string, verses: any[]) => {
+      if (!Array.isArray(verses) || verses.length === 0) return;
+
+      for (let i = 0; i < verses.length; i += VERSES_CHUNK_SIZE) {
+        const chunk = verses.slice(i, i + VERSES_CHUNK_SIZE);
+        const response = await fetch(`${API_URL}/xassidas/${xassidaId}/verses`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ verses: chunk })
+        });
+
+        if (!response.ok) {
+          let errorMessage = 'Impossible de sauvegarder les vers extraits';
+          try {
+            const payload = await response.json();
+            errorMessage = payload?.error || errorMessage;
+          } catch {
+            // Keep default message
+          }
+          throw new Error(errorMessage);
+        }
+      }
+    };
+
   const [showEditXassidaDialog, setShowEditXassidaDialog] = useState(false);
   const [editingXassida, setEditingXassida] = useState<Xassida | null>(null);
 
@@ -201,15 +227,7 @@ export function XassidasAdmin() {
           const extractedVerses = Array.isArray(uploadData?.verses) ? uploadData.verses : [];
 
           if (extractedVerses.length > 0) {
-            const saveVersesResponse = await fetch(`${API_URL}/xassidas/${xassidaData.id}/verses`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ verses: extractedVerses })
-            });
-
-            if (!saveVersesResponse.ok) {
-              throw new Error('Xassida créée, mais impossible de sauvegarder les vers extraits');
-            }
+            await saveVersesInChunks(xassidaData.id, extractedVerses);
           }
 
           setNewXassidaPdfProgress(100);
@@ -248,12 +266,14 @@ export function XassidasAdmin() {
 
   // Save verses
   const saveVersesMutation = useMutation({
-    mutationFn: (data: any) =>
-      fetch(`${API_URL}/xassidas/${selectedXassida?.id}/verses`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      }).then(r => r.json()),
+    mutationFn: async (data: any) => {
+      if (!selectedXassida?.id) {
+        throw new Error('Aucune xassida sélectionnée');
+      }
+
+      await saveVersesInChunks(selectedXassida.id, data?.verses || []);
+      return { message: 'Verses saved' };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['xassidas'] });
       setUploadedVerses([]);

@@ -174,10 +174,16 @@ router.post('/:id/verses', async (req: Request, res: Response) => {
       savedVerses.push({ id: verseId, ...verse });
     }
 
-    // Update verse count
+    // Update verse count from database total (works with chunked uploads)
+    const countRow = await get(
+      'SELECT COUNT(*) as count FROM verses WHERE xassida_id = ?',
+      [req.params.id]
+    );
+    const totalVerses = Number(countRow?.count || 0);
+
     await run(
       'UPDATE xassidas SET verse_count = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [verses.length, req.params.id]
+      [totalVerses, req.params.id]
     );
 
     res.status(201).json({
