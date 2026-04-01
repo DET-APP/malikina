@@ -3,7 +3,7 @@ import { Play, Heart, ChevronRight } from "lucide-react";
 import { useQassidasHistory, type QassidasHistoryItem } from "@/hooks/useQassidasHistory";
 
 interface RecentQassidasProps {
-  onNavigate: (screen: string) => void;
+  onNavigate: (screen: string, surahId?: number, verseNumber?: number, qassidaId?: number) => void;
   itemVariants: any;
   allQassidas: QassidasHistoryItem[];
 }
@@ -41,7 +41,7 @@ const RecentQassidas = ({ onNavigate, itemVariants, allQassidas }: RecentQassida
           {displayedQassidas.slice(0, 8).map((qassida, index) => (
             <motion.button
               key={qassida.id}
-              onClick={() => onNavigate("qassidas")}
+              onClick={() => onNavigate("qassidas", undefined, undefined, qassida.id)}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
