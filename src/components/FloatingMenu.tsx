@@ -19,6 +19,17 @@ const FloatingMenu = ({ onNavigate }: FloatingMenuProps) => {
     <div className="fixed bottom-24 right-4 z-50">
       <AnimatePresence>
         {isOpen && (
+          <motion.button
+            aria-label="Fermer le menu rapide"
+            onClick={() => setIsOpen(false)}
+            className="fixed inset-0 bg-black/20 backdrop-blur-[1px]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          />
+        )}
+
+        {isOpen && (
           <motion.div
             className="absolute bottom-16 right-0 flex flex-col gap-3"
             initial={{ opacity: 0, y: 20 }}

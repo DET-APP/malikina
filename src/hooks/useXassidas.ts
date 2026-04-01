@@ -19,6 +19,19 @@ export interface APIAuthor {
   photo_url?: string;
 }
 
+const toStableNumericId = (value: string): number => {
+  const compact = value.replace(/-/g, '').slice(0, 12);
+  const parsed = Number.parseInt(compact, 16);
+
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
+
+  return value.split('').reduce((acc, char) => {
+    return (acc * 31 + char.charCodeAt(0)) % 2147483647;
+  }, 7);
+};
+
 const API_URL =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://malikina-api.onrender.com/api');
@@ -34,11 +47,13 @@ const convertAPIXassidaToLocal = (apiXassida: APIXassida, authorName: string): Q
   );
 
   return {
-    id: parseInt(apiXassida.id) || Math.random() * 10000, // Convert string ID to number
+    id: toStableNumericId(apiXassida.id),
+    apiId: apiXassida.id,
     title: apiXassida.title,
     arabic: localXassida?.arabic || '',
     author: authorName,
     confraternity: localXassida?.confraternity || '',
+    verseCount: apiXassida.verse_count,
     isFavorite: false,
     fullText: localXassida?.fullText,
     transliteration: localXassida?.transliteration,

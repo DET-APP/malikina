@@ -219,7 +219,17 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   // Strategy 2: pdfjs-dist legacy fallback for compatibility edge-cases
   try {
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
+
+    // Force no-worker mode in Node to avoid API/Worker version mismatch
+    // when multiple pdfjs-dist versions exist in dependency tree.
+    if (pdfjs.GlobalWorkerOptions) {
+      pdfjs.GlobalWorkerOptions.workerSrc = '';
+    }
+
+    const loadingTask = pdfjs.getDocument({
+      data: new Uint8Array(buffer),
+      disableWorker: true,
+    } as any);
     const pdfDoc = await loadingTask.promise;
     let text = '';
 

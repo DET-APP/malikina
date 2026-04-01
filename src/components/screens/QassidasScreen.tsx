@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Search } from "lucide-react";
 import { useXassidas } from "@/hooks/useXassidas";
@@ -10,7 +10,11 @@ import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { ErrorState } from "@/components/shared/ErrorState";
 import type { Qassida } from "@/data/qassidasData";
 
-const QassidasScreen = () => {
+interface QassidasScreenProps {
+  initialQassidaId?: number;
+}
+
+const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAuthorId, setSelectedAuthorId] = useState<number | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
@@ -51,6 +55,15 @@ const QassidasScreen = () => {
     });
     setSelectedQassida(qassida);
   };
+
+  useEffect(() => {
+    if (!initialQassidaId || selectedQassida) return;
+
+    const target = allQassidas.find((q) => q.id === initialQassidaId);
+    if (target) {
+      handleQassidasClick(target);
+    }
+  }, [initialQassidaId, allQassidas, selectedQassida]);
 
   const handleNext = () => {
     if (!selectedQassida) return;

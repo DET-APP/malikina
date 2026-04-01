@@ -13,7 +13,7 @@ import { useVerseOfTheDay } from "@/hooks/useVerseOfTheDay";
 import { qassidasData } from "@/data/qassidasData";
 
 interface HomeScreenProps {
-  onNavigate: (screen: string, surahId?: number, verseNumber?: number) => void;
+  onNavigate: (screen: string, surahId?: number, verseNumber?: number, qassidaId?: number) => void;
 }
 
 const HomeScreen = ({ onNavigate }: HomeScreenProps) => {

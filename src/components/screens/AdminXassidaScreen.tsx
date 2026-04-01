@@ -59,10 +59,25 @@ export function XassidasAdmin() {
   const [newXassidaPdf, setNewXassidaPdf] = useState<File | null>(null);
   const [newXassidaPdfProgress, setNewXassidaPdfProgress] = useState(0);
   const [newXassidaPdfError, setNewXassidaPdfError] = useState('');
-    const saveVersesInChunks = async (xassidaId: string, verses: any[]) => {
+  const [chunkSaveProgress, setChunkSaveProgress] = useState<{
+    current: number;
+    total: number;
+    label: 'creation' | 'manual';
+  } | null>(null);
+
+    const saveVersesInChunks = async (
+      xassidaId: string,
+      verses: any[],
+      label: 'creation' | 'manual'
+    ) => {
       if (!Array.isArray(verses) || verses.length === 0) return;
 
+      const totalChunks = Math.ceil(verses.length / VERSES_CHUNK_SIZE);
+
       for (let i = 0; i < verses.length; i += VERSES_CHUNK_SIZE) {
+        const chunkNumber = Math.floor(i / VERSES_CHUNK_SIZE) + 1;
+        setChunkSaveProgress({ current: chunkNumber, total: totalChunks, label });
+
         const chunk = verses.slice(i, i + VERSES_CHUNK_SIZE);
         const response = await fetch(`${API_URL}/xassidas/${xassidaId}/verses`, {
           method: 'POST',
@@ -81,6 +96,8 @@ export function XassidasAdmin() {
           throw new Error(errorMessage);
         }
       }
+
+      setChunkSaveProgress(null);
     };
 
   const [showEditXassidaDialog, setShowEditXassidaDialog] = useState(false);
@@ -227,7 +244,7 @@ export function XassidasAdmin() {
           const extractedVerses = Array.isArray(uploadData?.verses) ? uploadData.verses : [];
 
           if (extractedVerses.length > 0) {
-            await saveVersesInChunks(xassidaData.id, extractedVerses);
+            await saveVersesInChunks(xassidaData.id, extractedVerses, 'creation');
           }
 
           setNewXassidaPdfProgress(100);
@@ -254,12 +271,14 @@ export function XassidasAdmin() {
       setNewXassidaPdf(null);
       setNewXassidaPdfProgress(0);
       setNewXassidaPdfError('');
+      setChunkSaveProgress(null);
       setShowXassidaDialog(false);
       setCreateNewAuthorMode(false);
     },
     onError: (error: any) => {
       console.error('❌ Erreur mutation:', error.message || error);
       setNewXassidaPdfError(error?.message || 'Erreur pendant création + import PDF');
+      setChunkSaveProgress(null);
       alert('Erreur: ' + (error.message || 'Impossible de créer la xassida'));
     }
   });
@@ -271,8 +290,12 @@ export function XassidasAdmin() {
         throw new Error('Aucune xassida sélectionnée');
       }
 
-      await saveVersesInChunks(selectedXassida.id, data?.verses || []);
-      return { message: 'Verses saved' };
+      try {
+        await saveVersesInChunks(selectedXassida.id, data?.verses || [], 'manual');
+        return { message: 'Verses saved' };
+      } finally {
+        setChunkSaveProgress(null);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['xassidas'] });
@@ -702,6 +725,12 @@ export function XassidasAdmin() {
                       </div>
                     )}
 
+                    {createXassidaMutation.isPending && chunkSaveProgress?.label === 'creation' && (
+                      <p className="text-xs text-muted-foreground">
+                        Sauvegarde des vers: lot {chunkSaveProgress.current}/{chunkSaveProgress.total}
+                      </p>
+                    )}
+
                     {newXassidaPdfError && (
                       <p className="text-xs text-red-600">{newXassidaPdfError}</p>
                     )}
@@ -853,6 +882,11 @@ export function XassidasAdmin() {
                                 >
                                   <Save className="w-4 h-4 mr-2" /> Valider et sauvegarder
                                 </Button>
+                                {saveVersesMutation.isPending && chunkSaveProgress?.label === 'manual' && (
+                                  <p className="text-xs text-muted-foreground text-center">
+                                    Sauvegarde en cours: lot {chunkSaveProgress.current}/{chunkSaveProgress.total}
+                                  </p>
+                                )}
                               </div>
                             )}
                           </div>

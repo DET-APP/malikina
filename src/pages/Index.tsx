@@ -11,8 +11,9 @@ import FiqhScreen from "@/components/screens/FiqhScreen";
 import CalendarScreen from "@/components/screens/CalendarScreen";
 import CommunityScreen from "@/components/screens/CommunityScreen";
 import AdminXassidaScreen from "@/components/screens/AdminXassidaScreen";
+import NewsScreen from "@/components/screens/NewsScreen";
 
-type Screen = "home" | "prayer" | "quran" | "calendar" | "qassidas" | "fiqh" | "community" | "admin-xassidas";
+type Screen = "home" | "prayer" | "quran" | "calendar" | "qassidas" | "fiqh" | "community" | "admin-xassidas" | "news";
 
 // Interface pour les paramètres de navigation du Coran
 interface QuranNavigationParams {
@@ -20,12 +21,18 @@ interface QuranNavigationParams {
   verseNumber?: number;
 }
 
+interface AppNavigationParams {
+  quran?: QuranNavigationParams;
+  qassidaId?: number;
+}
+
 const Index = () => {
   const [showSplash, setShowSplash] = useState(true);
   const [activeScreen, setActiveScreen] = useState<Screen>("home");
+  const [lastScreen, setLastScreen] = useState<Screen>("home");
 
-  // États pour stocker les paramètres de navigation du Coran
-  const [quranParams, setQuranParams] = useState<QuranNavigationParams>({});
+  // États pour stocker les paramètres de navigation
+  const [navigationParams, setNavigationParams] = useState<AppNavigationParams>({});
 
   useEffect(() => {
     // Meta tags for SEO
@@ -34,26 +41,36 @@ const Index = () => {
 
   // Fonction de navigation pour les écrans simples (BottomNavigation et FloatingMenu)
   const handleSimpleNavigate = (screen: Screen | string) => {
+    if (activeScreen !== "quran") {
+      setLastScreen(activeScreen);
+    }
+
     setActiveScreen(screen as Screen);
-    setQuranParams({}); // Réinitialiser les paramètres
+    setNavigationParams({});
   };
 
   // Fonction de navigation complète avec paramètres (pour HomeScreen)
-  const handleNavigateWithParams = (screen: string, surahId?: number, verseNumber?: number) => {
+  const handleNavigateWithParams = (screen: string, surahId?: number, verseNumber?: number, qassidaId?: number) => {
+    if (activeScreen !== "quran") {
+      setLastScreen(activeScreen);
+    }
+
     setActiveScreen(screen as Screen);
 
-    // Si on navigue vers le Coran avec des paramètres, on les stocke
+    // Paramètres de navigation ciblée
     if (screen === "quran" && surahId) {
-      setQuranParams({ surahId, verseNumber });
+      setNavigationParams({ quran: { surahId, verseNumber } });
+    } else if (screen === "qassidas" && qassidaId) {
+      setNavigationParams({ qassidaId });
     } else {
-      setQuranParams({});
+      setNavigationParams({});
     }
   };
 
-  // Fonction pour revenir à l'accueil depuis le Coran
+  // Fonction pour revenir à l'écran précédent depuis le Coran
   const handleBackFromQuran = () => {
-    setActiveScreen("home");
-    setQuranParams({});
+    setActiveScreen(lastScreen);
+    setNavigationParams({});
   };
 
   const renderScreen = () => {
@@ -65,17 +82,19 @@ const Index = () => {
       case "quran":
         return (
           <QuranScreen
-            initialSurahId={quranParams.surahId}
-            initialVerseNumber={quranParams.verseNumber}
+            initialSurahId={navigationParams.quran?.surahId}
+            initialVerseNumber={navigationParams.quran?.verseNumber}
             onBack={handleBackFromQuran}
           />
         );
       case "qassidas":
-        return <QassidasScreen />;
+        return <QassidasScreen initialQassidaId={navigationParams.qassidaId} />;
       case "fiqh":
         return <FiqhScreen />;
       case "calendar":
         return <CalendarScreen />;
+      case "news":
+        return <NewsScreen />;
       case "community":
         return <CommunityScreen />;
       case "admin-xassidas":
