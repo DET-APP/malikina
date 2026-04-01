@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
-import { Plus, Edit2, Trash2, Upload, Save } from 'lucide-react';
+import { Plus, Edit2, Trash2, Upload, Save, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
@@ -39,11 +39,24 @@ interface Xassida {
 }
 
 const VERSES_CHUNK_SIZE = 100;
+const VERSES_PER_PAGE = 20;
+const MIN_VERSE_FONT_SIZE = 24;
+const MAX_VERSE_FONT_SIZE = 44;
+
+const groupVersesByTwo = (verses: Verse[]): Verse[][] => {
+  const grouped: Verse[][] = [];
+  for (let index = 0; index < verses.length; index += 2) {
+    grouped.push(verses.slice(index, index + 2));
+  }
+  return grouped;
+};
 
 export function XassidasAdmin() {
   const queryClient = useQueryClient();
   const [selectedXassida, setSelectedXassida] = useState<Xassida | null>(null);
-  const [uploadedVerses, setUploadedVerses] = useState<Verse[]>([]);
+  const [editorVerses, setEditorVerses] = useState<Verse[]>([]);
+  const [currentVersePage, setCurrentVersePage] = useState(1);
+  const [editorFontSize, setEditorFontSize] = useState(32);
   const [showAuthorDialog, setShowAuthorDialog] = useState(false);
   const [showXassidaDialog, setShowXassidaDialog] = useState(false);
   const [createNewAuthorMode, setCreateNewAuthorMode] = useState(false); // Toggle for new author mode
@@ -54,6 +67,7 @@ export function XassidasAdmin() {
     return window.sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true';
   });
   const [uploadingByXassida, setUploadingByXassida] = useState<Record<string, boolean>>({});
+  const [loadingVersesByXassida, setLoadingVersesByXassida] = useState<Record<string, boolean>>({});
   const [uploadProgressByXassida, setUploadProgressByXassida] = useState<Record<string, number>>({});
   const [uploadErrorByXassida, setUploadErrorByXassida] = useState<Record<string, string>>({});
   const [newXassidaPdf, setNewXassidaPdf] = useState<File | null>(null);
@@ -68,7 +82,8 @@ export function XassidasAdmin() {
     const saveVersesInChunks = async (
       xassidaId: string,
       verses: any[],
-      label: 'creation' | 'manual'
+      label: 'creation' | 'manual',
+      replaceExisting = false
     ) => {
       if (!Array.isArray(verses) || verses.length === 0) return;
 
@@ -82,7 +97,10 @@ export function XassidasAdmin() {
         const response = await fetch(`${API_URL}/xassidas/${xassidaId}/verses`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ verses: chunk })
+          body: JSON.stringify({
+            verses: chunk,
+            replaceExisting: replaceExisting && chunkNumber === 1,
+          })
         });
 
         if (!response.ok) {
@@ -103,6 +121,35 @@ export function XassidasAdmin() {
   const [showEditXassidaDialog, setShowEditXassidaDialog] = useState(false);
   const [editingXassida, setEditingXassida] = useState<Xassida | null>(null);
 
+  const totalVersePages = Math.max(1, Math.ceil(editorVerses.length / VERSES_PER_PAGE));
+  const verseStartIndex = (currentVersePage - 1) * VERSES_PER_PAGE;
+  const paginatedVerses = useMemo(() => {
+    return editorVerses.slice(verseStartIndex, verseStartIndex + VERSES_PER_PAGE);
+  }, [editorVerses, verseStartIndex]);
+  const groupedPaginatedVerses = useMemo(() => groupVersesByTwo(paginatedVerses), [paginatedVerses]);
+  const visiblePageNumbers = useMemo(() => {
+    if (totalVersePages <= 5) {
+      return Array.from({ length: totalVersePages }, (_, index) => index + 1);
+    }
+
+    const start = Math.max(1, currentVersePage - 2);
+    const end = Math.min(totalVersePages, start + 4);
+    const adjustedStart = Math.max(1, end - 4);
+
+    return Array.from({ length: end - adjustedStart + 1 }, (_, index) => adjustedStart + index);
+  }, [currentVersePage, totalVersePages]);
+
+  const handleVerseFieldChange = (index: number, field: keyof Verse, value: string | number) => {
+    setEditorVerses((prev) => {
+      const next = [...prev];
+      next[index] = {
+        ...next[index],
+        [field]: value,
+      };
+      return next;
+    });
+  };
+
   const editXassidaForm = useForm({
     defaultValues: {
       title: '',
@@ -114,6 +161,12 @@ export function XassidasAdmin() {
     if (typeof window === 'undefined') return;
     window.sessionStorage.setItem(ADMIN_SESSION_KEY, isUnlocked ? 'true' : 'false');
   }, [isUnlocked]);
+
+  useEffect(() => {
+    if (currentVersePage > totalVersePages) {
+      setCurrentVersePage(totalVersePages);
+    }
+  }, [currentVersePage, totalVersePages]);
 
   // Fetch authors
   const { data: authors = [] } = useQuery({
@@ -291,7 +344,7 @@ export function XassidasAdmin() {
       }
 
       try {
-        await saveVersesInChunks(selectedXassida.id, data?.verses || [], 'manual');
+        await saveVersesInChunks(selectedXassida.id, data?.verses || [], 'manual', true);
         return { message: 'Verses saved' };
       } finally {
         setChunkSaveProgress(null);
@@ -299,7 +352,8 @@ export function XassidasAdmin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['xassidas'] });
-      setUploadedVerses([]);
+      setEditorVerses([]);
+      setCurrentVersePage(1);
       setSelectedXassida(null);
     }
   });
@@ -347,7 +401,8 @@ export function XassidasAdmin() {
       queryClient.invalidateQueries({ queryKey: ['xassidas'] });
       if (selectedXassida) {
         setSelectedXassida(null);
-        setUploadedVerses([]);
+        setEditorVerses([]);
+        setCurrentVersePage(1);
       }
     },
     onError: (error: any) => {
@@ -410,7 +465,9 @@ export function XassidasAdmin() {
       });
 
       setSelectedXassida(xassidas.find((x: Xassida) => x.id === xassidaId) || null);
-      setUploadedVerses(data.verses);
+      const extractedVerses = Array.isArray(data?.verses) ? data.verses : [];
+      setEditorVerses(extractedVerses);
+      setCurrentVersePage(1);
     } catch (error) {
       console.error('PDF upload error:', error);
       setUploadErrorByXassida(prev => ({
@@ -421,6 +478,31 @@ export function XassidasAdmin() {
       setUploadingByXassida(prev => ({ ...prev, [xassidaId]: false }));
       setUploadProgressByXassida(prev => ({ ...prev, [xassidaId]: 100 }));
       e.target.value = '';
+    }
+  };
+
+  const loadExistingVerses = async (xassidaId: string) => {
+    setLoadingVersesByXassida((prev) => ({ ...prev, [xassidaId]: true }));
+    setUploadErrorByXassida((prev) => ({ ...prev, [xassidaId]: '' }));
+
+    try {
+      const response = await fetch(`${API_URL}/xassidas/${xassidaId}/verses`);
+      if (!response.ok) {
+        throw new Error(`Impossible de charger les versets (${response.status})`);
+      }
+
+      const data = await response.json();
+      const verses = Array.isArray(data) ? data : [];
+      setSelectedXassida(xassidas.find((item: Xassida) => item.id === xassidaId) || null);
+      setEditorVerses(verses);
+      setCurrentVersePage(1);
+    } catch (error) {
+      setUploadErrorByXassida((prev) => ({
+        ...prev,
+        [xassidaId]: error instanceof Error ? error.message : 'Erreur inconnue pendant le chargement',
+      }));
+    } finally {
+      setLoadingVersesByXassida((prev) => ({ ...prev, [xassidaId]: false }));
     }
   };
 
@@ -809,17 +891,51 @@ export function XassidasAdmin() {
                       <p className="text-xs text-gray-500 mt-2">{x.verse_count} versets</p>
                     </div>
                     <div className="flex gap-2">
-                      <Dialog>
+                      <Dialog
+                        onOpenChange={(open) => {
+                          if (!open && selectedXassida?.id === x.id) {
+                            setEditorVerses([]);
+                            setCurrentVersePage(1);
+                          }
+                        }}
+                      >
                         <DialogTrigger asChild>
-                          <Button size="sm" variant="outline" onClick={() => setSelectedXassida(x)}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedXassida(x);
+                              loadExistingVerses(x.id);
+                            }}
+                          >
                             <Upload className="w-4 h-4 mr-2" /> Ajouter versets
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
+                        <DialogContent className="max-w-4xl">
                           <DialogHeader>
-                            <DialogTitle>Ajouter des versets - {x.title}</DialogTitle>
+                            <DialogTitle>Éditer les versets - {x.title}</DialogTitle>
                           </DialogHeader>
                           <div className="space-y-4">
+                            <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => loadExistingVerses(x.id)}
+                                disabled={!!loadingVersesByXassida[x.id] || !!uploadingByXassida[x.id]}
+                              >
+                                {loadingVersesByXassida[x.id] ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Chargement...
+                                  </>
+                                ) : (
+                                  'Charger les versets existants'
+                                )}
+                              </Button>
+                              <p className="text-xs text-muted-foreground">
+                                Les modifications remplacent les versets actuels à la sauvegarde.
+                              </p>
+                            </div>
+
                             <div>
                               <label className="block text-sm font-medium mb-2">Télécharger PDF</label>
                               <input
@@ -846,41 +962,146 @@ export function XassidasAdmin() {
                                 <p className="text-xs text-red-600 mt-2">{uploadErrorByXassida[x.id]}</p>
                               )}
                             </div>
-                            
-                            {uploadedVerses.length > 0 && (
+
+                            {editorVerses.length > 0 && selectedXassida?.id === x.id && (
                               <div className="space-y-4">
-                                <h4 className="font-bold">Versets extraits ({uploadedVerses.length})</h4>
-                                <div className="max-h-96 overflow-y-auto space-y-3">
-                                  {uploadedVerses.map((verse, idx) => (
-                                    <Card key={idx} className="p-4 border">
-                                      <p className="text-sm text-gray-500">Verset {verse.verse_number}</p>
-                                      <p className="font-semibold text-lg text-right" dir="rtl">{verse.text_arabic}</p>
-                                      <input
-                                        type="text"
-                                        placeholder="Transcription"
-                                        defaultValue={verse.transcription}
-                                        onChange={(e) => {
-                                          uploadedVerses[idx].transcription = e.target.value;
-                                        }}
-                                        className="border rounded px-2 py-1 text-sm w-full mt-2"
-                                      />
-                                      <input
-                                        type="text"
-                                        placeholder="Traduction FR"
-                                        defaultValue={verse.translation_fr}
-                                        onChange={(e) => {
-                                          uploadedVerses[idx].translation_fr = e.target.value;
-                                        }}
-                                        className="border rounded px-2 py-1 text-sm w-full mt-1"
-                                      />
+                                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                                  <h4 className="font-bold">Versets éditables ({editorVerses.length})</h4>
+                                  <div className="flex items-center gap-2 rounded-lg border px-2 py-1">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 px-2"
+                                      onClick={() => setEditorFontSize((prev) => Math.max(MIN_VERSE_FONT_SIZE, prev - 2))}
+                                    >
+                                      A-
+                                    </Button>
+                                    <input
+                                      type="range"
+                                      min={MIN_VERSE_FONT_SIZE}
+                                      max={MAX_VERSE_FONT_SIZE}
+                                      value={editorFontSize}
+                                      onChange={(event) => setEditorFontSize(Number(event.target.value))}
+                                      className="w-24 sm:w-32 h-1 accent-primary"
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 px-2"
+                                      onClick={() => setEditorFontSize((prev) => Math.min(MAX_VERSE_FONT_SIZE, prev + 2))}
+                                    >
+                                      A+
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-between gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={currentVersePage === 1}
+                                    onClick={() => setCurrentVersePage((page) => Math.max(1, page - 1))}
+                                  >
+                                    <ChevronLeft className="w-4 h-4 mr-1" /> Précédent
+                                  </Button>
+                                  <div className="flex items-center gap-1">
+                                    {visiblePageNumbers.map((page) => (
+                                      <Button
+                                        key={`page-${x.id}-${page}`}
+                                        type="button"
+                                        variant={currentVersePage === page ? 'default' : 'outline'}
+                                        size="sm"
+                                        className="h-8 min-w-8 px-2"
+                                        onClick={() => setCurrentVersePage(page)}
+                                      >
+                                        {page}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={currentVersePage === totalVersePages}
+                                    onClick={() => setCurrentVersePage((page) => Math.min(totalVersePages, page + 1))}
+                                  >
+                                    Suivant <ChevronRight className="w-4 h-4 ml-1" />
+                                  </Button>
+                                </div>
+
+                                <p className="text-xs text-muted-foreground">
+                                  Page {currentVersePage}/{totalVersePages} · Versets {verseStartIndex + 1} à {Math.min(verseStartIndex + VERSES_PER_PAGE, editorVerses.length)}
+                                </p>
+
+                                <div className="max-h-[65vh] overflow-y-auto space-y-4 pr-1">
+                                  {groupedPaginatedVerses.map((pair, pairIndex) => (
+                                    <Card key={`admin-pair-${x.id}-${pair[0]?.verse_number || pairIndex}`} className="border bg-card/40 p-4 [container-type:inline-size]">
+                                      <div className="space-y-4">
+                                        {pair.map((verse, verseIndexInPair) => {
+                                          const verseGlobalIndex = verseStartIndex + pairIndex * 2 + verseIndexInPair;
+
+                                          return (
+                                            <div
+                                              key={`admin-verse-${x.id}-${verseGlobalIndex}`}
+                                              className={verseIndexInPair === 0 && pair.length > 1 ? 'pb-4 border-b border-border/50 space-y-2' : 'space-y-2'}
+                                            >
+                                              <div className="flex items-center gap-2">
+                                                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">
+                                                  Verset {verse.verse_number}
+                                                </span>
+                                                <Input
+                                                  type="number"
+                                                  min={1}
+                                                  value={verse.verse_number}
+                                                  onChange={(event) => handleVerseFieldChange(verseGlobalIndex, 'verse_number', Number(event.target.value) || 1)}
+                                                  className="h-8 w-24"
+                                                />
+                                              </div>
+
+                                              <p
+                                                className="text-right font-arabic leading-relaxed rounded-lg bg-muted/30 px-3 py-2"
+                                                dir="rtl"
+                                                style={{ fontSize: `clamp(20px, 6cqi, ${editorFontSize}px)` }}
+                                              >
+                                                {verse.text_arabic || '—'}
+                                              </p>
+
+                                              <Textarea
+                                                rows={3}
+                                                dir="rtl"
+                                                value={verse.text_arabic || ''}
+                                                onChange={(event) => handleVerseFieldChange(verseGlobalIndex, 'text_arabic', event.target.value)}
+                                                placeholder="Texte arabe"
+                                                className="font-arabic"
+                                              />
+                                              <Input
+                                                value={verse.transcription || ''}
+                                                onChange={(event) => handleVerseFieldChange(verseGlobalIndex, 'transcription', event.target.value)}
+                                                placeholder="Transcription"
+                                              />
+                                              <Textarea
+                                                rows={2}
+                                                value={verse.translation_fr || ''}
+                                                onChange={(event) => handleVerseFieldChange(verseGlobalIndex, 'translation_fr', event.target.value)}
+                                                placeholder="Traduction FR"
+                                              />
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
                                     </Card>
                                   ))}
                                 </div>
-                                <Button 
-                                  onClick={() => saveVersesMutation.mutate({ verses: uploadedVerses })}
+
+                                <Button
+                                  onClick={() => saveVersesMutation.mutate({ verses: editorVerses })}
                                   className="w-full"
+                                  disabled={saveVersesMutation.isPending}
                                 >
-                                  <Save className="w-4 h-4 mr-2" /> Valider et sauvegarder
+                                  <Save className="w-4 h-4 mr-2" /> Enregistrer les versets modifiés
                                 </Button>
                                 {saveVersesMutation.isPending && chunkSaveProgress?.label === 'manual' && (
                                   <p className="text-xs text-muted-foreground text-center">
