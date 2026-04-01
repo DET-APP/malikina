@@ -22,13 +22,23 @@ interface XassidaVerse {
   translation_fr?: string;
 }
 
+const groupVersesByTwo = (verses: XassidaVerse[]): XassidaVerse[][] => {
+  const grouped: XassidaVerse[][] = [];
+
+  for (let index = 0; index < verses.length; index += 2) {
+    grouped.push(verses.slice(index, index + 2));
+  }
+
+  return grouped;
+};
+
 const XassidasDetail = ({
   selectedQassida,
   onBack,
   onNext,
   onPrevious,
 }: XassidasDetailProps) => {
-  const [fontSize, setFontSize] = useState(18);
+  const [fontSize, setFontSize] = useState(16);
   const [isFavorite, setIsFavorite] = useState(selectedQassida.isFavorite);
   const [darkMode, setDarkMode] = useState(false);
   const [showTranscription, setShowTranscription] = useState(false);
@@ -39,6 +49,7 @@ const XassidasDetail = ({
   const apiVerses: XassidaVerse[] = Array.isArray(apiDetail?.verses)
     ? (apiDetail.verses as XassidaVerse[])
     : [];
+  const groupedVerses = groupVersesByTwo(apiVerses);
 
   return (
     <motion.div
@@ -180,13 +191,13 @@ const XassidasDetail = ({
             <input
               type="range"
               min="14"
-              max="32"
+              max="28"
               value={fontSize}
               onChange={(e) => setFontSize(parseInt(e.target.value))}
               className="flex-1 h-1 accent-primary"
             />
             <button 
-              onClick={() => setFontSize(f => Math.min(32, f + 2))}
+              onClick={() => setFontSize(f => Math.min(28, f + 2))}
               className={`px-2 py-1 rounded text-xs font-bold ${darkMode ? "text-amber-300" : "text-primary"}`}
             >
               A+
@@ -229,49 +240,51 @@ const XassidasDetail = ({
           </div>
         ) : apiVerses.length > 0 ? (
           <div className="space-y-6">
-            {apiVerses.map((verse, index: number) => (
+            {groupedVerses.map((pair, pairIndex: number) => (
               <motion.div
-                key={verse.id || `${selectedQassida.id}-${verse.verse_number}`}
-                className="mb-6 pb-6 border-b border-border scroll-mt-32"
+                key={`pair-${selectedQassida.id}-${pair[0]?.verse_number || pairIndex}`}
+                className={`rounded-xl border p-4 sm:p-5 ${
+                  darkMode ? "border-slate-700 bg-slate-800/35" : "border-border/40 bg-card/30"
+                }`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.02 }}
+                transition={{ delay: pairIndex * 0.02 }}
               >
-                <div className="flex justify-between items-start mb-3">
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">
-                    {verse.verse_number}
-                  </span>
-                  <button className="p-2 rounded-full text-muted-foreground hover:text-primary hover:bg-muted/50 transition-all duration-300">
-                    <Bookmark className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="relative mb-3">
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 rounded-lg" />
-                  <p
-                    className="relative text-right font-arabic leading-loose p-4"
-                    style={{ fontSize: `${fontSize + 6}px` }}
-                    dir="rtl"
+                {pair.map((verse, verseIndex) => (
+                  <div
+                    key={verse.id || `${selectedQassida.id}-${verse.verse_number}`}
+                    className={`${verseIndex === 0 && pair.length > 1 ? "mb-4 pb-4 border-b border-border/30" : ""}`}
                   >
-                    {verse.text_arabic}
-                  </p>
-                </div>
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">
+                        {verse.verse_number}
+                      </span>
+                      <button className="p-1.5 rounded-full text-muted-foreground hover:text-primary hover:bg-muted/40 transition-all duration-300">
+                        <Bookmark className="w-4 h-4" />
+                      </button>
+                    </div>
 
-                {showTranscription && !!verse.transcription && (
-                  <div className="mb-3 bg-secondary/5 rounded-lg p-3 border border-secondary/20">
-                    <p className="text-sm text-secondary font-medium text-center italic">
-                      {verse.transcription}
+                    <p
+                      className="text-right font-arabic leading-loose"
+                      style={{ fontSize: `${fontSize + 2}px` }}
+                      dir="rtl"
+                    >
+                      {verse.text_arabic}
                     </p>
-                  </div>
-                )}
 
-                {!!verse.translation_fr && (
-                  <div className="bg-card/50 rounded-lg p-3">
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {verse.translation_fr}
-                    </p>
+                    {showTranscription && !!verse.transcription && (
+                      <p className="mt-2 text-sm text-secondary font-medium text-center italic">
+                        {verse.transcription}
+                      </p>
+                    )}
+
+                    {!!verse.translation_fr && (
+                      <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                        {verse.translation_fr}
+                      </p>
+                    )}
                   </div>
-                )}
+                ))}
               </motion.div>
             ))}
           </div>
