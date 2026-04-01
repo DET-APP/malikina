@@ -125,13 +125,14 @@ router.post('/:id/upload-pdf', upload.single('file'), async (req: Request, res: 
     }
 
     // Extract text from PDF
-    const text = await extractTextFromPDF(req.file.buffer);
+    const extraction = await extractTextFromPDF(req.file.buffer, req.file.originalname);
     
     // Parse text into verses (basic splitting by lines with Arabic text)
-    const verses = parseVerses(text);
+    const verses = parseVerses(extraction.text);
 
     res.json({
       message: 'PDF processed',
+      extraction_method: extraction.method,
       verses_extracted: verses.length,
       verses
     });
@@ -197,7 +198,12 @@ router.post('/:id/verses', async (req: Request, res: Response) => {
 });
 
 // Helper functions
-async function extractTextFromPDF(buffer: Buffer): Promise<string> {
+interface ExtractionResult {
+  text: string;
+  method: 'pdf-parse' | 'pdfjs' | 'ocr-space';
+}
+
+async function extractTextFromPDF(buffer: Buffer, fileName = 'document.pdf'): Promise<ExtractionResult> {
   const errors: string[] = [];
 
   // Strategy 1: pdf-parse (optional, loaded dynamically to avoid startup crash on older Node)
@@ -211,7 +217,7 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
       throw new Error('Aucun texte détecté dans le PDF (document probablement scanné/image)');
     }
 
-    return text;
+    return { text, method: 'pdf-parse' };
   } catch (error) {
     errors.push(error instanceof Error ? error.message : 'Erreur extraction pdf-parse');
   }
@@ -251,13 +257,80 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
       throw new Error('Aucun texte détecté dans le PDF avec fallback pdfjs (probablement scanné/image)');
     }
 
-    return finalText;
+    return { text: finalText, method: 'pdfjs' };
   } catch (error) {
     errors.push(error instanceof Error ? error.message : 'Erreur extraction pdfjs fallback');
   }
 
+  // Strategy 3: OCR cloud fallback (high sensitivity for scanned/manuscript PDFs)
+  try {
+    const ocrText = await extractTextWithOCRSpace(buffer, fileName);
+    const normalized = ocrText.trim();
+
+    if (!normalized) {
+      throw new Error('OCR terminé, mais aucun texte exploitable détecté');
+    }
+
+    return { text: normalized, method: 'ocr-space' };
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : 'Erreur OCR fallback');
+  }
+
   console.error('PDF extraction error (all strategies failed):', errors);
   throw new Error(`Extraction PDF impossible. Détails: ${errors.join(' | ')}`);
+}
+
+async function extractTextWithOCRSpace(buffer: Buffer, fileName: string): Promise<string> {
+  const apiKey = process.env.OCR_SPACE_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('OCR non configuré: OCR_SPACE_API_KEY manquant');
+  }
+
+  const endpoint = process.env.OCR_SPACE_ENDPOINT || 'https://api.ocr.space/parse/image';
+  const language = process.env.OCR_SPACE_LANGUAGE || 'ara';
+  const engine = process.env.OCR_SPACE_ENGINE || '2';
+
+  const form = new FormData();
+  form.append('apikey', apiKey);
+  form.append('language', language);
+  form.append('OCREngine', engine);
+  form.append('isOverlayRequired', 'false');
+  form.append('detectOrientation', 'true');
+  form.append('scale', 'true');
+  form.append('isTable', 'false');
+  form.append('file', new Blob([buffer], { type: 'application/pdf' }), fileName || 'document.pdf');
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    body: form,
+  });
+
+  if (!response.ok) {
+    throw new Error(`OCR HTTP ${response.status}`);
+  }
+
+  const payload: any = await response.json();
+
+  if (payload?.IsErroredOnProcessing) {
+    const details = Array.isArray(payload?.ErrorMessage)
+      ? payload.ErrorMessage.join(' | ')
+      : payload?.ErrorMessage || payload?.ErrorDetails || 'Erreur OCR inconnue';
+    throw new Error(`OCR.space: ${details}`);
+  }
+
+  const parsedResults = Array.isArray(payload?.ParsedResults) ? payload.ParsedResults : [];
+  const text = parsedResults
+    .map((entry: any) => (entry?.ParsedText || '').trim())
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+
+  if (!text) {
+    throw new Error('OCR.space n\'a retourné aucun texte');
+  }
+
+  return text;
 }
 
 function parseVerses(text: string): any[] {
