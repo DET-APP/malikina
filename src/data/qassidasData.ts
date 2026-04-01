@@ -1,9 +1,11 @@
 export interface Qassida {
   id: number;
+  apiId?: string;
   title: string;
   arabic: string;
   author: string;
   confraternity?: string;
+  verseCount?: number;
   isFavorite: boolean;
   fullText?: string;
   transliteration?: string;
