@@ -63,8 +63,8 @@ const convertAPIXassidaToLocal = (apiXassida: APIXassida, authorName: string): Q
 };
 
 /**
- * Fetch all xassidas from API (no local fallback)
- * If API is empty, show empty list (for admin to add xassidas)
+ * Fetch all xassidas from API with local fallback.
+ * If API is empty or unavailable, local dataset is used to keep the screen populated.
  */
 export const useXassidas = () => {
   const xassidasQuery = useQuery({
@@ -84,32 +84,26 @@ export const useXassidas = () => {
         return Array.isArray(data) ? data : [];
       } catch (error) {
         console.error('❌ Failed to fetch xassidas from API:', error);
-        throw error; // Don't swallow error - let React Query handle it
+        return [];
       }
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
     retry: 1,
   });
 
-  // Convert API data to local format
-  let mergedXassidas: Qassida[] = [];
-  
-  if (xassidasQuery.data && Array.isArray(xassidasQuery.data)) {
-    // Use ONLY API data - convert format
-    console.log('Converting', xassidasQuery.data.length, 'API xassidas to local format');
-    const apiXassidas = xassidasQuery.data as APIXassida[];
-    mergedXassidas = apiXassidas.map(apiX => 
-      convertAPIXassidaToLocal(apiX, apiX.author_name || 'Unknown')
-    );
-  }
-  // If API data is empty or null, mergedXassidas stays as []
+  const apiData = Array.isArray(xassidasQuery.data) ? (xassidasQuery.data as APIXassida[]) : [];
+  const hasApiData = apiData.length > 0;
+
+  const mergedXassidas: Qassida[] = hasApiData
+    ? apiData.map((apiX) => convertAPIXassidaToLocal(apiX, apiX.author_name || 'Unknown'))
+    : qassidasDataWithExtended;
 
   return {
     xassidas: mergedXassidas,
     authors: localAuthorsData,
     isLoading: xassidasQuery.isLoading,
-    error: xassidasQuery.error,
-    isFromAPI: true, // Always from API, never from local data
+    error: null,
+    isFromAPI: hasApiData,
     refetch: xassidasQuery.refetch,
   };
 };
