@@ -144,10 +144,14 @@ router.post('/:id/upload-pdf', upload.single('file'), async (req: Request, res: 
 // Save verses to xassida
 router.post('/:id/verses', async (req: Request, res: Response) => {
   try {
-    const { verses } = req.body;
+    const { verses, replaceExisting } = req.body;
     
     if (!Array.isArray(verses) || verses.length === 0) {
       return res.status(400).json({ error: 'Verses array required' });
+    }
+
+    if (replaceExisting) {
+      await run('DELETE FROM verses WHERE xassida_id = ?', [req.params.id]);
     }
 
     const savedVerses = [];
