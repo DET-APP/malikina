@@ -26,15 +26,28 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
   // Fetch xassidas from API (with local data fallback)
   const { xassidas: allQassidas, authors: authorsData, isLoading, error, isFromAPI } = useXassidas();
 
-  // Show loading state
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
+  // Navigation handler
+  const handleQassidasClick = (qassida: Qassida) => {
+    addToHistory({
+      id: qassida.id,
+      title: qassida.title,
+      arabic: qassida.arabic,
+      author: qassida.author,
+    });
+    setSelectedQassida(qassida);
+  };
 
-  // Show error state
-  if (error) {
-    return <ErrorState message="Erreur lors du chargement des xassidas" />;
-  }
+  // Debug logs - must be BEFORE early returns
+  useEffect(() => {
+    console.log('🎵 QassidasScreen Debug:', {
+      allQassidasLength: allQassidas?.length ?? 0,
+      authorsLength: authorsData?.length ?? 0,
+      isLoading,
+      error,
+      isFromAPI,
+      allQassidas: allQassidas?.slice(0, 3),
+    });
+  }, [allQassidas, authorsData, isLoading, error, isFromAPI]);
 
   const filteredQassidas = allQassidas.filter(q => {
     const matchesSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -46,16 +59,19 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
     return matchesSearch && matchesAuthor && matchesFavorite;
   });
 
-  const handleQassidasClick = (qassida: Qassida) => {
-    addToHistory({
-      id: qassida.id,
-      title: qassida.title,
-      arabic: qassida.arabic,
-      author: qassida.author,
+  // Debug filtered data - must be BEFORE early returns
+  useEffect(() => {
+    console.log('📊 Filtered Qassidas:', {
+      allQassidasLength: allQassidas.length,
+      filteredLength: filteredQassidas.length,
+      searchQuery,
+      selectedAuthorId,
+      showFavorites,
+      first3filtered: filteredQassidas.slice(0, 3),
     });
-    setSelectedQassida(qassida);
-  };
+  }, [searchQuery, selectedAuthorId, showFavorites, allQassidas.length, filteredQassidas.length]);
 
+  // Initialize selected qassida if needed - must be BEFORE early returns
   useEffect(() => {
     if (!initialQassidaId || selectedQassida) return;
 
@@ -63,7 +79,19 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
     if (target) {
       handleQassidasClick(target);
     }
-  }, [initialQassidaId, allQassidas, selectedQassida]);
+  }, [initialQassidaId, allQassidas, selectedQassida, handleQassidasClick]);
+
+  // Show loading state
+  if (isLoading) {
+    console.log('📍 Showing LoadingSpinner');
+    return <LoadingSpinner />;
+  }
+
+  // Show error state
+  if (error) {
+    console.log('❌ Showing ErrorState:', error);
+    return <ErrorState message="Erreur lors du chargement des xassidas" />;
+  }
 
   const handleNext = () => {
     if (!selectedQassida) return;
