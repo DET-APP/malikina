@@ -271,8 +271,13 @@ const openApiSpec = swaggerJsdoc({
 });
 
 // Middleware
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:8080,http://localhost:5173').split(',').map(s => s.trim());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, Postman, same-origin)
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials: true
 }));
 app.use(EXPRESS.json({ limit: '50mb' }));

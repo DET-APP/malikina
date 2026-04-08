@@ -9,7 +9,8 @@
     "build": "tsc",
     "start": "node dist/api/server.js",
     "db:migrate": "tsx db/migrate.ts",
-    "db:seed": "tsx db/seed.ts"
+    "db:seed": "tsx db/seed.ts",
+    "scrape": "tsx scripts/scrape-xassidas.ts"
   },
   "dependencies": {
     "@types/cors": "^2.8.17",
