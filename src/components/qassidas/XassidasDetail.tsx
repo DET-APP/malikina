@@ -96,6 +96,19 @@ const AudioPlayer = ({ url, dark }: AudioPlayerProps) => {
   );
 };
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+const fallbackCopy = (text: string, onSuccess: () => void) => {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0";
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try { document.execCommand("copy"); onSuccess(); } catch {}
+  document.body.removeChild(ta);
+};
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: XassidasDetailProps) => {
@@ -131,18 +144,25 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
   const chapterKeys = Object.keys(byChapter).map(Number).sort((a, b) => a - b);
   const multipleChapters = chapterKeys.length > 1;
 
-  // Filtered flat list
-  const filtered = apiVerses.filter((v) => {
-    const ch = v.chapter_number ?? 1;
-    if (selectedChapter !== null && ch !== selectedChapter) return false;
-    if (verseSearch) {
-      const q = verseSearch.toLowerCase();
-      return v.text_arabic.includes(verseSearch) ||
-             (v.transcription?.toLowerCase().includes(q)) ||
-             (v.translation_fr?.toLowerCase().includes(q));
-    }
-    return true;
-  });
+  // Filtered flat list — always sorted by chapter then verse_number
+  const filtered = apiVerses
+    .filter((v) => {
+      const ch = v.chapter_number ?? 1;
+      if (selectedChapter !== null && ch !== selectedChapter) return false;
+      if (verseSearch) {
+        const q = verseSearch.toLowerCase();
+        return v.text_arabic.includes(verseSearch) ||
+               (v.transcription?.toLowerCase().includes(q)) ||
+               (v.translation_fr?.toLowerCase().includes(q));
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const chA = a.chapter_number ?? 1;
+      const chB = b.chapter_number ?? 1;
+      if (chA !== chB) return chA - chB;
+      return a.verse_number - b.verse_number;
+    });
 
   // Infinite scroll
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -166,17 +186,21 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
     fetchAudioUrl(selectedQassida.id).then(setAudioUrl);
   }, [selectedQassida.id]);
 
-  // Copy verse
+  // Copy verse — fallback for mobile / non-HTTPS
   const copyVerse = useCallback((verse: XassidaVerse) => {
     const lines: string[] = [verse.text_arabic];
     if (showTranscription && verse.transcription) lines.push(verse.transcription);
     if (showTranslation && (verse.translation_fr || verse.translation_en))
       lines.push(verse.translation_fr || verse.translation_en || "");
-    navigator.clipboard.writeText(lines.join("\n")).then(() => {
-      const key = verse.id || `${verse.chapter_number}-${verse.verse_number}`;
-      setCopiedId(key);
-      setTimeout(() => setCopiedId(null), 2000);
-    });
+    const text = lines.join("\n");
+    const key = verse.id || `${verse.chapter_number}-${verse.verse_number}`;
+    const succeed = () => { setCopiedId(key); setTimeout(() => setCopiedId(null), 2000); };
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(succeed).catch(() => fallbackCopy(text, succeed));
+    } else {
+      fallbackCopy(text, succeed);
+    }
   }, [showTranscription, showTranslation]);
 
   const visibleVerses = filtered.slice(0, visibleCount);
