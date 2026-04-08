@@ -286,6 +286,22 @@ app.use(EXPRESS.urlencoded({ limit: '50mb', extended: true }));
 // Initialize database
 await initDatabase();
 
+// Auto-seed: run scraper in background if DB is empty and AUTO_SEED_DB=true
+if (process.env.AUTO_SEED_DB === 'true') {
+  import('./db/schema.js').then(async ({ get }) => {
+    const row = await get('SELECT COUNT(*) as cnt FROM xassidas', []);
+    const cnt = (row as any)?.cnt ?? 0;
+    if (cnt === 0) {
+      console.log('🌱 Base vide — démarrage du scraper en arrière-plan...');
+      import('./scripts/scrape-xassidas.js').catch(err =>
+        console.error('❌ Scraper error:', err)
+      );
+    } else {
+      console.log(`📚 Base déjà peuplée (${cnt} xassidas) — scraper ignoré.`);
+    }
+  }).catch(() => {});
+}
+
 // Routes
 app.use('/api/xassidas', xassidaRoutes);
 app.use('/api/authors', authorRoutes);
