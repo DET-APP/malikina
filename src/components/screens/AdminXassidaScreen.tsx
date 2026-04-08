@@ -120,6 +120,8 @@ export function XassidasAdmin() {
 
   const [showEditXassidaDialog, setShowEditXassidaDialog] = useState(false);
   const [editingXassida, setEditingXassida] = useState<Xassida | null>(null);
+  const [showEditAuthorDialog, setShowEditAuthorDialog] = useState(false);
+  const [editingAuthor, setEditingAuthor] = useState<Author | null>(null);
 
   const totalVersePages = Math.max(1, Math.ceil(editorVerses.length / VERSES_PER_PAGE));
   const verseStartIndex = (currentVersePage - 1) * VERSES_PER_PAGE;
@@ -150,12 +152,33 @@ export function XassidasAdmin() {
     });
   };
 
-  const editXassidaForm = useForm({
-    defaultValues: {
-      title: '',
-      description: ''
-    }
+  const editXassidaForm = useForm({ defaultValues: { title: '', description: '' } });
+  const editAuthorForm = useForm({ defaultValues: { name: '', description: '', photo_url: '', tradition: '' } });
+
+  const updateAuthorMutation = useMutation({
+    mutationFn: async (data: { id: string; name: string; description?: string; photo_url?: string; tradition?: string }) => {
+      const response = await fetch(`${API_URL}/authors/${data.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: data.name, description: data.description, photo_url: data.photo_url, tradition: data.tradition })
+      });
+      if (!response.ok) throw new Error('Impossible de modifier l\'auteur');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['authors'] });
+      setShowEditAuthorDialog(false);
+      setEditingAuthor(null);
+      editAuthorForm.reset();
+    },
+    onError: (error: any) => alert(`Erreur: ${error?.message}`)
   });
+
+  const openEditAuthorDialog = (author: Author) => {
+    setEditingAuthor(author);
+    editAuthorForm.reset({ name: (author as any).name || '', description: (author as any).description || '', photo_url: (author as any).photo_url || '', tradition: (author as any).tradition || '' });
+    setShowEditAuthorDialog(true);
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -628,15 +651,58 @@ export function XassidasAdmin() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Edit author dialog */}
+          <Dialog open={showEditAuthorDialog} onOpenChange={setShowEditAuthorDialog}>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Modifier l'auteur</DialogTitle></DialogHeader>
+              <form onSubmit={editAuthorForm.handleSubmit((v) => {
+                if (!editingAuthor) return;
+                updateAuthorMutation.mutate({ id: editingAuthor.id, ...v });
+              })} className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Nom *</label>
+                  <Input {...editAuthorForm.register('name', { required: true })} disabled={updateAuthorMutation.isPending} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Description / Bio</label>
+                  <Textarea {...editAuthorForm.register('description')} rows={3} disabled={updateAuthorMutation.isPending} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">URL Photo</label>
+                  <Input {...editAuthorForm.register('photo_url')} type="url" disabled={updateAuthorMutation.isPending} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Tradition</label>
+                  <Input {...editAuthorForm.register('tradition')} placeholder="Tidjane, Mouride…" disabled={updateAuthorMutation.isPending} />
+                </div>
+                <Button type="submit" className="w-full" disabled={updateAuthorMutation.isPending}>
+                  {updateAuthorMutation.isPending ? 'Mise à jour…' : 'Sauvegarder'}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {authors.map((author: Author) => (
               <Card key={author.id} className="border">
-                <CardContent className="pt-6">
-                  {author.photo_url && (
-                    <img src={author.photo_url} alt={author.name} className="w-full h-48 object-cover rounded mb-4" />
-                  )}
-                  <h3 className="font-bold text-lg">{author.name}</h3>
-                  <p className="text-sm text-gray-600">{author.description}</p>
+                <CardContent className="pt-4">
+                  <div className="flex items-start gap-3">
+                    {(author as any).photo_url ? (
+                      <img src={(author as any).photo_url} alt={author.name} className="w-14 h-14 object-cover rounded-full flex-shrink-0" />
+                    ) : (
+                      <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-lg font-bold text-primary">{author.name[0]}</span>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold">{author.name}</h3>
+                      {(author as any).tradition && <p className="text-xs text-primary/70">{(author as any).tradition}</p>}
+                      {(author as any).description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{(author as any).description}</p>}
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => openEditAuthorDialog(author)}>
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}

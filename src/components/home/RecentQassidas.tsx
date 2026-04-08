@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Play, Heart, ChevronRight } from "lucide-react";
+import { Play, ChevronRight, Clock } from "lucide-react";
 import { useQassidasHistory, type QassidasHistoryItem } from "@/hooks/useQassidasHistory";
 
 interface RecentQassidasProps {
@@ -10,21 +10,21 @@ interface RecentQassidasProps {
 
 const RecentQassidas = ({ onNavigate, itemVariants, allQassidas }: RecentQassidasProps) => {
   const { history, hasHistory, getFeaturedQassidas } = useQassidasHistory();
-  const displayedQassidas = hasHistory ? history : getFeaturedQassidas(allQassidas);
+  const displayed = hasHistory ? history : getFeaturedQassidas(allQassidas);
+
+  if (displayed.length === 0) return null;
 
   return (
-    <motion.div
-      variants={itemVariants}
-      className="space-y-4"
-    >
+    <motion.div variants={itemVariants} className="space-y-4">
       {/* Header */}
-      <div className="px-0 flex items-center justify-between">
+      <div className="flex items-center justify-between px-0">
         <div>
-          <h2 className="text-lg font-bold text-foreground">
-            {hasHistory ? "🎵 Récemment écoutées" : "🎵 À découvrir"}
+          <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+            {hasHistory ? <Clock className="w-4 h-4 text-primary" /> : <span>🎵</span>}
+            {hasHistory ? "Récemment consultées" : "À découvrir"}
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {hasHistory ? "Vos dernières consultations" : "Xassidas populaires"}
+            {hasHistory ? "Reprends où tu t'es arrêté" : "Xassidas populaires"}
           </p>
         </div>
         <button
@@ -35,51 +35,37 @@ const RecentQassidas = ({ onNavigate, itemVariants, allQassidas }: RecentQassida
         </button>
       </div>
 
-      {/* Carousel Horizontal */}
-      <div className="overflow-x-auto scrollbar-hide">
+      {/* Carousel */}
+      <div className="overflow-x-auto scrollbar-hide -mx-1 px-1">
         <div className="flex gap-3 pb-2">
-          {displayedQassidas.slice(0, 8).map((qassida, index) => (
+          {displayed.slice(0, 8).map((qassida, index) => (
             <motion.button
-              key={qassida.id}
+              key={`${qassida.id}-${index}`}
               onClick={() => onNavigate("qassidas", undefined, undefined, qassida.id)}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              whileHover={{ scale: 1.05, y: -4 }}
-              whileTap={{ scale: 0.98 }}
-              className="group flex-shrink-0 w-48 bg-gradient-to-br from-primary/15 via-primary/10 to-secondary/10 rounded-2xl p-4 border border-primary/30 hover:border-primary/60 transition-all duration-300 cursor-pointer relative overflow-hidden"
+              whileHover={{ scale: 1.03, y: -3 }}
+              whileTap={{ scale: 0.97 }}
+              className="group flex-shrink-0 w-44 bg-gradient-to-br from-primary/10 via-primary/5 to-secondary/10 rounded-2xl p-4 border border-primary/20 hover:border-primary/50 hover:shadow-md transition-all duration-300 cursor-pointer text-left"
             >
-              {/* Background blur effect on hover */}
-              <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              
-              <div className="relative z-10 space-y-3">
-                {/* Title & Author */}
-                <div>
-                  <h3 className="font-bold text-foreground text-sm line-clamp-2 leading-tight">
-                    {qassida.title}
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-2 line-clamp-1">
-                    {qassida.author}
-                  </p>
-                </div>
+              {/* Initials circle */}
+              <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center mb-3">
+                <span className="text-xs font-bold text-primary">
+                  {qassida.title.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("")}
+                </span>
+              </div>
 
-                {/* Arabic text */}
-                <p className="text-xs font-arabic text-right text-primary/70 line-clamp-1">
-                  {qassida.arabic}
-                </p>
+              <h3 className="font-bold text-foreground text-sm line-clamp-2 leading-tight mb-1">
+                {qassida.title}
+              </h3>
+              <p className="text-xs text-muted-foreground line-clamp-1 mb-3">
+                {qassida.author}
+              </p>
 
-                {/* Play Button */}
-                <motion.button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="w-full flex items-center justify-center gap-2 bg-primary/30 hover:bg-primary/50 text-primary font-medium rounded-xl py-2.5 transition-all group-hover:bg-primary group-hover:text-primary-foreground"
-                >
-                  <Play className="w-4 h-4 fill-current" />
-                  <span className="text-xs">Écouter</span>
-                </motion.button>
+              <div className="flex items-center gap-1.5 bg-primary/20 group-hover:bg-primary group-hover:text-primary-foreground text-primary rounded-lg px-2 py-1.5 transition-all">
+                <Play className="w-3 h-3 fill-current flex-shrink-0" />
+                <span className="text-xs font-medium">Lire</span>
               </div>
             </motion.button>
           ))}

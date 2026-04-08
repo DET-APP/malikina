@@ -1,5 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { qassidasDataWithExtended, authorsData as localAuthorsData, type Qassida, type Author } from '@/data/qassidasData';
+import { authorsData as localAuthorsData, type Qassida } from '@/data/qassidasData';
+
+const SUPABASE_ANON_KEY =
+  'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.' +
+  'eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTcyNjUzMjUyMCwiZXhwIjo0ODgyMjA2MTIwLCJyb2xlIjoiYW5vbiJ9.' +
+  'IbM1B5YYZOXq47F8lPxuNvKtQiMMaYCKQBJTonYq8aQ';
+const SUPABASE_URL = 'https://api.xassida.sn';
 
 // API interfaces
 export interface APIXassida {
@@ -12,120 +18,89 @@ export interface APIXassida {
   created_at: string;
 }
 
-export interface APIAuthor {
-  id: string;
-  name: string;
-  description?: string;
-  photo_url?: string;
-}
-
 const toStableNumericId = (value: string): number => {
   const compact = value.replace(/-/g, '').slice(0, 12);
   const parsed = Number.parseInt(compact, 16);
-
-  if (Number.isFinite(parsed) && parsed > 0) {
-    return parsed;
-  }
-
-  return value.split('').reduce((acc, char) => {
-    return (acc * 31 + char.charCodeAt(0)) % 2147483647;
-  }, 7);
+  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  return value.split('').reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) % 2147483647, 7);
 };
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://malikina-api.onrender.com/api');
 
-/**
- * Convert API xassida format to local format
- */
-const convertAPIXassidaToLocal = (apiXassida: APIXassida, authorName: string): Qassida => {
-  // Find matching local xassida to get additional fields (arabic, fullText, etc)
-  const localXassida = qassidasDataWithExtended.find(
-    q => q.title.toLowerCase() === apiXassida.title.toLowerCase() || 
-         q.author === authorName
-  );
-
-  return {
-    id: toStableNumericId(apiXassida.id),
-    apiId: apiXassida.id,
-    title: apiXassida.title,
-    arabic: localXassida?.arabic || '',
-    author: authorName,
-    confraternity: localXassida?.confraternity || '',
-    verseCount: apiXassida.verse_count,
-    isFavorite: false,
-    fullText: localXassida?.fullText,
-    transliteration: localXassida?.transliteration,
-    audioUrl: localXassida?.audioUrl,
-    pdfUrl: localXassida?.pdfUrl,
-  };
+/** Fetch audio URL from xassida.sn for a given xassida numeric ID */
+const fetchAudioUrl = async (xassidaNumericId: number): Promise<string | null> => {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/audio?xassida_id=eq.${xassidaNumericId}&select=file&limit=1`,
+      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (Array.isArray(data) && data[0]?.file) {
+      return `${SUPABASE_URL}/storage/v1/object/public/audios/${data[0].file}.mp3`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 };
 
+const convertAPIXassidaToLocal = (apiXassida: APIXassida, authorName: string): Qassida => ({
+  id: toStableNumericId(apiXassida.id),
+  apiId: apiXassida.id,
+  title: apiXassida.title,
+  arabic: '',
+  author: authorName,
+  confraternity: '',
+  verseCount: apiXassida.verse_count,
+  isFavorite: false,
+});
+
 /**
- * Fetch all xassidas from API with local fallback.
- * If API is empty or unavailable, local dataset is used to keep the screen populated.
+ * Fetch all xassidas from the local API.
+ * No local fallback — if the API is unavailable or empty, returns [].
  */
 export const useXassidas = () => {
-  const xassidasQuery = useQuery({
+  const query = useQuery({
     queryKey: ['xassidas-api'],
     queryFn: async () => {
-      try {
-        console.log('Fetching xassidas from API:', `${API_URL}/xassidas`);
-        const response = await fetch(`${API_URL}/xassidas`);
-        
-        if (!response.ok) {
-          console.error(`API error ${response.status}:`, response.statusText);
-          throw new Error(`API error: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log('✅ API returned', Array.isArray(data) ? data.length : 0, 'xassidas');
-        return Array.isArray(data) ? data : [];
-      } catch (error) {
-        console.error('❌ Failed to fetch xassidas from API:', error);
-        return [];
-      }
+      const response = await fetch(`${API_URL}/xassidas`);
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      const data = await response.json();
+      return Array.isArray(data) ? (data as APIXassida[]) : [];
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 2 * 60 * 1000,
     retry: 1,
   });
 
-  const apiData = Array.isArray(xassidasQuery.data) ? (xassidasQuery.data as APIXassida[]) : [];
-  const hasApiData = apiData.length > 0;
-
-  const mergedXassidas: Qassida[] = hasApiData
-    ? apiData.map((apiX) => convertAPIXassidaToLocal(apiX, apiX.author_name || 'Unknown'))
-    : qassidasDataWithExtended;
+  const apiData: APIXassida[] = Array.isArray(query.data) ? query.data : [];
 
   return {
-    xassidas: mergedXassidas,
+    xassidas: apiData.map((x) => convertAPIXassidaToLocal(x, x.author_name || 'Inconnu')),
     authors: localAuthorsData,
-    isLoading: xassidasQuery.isLoading,
-    error: null,
-    isFromAPI: hasApiData,
-    refetch: xassidasQuery.refetch,
+    isLoading: query.isLoading,
+    error: query.isError ? (query.error as Error).message : null,
+    isFromAPI: apiData.length > 0,
+    refetch: query.refetch,
+    fetchAudioUrl,
   };
 };
 
 /**
- * Fetch single xassida with verses from API
+ * Fetch single xassida with verses from local API
  */
 export const useXassidasDetail = (xassidasId: string | null) => {
   return useQuery({
     queryKey: ['xassida-detail', xassidasId],
     queryFn: async () => {
       if (!xassidasId) return null;
-      try {
-        const response = await fetch(`${API_URL}/xassidas/${xassidasId}`);
-        if (!response.ok) throw new Error('Failed to fetch xassida');
-        return response.json();
-      } catch (error) {
-        console.warn('Could not fetch xassida details from API:', error);
-        return null;
-      }
+      const response = await fetch(`${API_URL}/xassidas/${xassidasId}`);
+      if (!response.ok) throw new Error('Failed to fetch xassida');
+      return response.json();
     },
     enabled: !!xassidasId,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 10 * 60 * 1000,
   });
 };
