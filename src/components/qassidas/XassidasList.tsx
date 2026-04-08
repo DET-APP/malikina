@@ -41,6 +41,9 @@ const XassidasList = ({ qassidas, viewMode, onQassidasSelect }: XassidasListProp
     };
   };
 
+  const getTitleInitials = (title: string) =>
+    title.split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('');
+
   return (
     <motion.div
       className="px-6 py-6"
@@ -56,7 +59,7 @@ const XassidasList = ({ qassidas, viewMode, onQassidasSelect }: XassidasListProp
             return (
               <motion.button
                 key={qassida.id}
-                className="bg-card rounded-xl p-5 shadow-soft relative overflow-hidden hover:shadow-lg transition-shadow text-left"
+                className="bg-card rounded-xl p-5 shadow-soft relative overflow-hidden hover:shadow-lg transition-shadow text-left min-w-0"
                 variants={itemVariants}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -65,22 +68,24 @@ const XassidasList = ({ qassidas, viewMode, onQassidasSelect }: XassidasListProp
                 <div className="absolute -right-4 -top-4 w-16 h-16 bg-secondary/5 rounded-full" />
                 <div className="absolute -right-2 -top-2 w-10 h-10 bg-secondary/10 rounded-full" />
 
-                <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center mb-3">
-                  <span className="text-sm font-bold text-secondary">{qassida.id}</span>
+                <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center mb-3 flex-shrink-0">
+                  <span className="text-sm font-bold text-secondary">{getTitleInitials(qassida.title)}</span>
                 </div>
 
-                <div>
-                  <p className="text-lg font-arabic text-primary mb-2 text-right leading-relaxed">
-                    {qassida.arabic}
-                  </p>
-                  <p className="font-semibold text-foreground text-base mb-1">
+                <div className="min-w-0">
+                  {qassida.arabic && (
+                    <p className="text-lg font-arabic text-primary mb-2 text-right leading-relaxed line-clamp-2">
+                      {qassida.arabic}
+                    </p>
+                  )}
+                  <p className="font-semibold text-foreground text-base mb-1 line-clamp-2 break-words">
                     {qassida.title}
                   </p>
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="text-xs bg-muted px-2 py-1 rounded-full text-muted-foreground">
+                  <div className="flex items-center justify-between mt-3 gap-2">
+                    <span className="text-xs bg-muted px-2 py-1 rounded-full text-muted-foreground truncate max-w-[80px]">
                       {authorDisplay.initials}
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-muted-foreground truncate">
                       {qassida.confraternity || 'Tidjane'}
                     </span>
                   </div>
@@ -97,27 +102,29 @@ const XassidasList = ({ qassidas, viewMode, onQassidasSelect }: XassidasListProp
             return (
               <motion.button
                 key={qassida.id}
-                className="bg-card rounded-xl p-4 shadow-soft flex items-center gap-4 w-full hover:shadow-lg transition-shadow"
+                className="bg-card rounded-xl p-4 shadow-soft flex items-center gap-4 w-full hover:shadow-lg transition-shadow min-w-0"
                 variants={itemVariants}
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
                 onClick={() => onQassidasSelect(qassida)}
               >
-                <div className="relative flex-shrink-0">
+                <div className="flex-shrink-0">
                   <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center">
-                    <span className="text-lg font-bold text-secondary">{qassida.id}</span>
+                    <span className="text-sm font-bold text-secondary">{getTitleInitials(qassida.title)}</span>
                   </div>
                 </div>
 
-                <div className="flex-1 text-left">
-                  <p className="font-arabic text-lg text-primary leading-relaxed mb-1">
-                    {qassida.arabic}
-                  </p>
-                  <p className="font-semibold text-foreground">{qassida.title}</p>
+                <div className="flex-1 text-left min-w-0">
+                  {qassida.arabic && (
+                    <p className="font-arabic text-lg text-primary leading-relaxed mb-1 line-clamp-1">
+                      {qassida.arabic}
+                    </p>
+                  )}
+                  <p className="font-semibold text-foreground truncate">{qassida.title}</p>
                   <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                    <span>{authorDisplay.initials}</span>
+                    <span className="truncate max-w-[100px]">{authorDisplay.initials}</span>
                     <span>•</span>
-                    <span>{qassida.confraternity || 'Tidjane'}</span>
+                    <span className="truncate">{qassida.confraternity || 'Tidjane'}</span>
                   </div>
                 </div>
 

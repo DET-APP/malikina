@@ -198,6 +198,49 @@ echo "✅ Data ready for integration!"
 - **Source Repo**: https://github.com/AlKountiyou/xassidas
 - **Data Completeness**: 100%
 - **Integration Time**: 20-30 minutes
+
+---
+
+## 🎤 OCR Configuration for PDF Extraction
+
+### Quick Links
+| Action | Link |
+|--------|------|
+| Get API Key | https://ocr.space/ocrapi |
+| Render Dashboard | https://render.com/dashboard |
+| Malikina API Service | https://render.com/dashboard → malikina-api |
+| Deploy Logs | https://malikina-api.onrender.com/logs |
+
+### Fast Setup (3 steps)
+```bash
+# 1. Get API from https://ocr.space/ocrapi (free 25/day)
+# Check email for OCR_SPACE_API_KEY
+
+# 2. Add to Render
+# https://render.com/dashboard 
+# → malikina-api → Environment
+# Add: OCR_SPACE_API_KEY, OCR_SPACE_LANGUAGE=ara, OCR_SPACE_ENGINE=2
+
+# 3. Test
+curl -X POST -F 'file=@document.pdf' \
+  https://malikina-api.onrender.com/api/xassidas/1/upload-pdf
+# Response: {"extraction_method":"ocr-space"}
+```
+
+### Test Locally
+```bash
+cd api && npm run dev          # Terminal 1
+npm run dev                     # Terminal 2 (main app)
+
+# Add to api/.env
+echo "OCR_SPACE_API_KEY=your_key" >> api/.env
+
+# Upload test PDF
+curl -X POST -F 'file=@test.pdf' http://localhost:5000/api/xassidas/1/upload-pdf
+```
+
+### Full Setup Guide
+See: [OCR-SPACE-SETUP.md](OCR-SPACE-SETUP.md)
 - **Total Files Created**: 8 documentation files + 1 script
 - **Quality**: Production-ready
 

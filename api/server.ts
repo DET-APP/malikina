@@ -271,8 +271,13 @@ const openApiSpec = swaggerJsdoc({
 });
 
 // Middleware
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:8080,http://localhost:5173').split(',').map(s => s.trim());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, Postman, same-origin)
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials: true
 }));
 app.use(EXPRESS.json({ limit: '50mb' }));
@@ -280,6 +285,22 @@ app.use(EXPRESS.urlencoded({ limit: '50mb', extended: true }));
 
 // Initialize database
 await initDatabase();
+
+// Auto-seed: run scraper in background if DB is empty and AUTO_SEED_DB=true
+if (process.env.AUTO_SEED_DB === 'true') {
+  import('./db/schema.js').then(async ({ get }) => {
+    const row = await get('SELECT COUNT(*) as cnt FROM xassidas', []);
+    const cnt = (row as any)?.cnt ?? 0;
+    if (cnt === 0) {
+      console.log('🌱 Base vide — démarrage du scraper en arrière-plan...');
+      import('./scripts/scrape-xassidas.js').catch(err =>
+        console.error('❌ Scraper error:', err)
+      );
+    } else {
+      console.log(`📚 Base déjà peuplée (${cnt} xassidas) — scraper ignoré.`);
+    }
+  }).catch(() => {});
+}
 
 // Routes
 app.use('/api/xassidas', xassidaRoutes);

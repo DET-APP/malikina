@@ -1,6 +1,6 @@
 // src/components/qassidas/XassidasDetail.tsx
-import { motion } from "framer-motion";
-import { ChevronLeft, Play, Headphones, Bookmark, Share2, Loader2, Heart } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, Play, Headphones, Share2, Loader2, Heart, Languages, AlignLeft } from "lucide-react";
 import { useState } from "react";
 import { useXassidasDetail } from "@/hooks/useXassidas";
 import type { Qassida } from "@/data/qassidasData";
@@ -17,20 +17,12 @@ interface XassidasDetailProps {
 interface XassidaVerse {
   id?: string;
   verse_number: number;
+  chapter_number?: number;
   text_arabic: string;
   transcription?: string;
   translation_fr?: string;
+  translation_en?: string;
 }
-
-const groupVersesByTwo = (verses: XassidaVerse[]): XassidaVerse[][] => {
-  const grouped: XassidaVerse[][] = [];
-
-  for (let index = 0; index < verses.length; index += 2) {
-    grouped.push(verses.slice(index, index + 2));
-  }
-
-  return grouped;
-};
 
 const XassidasDetail = ({
   selectedQassida,
@@ -38,10 +30,11 @@ const XassidasDetail = ({
   onNext,
   onPrevious,
 }: XassidasDetailProps) => {
-  const [fontSize, setFontSize] = useState(16);
+  const [fontSize, setFontSize] = useState(20);
   const [isFavorite, setIsFavorite] = useState(selectedQassida.isFavorite);
   const [darkMode, setDarkMode] = useState(false);
   const [showTranscription, setShowTranscription] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
 
   const author = authorsData.find(a => a.fullName === selectedQassida.author);
   const enrichedData = enrichedQassidasData[selectedQassida.id];
@@ -49,69 +42,117 @@ const XassidasDetail = ({
   const apiVerses: XassidaVerse[] = Array.isArray(apiDetail?.verses)
     ? (apiDetail.verses as XassidaVerse[])
     : [];
-  const groupedVerses = groupVersesByTwo(apiVerses);
+
+  const hasTranscription = apiVerses.some(v => v.transcription);
+  const hasTranslation   = apiVerses.some(v => v.translation_fr || v.translation_en);
+
+  // Group verses by chapter for display
+  const byChapter = apiVerses.reduce<Record<number, XassidaVerse[]>>((acc, v) => {
+    const ch = v.chapter_number ?? 1;
+    if (!acc[ch]) acc[ch] = [];
+    acc[ch].push(v);
+    return acc;
+  }, {});
+  const chapters = Object.entries(byChapter).sort(([a], [b]) => Number(a) - Number(b));
+
+  const dark = {
+    bg:       "bg-slate-900",
+    card:     "bg-slate-800/60 border-slate-700",
+    header:   "from-amber-950 via-orange-950 to-amber-900",
+    text:     "text-amber-50",
+    sub:      "text-amber-200/70",
+    muted:    "text-amber-200/50",
+    ctrl:     "bg-slate-800/80 border-slate-700",
+    ctrlBtn:  "text-amber-300 hover:bg-slate-700",
+    active:   "bg-amber-700/40 text-amber-200",
+    trans:    "text-amber-400/80",
+    trFr:     "text-amber-300/70",
+    badge:    "bg-amber-900/50 text-amber-300",
+    num:      "text-amber-500",
+  };
+
+  const light = {
+    bg:       "bg-background",
+    card:     "bg-card border-border/30",
+    header:   "from-secondary via-secondary to-secondary/80",
+    text:     "text-white",
+    sub:      "text-white/75",
+    muted:    "text-white/55",
+    ctrl:     "bg-muted/60 border-border/20",
+    ctrlBtn:  "text-muted-foreground hover:bg-muted",
+    active:   "bg-primary/15 text-primary",
+    trans:    "text-secondary/80",
+    trFr:     "text-muted-foreground",
+    badge:    "bg-primary/10 text-primary",
+    num:      "text-muted-foreground/60",
+  };
+
+  const t = darkMode ? dark : light;
 
   return (
     <motion.div
-      className={`min-h-screen transition-colors ${darkMode ? "bg-slate-900" : "bg-background"}`}
+      className={`min-h-screen transition-colors ${t.bg}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >
-      {/* Header */}
-      <div className={`relative pt-12 pb-32 px-6 transition-colors ${
-        darkMode 
-          ? "bg-gradient-to-b from-amber-900 to-orange-900" 
-          : "bg-gradient-to-b from-secondary to-secondary/80"
-      }`}>
-        <div className="absolute top-12 left-6 flex gap-2">
-          <button
-            onClick={onBack}
-            className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
-          >
-            <ChevronLeft className="w-6 h-6 text-white" />
-          </button>
-        </div>
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <div className={`relative pt-12 pb-28 px-6 bg-gradient-to-b ${t.header}`}>
+        {/* Back */}
+        <button
+          onClick={onBack}
+          className="absolute top-12 left-6 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
+        >
+          <ChevronLeft className="w-6 h-6 text-white" />
+        </button>
 
-        <div className="text-center mt-8">
-          <p className="text-4xl font-arabic text-white mb-3 leading-relaxed">
-            {selectedQassida.arabic}
-          </p>
-          <h1 className="text-2xl font-bold text-white">{selectedQassida.title}</h1>
-          {author && (
-            <p className="text-white/80 text-sm mt-2">
-              {author.fullName} • {author.confraternity}
+        {/* Night-mode toggle */}
+        <button
+          onClick={() => setDarkMode(!darkMode)}
+          className="absolute top-12 right-6 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors text-lg"
+        >
+          {darkMode ? "☀️" : "🌙"}
+        </button>
+
+        <div className="text-center mt-10">
+          {selectedQassida.arabic && (
+            <p className={`text-3xl font-arabic ${t.text} mb-2 leading-relaxed`}>
+              {selectedQassida.arabic}
             </p>
+          )}
+          <h1 className={`text-xl font-bold ${t.text}`}>{selectedQassida.title}</h1>
+          {author && (
+            <p className={`text-sm ${t.sub} mt-1`}>
+              {author.fullName} · {author.confraternity}
+            </p>
+          )}
+          {apiVerses.length > 0 && (
+            <p className={`text-xs ${t.muted} mt-1`}>{apiVerses.length} versets</p>
           )}
         </div>
 
-        {/* Actions */}
-        <div className="absolute -bottom-16 left-6 right-6">
-          <div className="bg-card rounded-2xl p-4 shadow-xl flex justify-around">
-            <button 
-              onClick={() => setIsFavorite(!isFavorite)}
-              className="flex flex-col items-center gap-1 group"
-            >
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center group-hover:bg-secondary/20 transition-colors ${
-                isFavorite ? "bg-secondary/20" : "bg-secondary/10"
-              }`}>
+        {/* Action bar */}
+        <div className="absolute -bottom-14 left-6 right-6">
+          <div className="bg-card rounded-2xl px-2 py-3 shadow-xl flex justify-around">
+            <button onClick={() => setIsFavorite(!isFavorite)} className="flex flex-col items-center gap-1">
+              <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${isFavorite ? "bg-secondary/20" : "bg-secondary/10 hover:bg-secondary/20"}`}>
                 <Heart className={`w-5 h-5 ${isFavorite ? "fill-secondary text-secondary" : "text-secondary"}`} />
               </div>
               <span className="text-xs text-muted-foreground">Favori</span>
             </button>
-            <button className="flex flex-col items-center gap-1 group">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+            <button className="flex flex-col items-center gap-1">
+              <div className="w-11 h-11 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors">
                 <Play className="w-5 h-5 text-primary" />
               </div>
               <span className="text-xs text-muted-foreground">Lecture</span>
             </button>
-            <button className="flex flex-col items-center gap-1 group">
-              <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center group-hover:bg-secondary/20 transition-colors">
+            <button className="flex flex-col items-center gap-1">
+              <div className="w-11 h-11 rounded-full bg-secondary/10 hover:bg-secondary/20 flex items-center justify-center transition-colors">
                 <Headphones className="w-5 h-5 text-secondary" />
               </div>
               <span className="text-xs text-muted-foreground">Audio</span>
             </button>
-            <button className="flex flex-col items-center gap-1 group">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+            <button className="flex flex-col items-center gap-1">
+              <div className="w-11 h-11 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors">
                 <Share2 className="w-5 h-5 text-primary" />
               </div>
               <span className="text-xs text-muted-foreground">Partager</span>
@@ -120,207 +161,172 @@ const XassidasDetail = ({
         </div>
       </div>
 
-      {/* Content */}
-      <div className="pt-20 px-6 pb-24">
-        {/* Author Card */}
-        {author && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className={`p-5 rounded-2xl mb-8 border transition-all ${
-              darkMode
-                ? "bg-slate-800/50 border-slate-700"
-                : "bg-primary/10 border-primary/20"
-            }`}
-          >
-            <div className="flex items-center gap-4">
-              <div className={`flex-shrink-0 w-16 h-16 rounded-full overflow-hidden flex items-center justify-center ${
-                darkMode ? "bg-amber-900/30" : "bg-primary/20"
-              }`}>
-                {author.imageUrl ? (
-                  <img
-                    src={author.imageUrl}
-                    alt={author.fullName}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <span className={`text-xl font-bold ${darkMode ? "text-amber-300" : "text-primary"}`}>
-                    {author.fullName.split(' ')[0][0]}
-                  </span>
-                )}
-              </div>
-              <div>
-                <h3 className={`font-bold text-lg ${darkMode ? "text-amber-100" : ""}`}>
-                  {author.fullName}
-                </h3>
-                <p className={`text-sm font-arabic ${darkMode ? "text-amber-200/70" : "text-muted-foreground"}`}>
-                  {author.arabic}
-                </p>
-                {author.bio && (
-                  <p className={`text-xs mt-1 ${darkMode ? "text-amber-200/50" : "text-muted-foreground"}`}>
-                    {author.bio}
-                  </p>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
+      {/* ── Content ────────────────────────────────────────────── */}
+      <div className="pt-20 px-4 pb-28">
 
-        {/* Reading Controls */}
+        {/* Reading controls */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className={`flex gap-2 p-4 rounded-xl mb-8 flex-wrap transition-colors ${
-            darkMode 
-              ? "bg-slate-800/50 border border-slate-700" 
-              : "bg-muted/50"
-          }`}
+          transition={{ delay: 0.15 }}
+          className={`flex items-center gap-2 px-3 py-2 rounded-xl border mb-6 flex-wrap ${t.ctrl}`}
         >
-          <div className="flex items-center gap-2 flex-1 min-w-32">
-            <button 
+          {/* Font size */}
+          <div className="flex items-center gap-1 mr-1">
+            <button
               onClick={() => setFontSize(f => Math.max(14, f - 2))}
-              className={`px-2 py-1 rounded text-xs font-bold ${darkMode ? "text-amber-300" : "text-primary"}`}
+              className={`w-7 h-7 rounded-lg text-sm font-bold flex items-center justify-center ${t.ctrlBtn}`}
             >
-              A-
+              A‑
             </button>
-            <input
-              type="range"
-              min="14"
-              max="28"
-              value={fontSize}
-              onChange={(e) => setFontSize(parseInt(e.target.value))}
-              className="flex-1 h-1 accent-primary"
-            />
-            <button 
-              onClick={() => setFontSize(f => Math.min(28, f + 2))}
-              className={`px-2 py-1 rounded text-xs font-bold ${darkMode ? "text-amber-300" : "text-primary"}`}
+            <span className={`text-xs w-6 text-center tabular-nums ${t.ctrlBtn}`}>{fontSize}</span>
+            <button
+              onClick={() => setFontSize(f => Math.min(32, f + 2))}
+              className={`w-7 h-7 rounded-lg text-sm font-bold flex items-center justify-center ${t.ctrlBtn}`}
             >
               A+
             </button>
           </div>
-          
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className={`px-3 py-1 rounded-lg transition-colors text-sm font-medium ${
-              darkMode
-                ? "bg-amber-700/30 text-amber-300"
-                : "hover:bg-muted text-muted-foreground"
-            }`}
-          >
-            {darkMode ? "☀️" : "🌙"}
-          </button>
 
-          {!!apiVerses.length && (
+          <div className="w-px h-6 bg-border/40 mx-1" />
+
+          {/* Transliteration toggle */}
+          {hasTranscription && (
             <button
-              onClick={() => setShowTranscription(!showTranscription)}
-              className={`px-3 py-1 rounded-lg transition-colors text-sm font-medium ${
-                showTranscription
-                  ? darkMode
-                    ? "bg-amber-700/30 text-amber-200"
-                    : "bg-primary/20 text-primary"
-                  : darkMode
-                    ? "text-amber-300/70 hover:bg-slate-700"
-                    : "hover:bg-muted text-muted-foreground"
+              onClick={() => setShowTranscription(s => !s)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                showTranscription ? t.active : t.ctrlBtn
               }`}
             >
-              {showTranscription ? "Transcription ON" : "Transcription OFF"}
+              <AlignLeft className="w-3.5 h-3.5" />
+              Translitération
+            </button>
+          )}
+
+          {/* Translation toggle */}
+          {(hasTranslation || !apiVerses.length) && (
+            <button
+              onClick={() => setShowTranslation(s => !s)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                showTranslation ? t.active : t.ctrlBtn
+              }`}
+            >
+              <Languages className="w-3.5 h-3.5" />
+              Traduction
             </button>
           )}
         </motion.div>
 
-        {/* Versets API (format lecture Coran) */}
+        {/* Verses */}
         {loadingVerses ? (
-          <div className="flex justify-center py-10">
+          <div className="flex justify-center py-16">
             <Loader2 className="w-7 h-7 animate-spin text-primary" />
           </div>
+
         ) : apiVerses.length > 0 ? (
-          <div className="space-y-6">
-            {groupedVerses.map((pair, pairIndex: number) => (
-              <motion.div
-                key={`pair-${selectedQassida.id}-${pair[0]?.verse_number || pairIndex}`}
-                className={`rounded-xl border p-4 sm:p-5 ${
-                  darkMode ? "border-slate-700 bg-slate-800/35" : "border-border/40 bg-card/30"
-                }`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: pairIndex * 0.02 }}
-              >
-                {pair.map((verse, verseIndex) => (
-                  <div
-                    key={verse.id || `${selectedQassida.id}-${verse.verse_number}`}
-                    className={`${verseIndex === 0 && pair.length > 1 ? "mb-4 pb-4 border-b border-border/30" : ""}`}
+          <div className="space-y-3">
+            {chapters.map(([chNum, verses], ci) => (
+              <div key={chNum}>
+                {/* Chapter heading (only if multiple chapters) */}
+                {chapters.length > 1 && (
+                  <div className="flex items-center gap-3 mb-3 mt-5">
+                    <div className="flex-1 h-px bg-border/30" />
+                    <span className={`text-xs font-semibold uppercase tracking-wider ${t.num}`}>
+                      Chapitre {chNum}
+                    </span>
+                    <div className="flex-1 h-px bg-border/30" />
+                  </div>
+                )}
+
+                {verses.map((verse, vi) => (
+                  <motion.div
+                    key={verse.id || `${chNum}-${verse.verse_number}`}
+                    className={`rounded-2xl border p-4 mb-3 transition-colors ${t.card}`}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: (ci * 10 + vi) * 0.015 }}
                   >
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">
+                    {/* Verse number */}
+                    <div className="flex justify-end mb-3">
+                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${t.badge}`}>
                         {verse.verse_number}
                       </span>
-                      <button className="p-1.5 rounded-full text-muted-foreground hover:text-primary hover:bg-muted/40 transition-all duration-300">
-                        <Bookmark className="w-4 h-4" />
-                      </button>
                     </div>
 
+                    {/* Arabic text */}
                     <p
                       className="text-right font-arabic leading-loose"
-                      style={{ fontSize: `${fontSize + 2}px` }}
+                      style={{ fontSize: `${fontSize}px` }}
                       dir="rtl"
                     >
                       {verse.text_arabic}
                     </p>
 
-                    {showTranscription && !!verse.transcription && (
-                      <p className="mt-2 text-sm text-secondary font-medium text-center italic">
-                        {verse.transcription}
-                      </p>
-                    )}
+                    {/* Transliteration */}
+                    <AnimatePresence>
+                      {showTranscription && verse.transcription && (
+                        <motion.p
+                          initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                          animate={{ opacity: 1, height: "auto", marginTop: 10 }}
+                          exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                          className={`text-sm italic text-center leading-relaxed ${t.trans}`}
+                        >
+                          {verse.transcription}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
 
-                    {!!verse.translation_fr && (
-                      <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                        {verse.translation_fr}
-                      </p>
-                    )}
-                  </div>
+                    {/* Translation */}
+                    <AnimatePresence>
+                      {showTranslation && (verse.translation_fr || verse.translation_en) && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                          animate={{ opacity: 1, height: "auto", marginTop: 10 }}
+                          exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                        >
+                          <div className="h-px bg-border/20 mb-2" />
+                          <p className={`text-sm leading-relaxed ${t.trFr}`}>
+                            {verse.translation_fr || verse.translation_en}
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
                 ))}
-              </motion.div>
+              </div>
             ))}
           </div>
-        ) : (
-          enrichedData?.fullText && (
+
+        ) : enrichedData?.fullText ? (
+          /* Fallback: local full text */
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className={`rounded-xl overflow-hidden border transition-all ${
-              darkMode
-                ? "bg-slate-800/50 border-slate-700"
-                : "bg-card border-border/20"
-            }`}
+            transition={{ delay: 0.3 }}
+            className={`rounded-2xl border overflow-hidden ${t.card}`}
           >
-            <div className={`p-6 max-h-96 overflow-y-auto ${darkMode ? "bg-slate-800/30" : "bg-background/50"}`}>
+            <div className="p-5 max-h-[60vh] overflow-y-auto">
               <p
-                className={`leading-relaxed font-arabic text-right whitespace-pre-wrap break-words transition-all ${
-                  darkMode ? "text-amber-100" : "text-foreground"
-                }`}
+                className="leading-loose font-arabic text-right whitespace-pre-wrap break-words"
                 style={{ fontSize: `${fontSize}px` }}
               >
                 {enrichedData.fullText}
               </p>
             </div>
           </motion.div>
-          )
+        ) : (
+          <div className="text-center py-16">
+            <p className={`text-sm ${t.num}`}>Aucun verset disponible pour cette xassida.</p>
+          </div>
         )}
 
-        {/* Navigation */}
+        {/* Navigation prev / next */}
         {(onNext || onPrevious) && (
-          <div className="flex gap-4 mt-8">
+          <div className="flex gap-3 mt-8">
             {onPrevious && (
               <button
                 onClick={onPrevious}
-                className="flex-1 py-3 rounded-lg bg-muted hover:bg-muted/80 transition-colors font-medium"
+                className="flex-1 py-3 rounded-xl bg-muted hover:bg-muted/80 transition-colors font-medium text-sm"
               >
                 ← Précédente
               </button>
@@ -328,7 +334,7 @@ const XassidasDetail = ({
             {onNext && (
               <button
                 onClick={onNext}
-                className="flex-1 py-3 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground transition-colors font-medium"
+                className="flex-1 py-3 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground transition-colors font-medium text-sm"
               >
                 Suivante →
               </button>

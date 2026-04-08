@@ -17,6 +17,6 @@ services:
       - key: DATABASE_PATH
         value: /var/data/xassidas.db
       - key: AUTO_SEED_DB
-        value: false
+        value: "true"
     autoDeploy: true
     branch: main
