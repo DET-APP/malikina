@@ -102,32 +102,14 @@ export async function initDatabase() {
       `);
 
       database.run(`CREATE INDEX IF NOT EXISTS idx_verses_xassida ON verses(xassida_id)`);
-      database.run(`CREATE INDEX IF NOT EXISTS idx_xassidas_author ON xassidas(author_id)`, async (err) => {
+      database.run(`CREATE INDEX IF NOT EXISTS idx_xassidas_author ON xassidas(author_id)`, (err) => {
         if (err) {
           reject(err);
           return;
         }
         console.log('✅ Database tables initialized');
         console.log(`🗄️  Database path: ${dbPath}`);
-        
-        // Check if database is empty and seed if needed
-        const count = await count_authors();
-        const shouldAutoSeed = process.env.AUTO_SEED_DB === 'true' ||
-          (process.env.NODE_ENV !== 'production' && process.env.AUTO_SEED_DB !== 'false');
-
-        if (count === 0 && shouldAutoSeed) {
-          console.log('📊 Database is empty, auto-seeding...');
-          try {
-            await seedDatabase();
-            resolve();
-          } catch (seedErr) {
-            console.warn('⚠️  Could not auto-seed database:', seedErr);
-            resolve(); // Don't fail if seed fails
-          }
-        } else {
-          console.log(`📊 Database has ${count} authors${shouldAutoSeed ? '' : ' (auto-seed disabled)'}`);
-          resolve();
-        }
+        resolve();
       });
     });
   });
