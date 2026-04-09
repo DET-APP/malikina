@@ -1,11 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
-import { authorsData as localAuthorsData, type Qassida } from '@/data/qassidasData';
+import { authorsData as localAuthorsData, type Qassida, type Author } from '@/data/qassidasData';
 
 const SUPABASE_ANON_KEY =
   'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.' +
   'eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTcyNjUzMjUyMCwiZXhwIjo0ODgyMjA2MTIwLCJyb2xlIjoiYW5vbiJ9.' +
   'IbM1B5YYZOXq47F8lPxuNvKtQiMMaYCKQBJTonYq8aQ';
 const SUPABASE_URL = 'https://api.xassida.sn';
+
+// API Author interface
+export interface APIAuthor {
+  id: string;
+  name: string;
+  description?: string;
+  photo_url?: string;
+  tradition?: string;
+}
 
 // API interfaces
 export interface APIXassida {
