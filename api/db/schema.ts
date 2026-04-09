@@ -74,6 +74,7 @@ export async function initDatabase() {
           author_id TEXT NOT NULL,
           description TEXT,
           audio_url TEXT,
+          youtube_id TEXT,
           verse_count INTEGER DEFAULT 0,
           chapter_count INTEGER DEFAULT 1,
           language TEXT DEFAULT 'ar',
@@ -82,6 +83,13 @@ export async function initDatabase() {
           FOREIGN KEY (author_id) REFERENCES authors(id)
         )
       `);
+
+      // Migration: Add youtube_id column if not exists (for existing DBs)
+      database.run(`
+        ALTER TABLE xassidas ADD COLUMN youtube_id TEXT DEFAULT NULL
+      `, (err) => {
+        // Ignore error if column already exists
+      });
 
       // Verses table
       database.run(`

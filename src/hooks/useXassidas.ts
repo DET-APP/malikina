@@ -25,6 +25,7 @@ export interface APIXassida {
   description?: string;
   verse_count: number;
   audio_url?: string;
+  youtube_id?: string;
   created_at: string;
 }
 

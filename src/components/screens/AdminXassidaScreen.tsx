@@ -126,6 +126,9 @@ export function XassidasAdmin() {
   const [audioUploadingXassidaId, setAudioUploadingXassidaId] = useState<string | null>(null);
   const [audioUploadProgress, setAudioUploadProgress] = useState(0);
   const [audioUploadError, setAudioUploadError] = useState('');
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [youtubeLoading, setYoutubeLoading] = useState(false);
+  const [youtubeError, setYoutubeError] = useState('');
 
   const totalVersePages = Math.max(1, Math.ceil(editorVerses.length / VERSES_PER_PAGE));
   const verseStartIndex = (currentVersePage - 1) * VERSES_PER_PAGE;
@@ -444,7 +447,43 @@ export function XassidasAdmin() {
       description: xassida.description || '',
       author_id: xassida.author_id || ''
     });
+    setYoutubeUrl('');
+    setYoutubeError('');
     setShowEditXassidaDialog(true);
+  };
+
+  // Save YouTube ID
+  const handleSaveYoutubeId = async () => {
+    if (!editingXassida || !youtubeUrl.trim()) {
+      setYoutubeError('Veuillez entrer une URL YouTube');
+      return;
+    }
+
+    setYoutubeLoading(true);
+    setYoutubeError('');
+
+    try {
+      const response = await fetch(`${API_URL}/xassidas/${editingXassida.id}/set-youtube-id`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ youtube_url: youtubeUrl })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || 'Impossible de sauvegarder l\'URL YouTube');
+      }
+
+      alert('✅ URL YouTube sauvegardée avec succès!');
+      queryClient.invalidateQueries({ queryKey: ['xassidas'] });
+      setYoutubeUrl('');
+      setYoutubeError('');
+    } catch (error) {
+      console.error('YouTube ID error:', error);
+      setYoutubeError(error instanceof Error ? error.message : 'Erreur inconnue');
+    } finally {
+      setYoutubeLoading(false);
+    }
   };
 
   const handleDeleteXassida = async (xassida: Xassida) => {
@@ -1061,6 +1100,37 @@ export function XassidasAdmin() {
                     disabled={updateXassidaMutation.isPending}
                   />
                 </div>
+                
+                <div className="border-t pt-4 space-y-2">
+                  <label className="text-sm font-medium">🎵 URL YouTube (pour diffuser l'audio)</label>
+                  <div className="space-y-2">
+                    <Input
+                      placeholder="https://youtube.com/watch?v=... ou juste l'ID"
+                      value={youtubeUrl}
+                      onChange={(e) => {
+                        setYoutubeUrl(e.target.value);
+                        setYoutubeError('');
+                      }}
+                      disabled={youtubeLoading}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      L'audio sera extrait de YouTube et mis en cache automatiquement à la première lecture.
+                    </p>
+                    {youtubeError && (
+                      <p className="text-xs text-red-600">{youtubeError}</p>
+                    )}
+                    <Button
+                      type="button"
+                      onClick={handleSaveYoutubeId}
+                      disabled={youtubeLoading || !youtubeUrl.trim()}
+                      variant="secondary"
+                      className="w-full"
+                    >
+                      {youtubeLoading ? 'Vérification...' : 'Sauvegarder l\'URL YouTube'}
+                    </Button>
+                  </div>
+                </div>
+                
                 <Button type="submit" className="w-full" disabled={updateXassidaMutation.isPending}>
                   {updateXassidaMutation.isPending ? 'Mise à jour...' : 'Sauvegarder les modifications'}
                 </Button>

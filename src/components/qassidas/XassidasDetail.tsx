@@ -185,19 +185,32 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
   // Audio
   useEffect(() => {
     setAudioUrl(undefined);
+    
+    // Get the API base URL
+    const API_BASE = import.meta.env.VITE_API_URL ||
+      (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://malikina-api.onrender.com/api');
+    
     // First check if API returned audio_url from database
     if (apiDetail?.audio_url) { 
       setAudioUrl(apiDetail.audio_url); 
       return; 
     }
+    
+    // Check if has YouTube ID or local audio — use streaming endpoint
+    if (apiDetail?.youtube_id || apiDetail?.audio_url) {
+      setAudioUrl(`${API_BASE}/xassidas/${selectedQassida.apiId}/audio`);
+      return;
+    }
+    
     // Then check if selectedQassida has audioUrl
     if (selectedQassida.audioUrl) { 
       setAudioUrl(selectedQassida.audioUrl); 
       return; 
     }
+    
     // Finally try to fetch from Supabase
     fetchAudioUrl(selectedQassida.id).then(setAudioUrl);
-  }, [selectedQassida.id, apiDetail?.audio_url]);
+  }, [selectedQassida.id, selectedQassida.apiId, apiDetail?.audio_url, apiDetail?.youtube_id]);
 
   // Copy verse — fallback for mobile / non-HTTPS
   const copyVerse = useCallback((verse: XassidaVerse) => {
