@@ -38,8 +38,19 @@ const API_URL =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://malikina-api.onrender.com/api');
 
+/** Audio mapping — add URLs here for xassidas */
+const audioMapping: Record<number, string> = {
+  // Format: numericId: "audio_url"
+  // Example: 12345: "https://example.com/audio.mp3"
+};
+
 /** Fetch audio URL from xassida.sn for a given xassida numeric ID */
 const fetchAudioUrl = async (xassidaNumericId: number): Promise<string | null> => {
+  // First check manual mapping
+  if (audioMapping[xassidaNumericId]) {
+    return audioMapping[xassidaNumericId];
+  }
+  
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/audio?xassida_id=eq.${xassidaNumericId}&select=file&limit=1`,

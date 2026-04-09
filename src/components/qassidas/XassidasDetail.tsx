@@ -48,7 +48,7 @@ const AudioPlayer = ({ url, dark }: AudioPlayerProps) => {
     const a = audioRef.current;
     if (!a) return;
     if (playing) { a.pause(); setPlaying(false); }
-    else { a.play().catch(() => setError(true)); setPlaying(true); }
+    else { a.play().catch((err) => { console.error('Audio play error:', err); setError(true); }); setPlaying(true); }
   };
 
   const seek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -67,13 +67,16 @@ const AudioPlayer = ({ url, dark }: AudioPlayerProps) => {
       <audio
         ref={audioRef}
         src={url}
+        crossOrigin="anonymous"
         onTimeUpdate={() => { const a = audioRef.current; if (a?.duration) setProgress((a.currentTime / a.duration) * 100); }}
         onLoadedMetadata={() => { setDuration(audioRef.current?.duration ?? 0); setLoading(false); }}
         onEnded={() => setPlaying(false)}
-        onError={() => { setError(true); setLoading(false); }}
+        onError={(e) => { console.error('Audio error:', e); setError(true); setLoading(false); }}
       />
       {error ? (
-        <p className={`text-xs text-center ${sub}`}>Audio indisponible</p>
+        <p className={`text-xs text-center ${sub}`}>❌ Audio indisponible — Lien ou format incompatible</p>
+      ) : !url ? (
+        <p className={`text-xs text-center ${sub}`}>📢 Pas d'audio disponible</p>
       ) : (
         <div className="flex items-center gap-3">
           <button onClick={toggle} disabled={loading} className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${dark ? "bg-amber-700/40 text-amber-200 hover:bg-amber-700/60" : "bg-primary/15 text-primary hover:bg-primary/25"}`}>
