@@ -72,7 +72,8 @@ const convertAPIXassidaToLocal = (apiXassida: APIXassida, authorName: string): Q
  * No local fallback — if the API is unavailable or empty, returns [].
  */
 export const useXassidas = () => {
-  const query = useQuery({
+  // Fetch xassidas
+  const xassidaQuery = useQuery({
     queryKey: ['xassidas-api'],
     queryFn: async () => {
       const response = await fetch(`${API_URL}/xassidas`);
@@ -84,15 +85,42 @@ export const useXassidas = () => {
     retry: 1,
   });
 
-  const apiData: APIXassida[] = Array.isArray(query.data) ? query.data : [];
+  // Fetch authors from API
+  const authorsQuery = useQuery({
+    queryKey: ['authors-api'],
+    queryFn: async () => {
+      const response = await fetch(`${API_URL}/authors`);
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      const data = await response.json();
+      return Array.isArray(data) ? (data as APIAuthor[]) : [];
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+
+  const apiXassidas: APIXassida[] = Array.isArray(xassidaQuery.data) ? xassidaQuery.data : [];
+  const apiAuthors: APIAuthor[] = Array.isArray(authorsQuery.data) ? authorsQuery.data : [];
+
+  // Convert API authors to local format with fallback to static data
+  const convertedAuthors: Author[] = apiAuthors.length > 0
+    ? apiAuthors.map((a, idx) => ({
+        id: idx + 1,
+        fullName: a.name,
+        shortName: a.name.split(' ').slice(0, 2).join(' '),
+        arabic: '',
+        imageUrl: a.photo_url || '',
+        confraternity: a.tradition || 'Tidjane',
+        bio: a.description || '',
+      }))
+    : localAuthorsData;
 
   return {
-    xassidas: apiData.map((x) => convertAPIXassidaToLocal(x, x.author_name || 'Inconnu')),
-    authors: localAuthorsData,
-    isLoading: query.isLoading,
-    error: query.isError ? (query.error as Error).message : null,
-    isFromAPI: apiData.length > 0,
-    refetch: query.refetch,
+    xassidas: apiXassidas.map((x) => convertAPIXassidaToLocal(x, x.author_name || 'Inconnu')),
+    authors: convertedAuthors,
+    isLoading: xassidaQuery.isLoading || authorsQuery.isLoading,
+    error: xassidaQuery.isError ? (xassidaQuery.error as Error).message : authorsQuery.isError ? (authorsQuery.error as Error).message : null,
+    isFromAPI: apiXassidas.length > 0,
+    refetch: xassidaQuery.refetch,
     fetchAudioUrl,
   };
 };
