@@ -429,4 +429,90 @@ function parseVerses(text: string): any[] {
   return verses;
 }
 
+// SET YouTube ID for xassida
+router.post('/:id/set-youtube-id', async (req: Request, res: Response) => {
+  try {
+    const { youtube_url } = req.body;
+    
+    if (!youtube_url) {
+      return res.status(400).json({ error: 'YouTube URL required' });
+    }
+
+    // Extract video ID from URL
+    let youtubeId: string | null = null;
+    
+    // Try different YouTube URL formats
+    if (youtube_url.includes('youtube.com/watch?v=')) {
+      youtubeId = youtube_url.split('v=')[1]?.split('&')[0]?.split('?')[0];
+    } else if (youtube_url.includes('youtu.be/')) {
+      youtubeId = youtube_url.split('youtu.be/')[1]?.split('?')[0]?.split('&')[0];
+    } else if (youtube_url.match(/^[a-zA-Z0-9_-]{11}$/)) {
+      // Already a video ID
+      youtubeId = youtube_url;
+    }
+
+    if (!youtubeId || youtubeId.length !== 11) {
+      return res.status(400).json({ error: 'Invalid YouTube URL or ID' });
+    }
+
+    // Verify it's a valid video ID format
+    if (!youtubeId.match(/^[a-zA-Z0-9_-]{11}$/)) {
+      return res.status(400).json({ error: 'Invalid YouTube video ID format' });
+    }
+
+    // Get xassida
+    const xassida = await get('SELECT * FROM xassidas WHERE id = ?', [req.params.id]);
+    if (!xassida) {
+      return res.status(404).json({ error: 'Xassida not found' });
+    }
+
+    // Update youtube_id
+    await run(
+      'UPDATE xassidas SET youtube_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [youtubeId, req.params.id]
+    );
+
+    res.json({
+      message: 'YouTube ID saved',
+      youtube_id: youtubeId
+    });
+  } catch (error: any) {
+    console.error('Set YouTube ID error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET audio or YouTube info
+router.get('/:id/audio', async (req: Request, res: Response) => {
+  try {
+    const xassida = await get('SELECT * FROM xassidas WHERE id = ?', [req.params.id]);
+    if (!xassida) {
+      return res.status(404).json({ error: 'Xassida not found' });
+    }
+
+    // Return local audio if available
+    if (xassida.audio_url) {
+      return res.json({ 
+        type: 'local',
+        url: xassida.audio_url 
+      });
+    }
+
+    // Return YouTube info if available
+    if (xassida.youtube_id) {
+      return res.json({ 
+        type: 'youtube',
+        video_id: xassida.youtube_id,
+        embed_url: `https://www.youtube.com/embed/${xassida.youtube_id}`,
+        watch_url: `https://www.youtube.com/watch?v=${xassida.youtube_id}`
+      });
+    }
+
+    return res.status(404).json({ error: 'No audio available' });
+  } catch (error: any) {
+    console.error('Audio retrieval error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export const xassidaRoutes = router;
