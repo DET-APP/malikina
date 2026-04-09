@@ -73,6 +73,7 @@ export async function initDatabase() {
           title TEXT NOT NULL,
           author_id TEXT NOT NULL,
           description TEXT,
+          audio_url TEXT,
           verse_count INTEGER DEFAULT 0,
           chapter_count INTEGER DEFAULT 1,
           language TEXT DEFAULT 'ar',

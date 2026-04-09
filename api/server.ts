@@ -6,6 +6,10 @@ import swaggerJsdoc from 'swagger-jsdoc';
 import { initDatabase } from './db/schema.js';
 import { xassidaRoutes } from './routes/xassidas.js';
 import { authorRoutes } from './routes/authors.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 dotenv.config();
 
@@ -282,6 +286,9 @@ app.use(cors({
 }));
 app.use(EXPRESS.json({ limit: '50mb' }));
 app.use(EXPRESS.urlencoded({ limit: '50mb', extended: true }));
+
+// Serve audio files statically
+app.use('/audios', EXPRESS.static(path.join(__dirname, 'public/audios')));
 
 // Initialize database
 await initDatabase();

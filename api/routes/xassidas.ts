@@ -2,9 +2,25 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuid } from 'uuid';
 import { all, get, run } from '../db/schema.js';
 import multer from 'multer';
+import path from 'path';
+import { promises as fs } from 'fs';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Audio upload directory
+const audioDir = path.join(__dirname, '../public/audios');
+
+// Ensure audio directory exists
+async function ensureAudioDir() {
+  try {
+    await fs.mkdir(audioDir, { recursive: true });
+  } catch (error) {
+    console.error('Error creating audio directory:', error);
+  }
+}
 
 // GET all xassidas
 router.get('/', async (req: Request, res: Response) => {
@@ -113,6 +129,59 @@ router.delete('/:id', async (req: Request, res: Response) => {
     await run('DELETE FROM xassidas WHERE id = ?', [req.params.id]);
     res.json({ message: 'Xassida deleted' });
   } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// UPLOAD audio for xassida
+router.post('/:id/upload-audio', upload.single('file'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file provided' });
+    }
+
+    // Validate file type
+    const allowedMimes = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/mp4'];
+    if (!allowedMimes.includes(req.file.mimetype)) {
+      return res.status(400).json({ error: 'Invalid audio format. Allowed: MP3, WAV, OGG, WebM, M4A' });
+    }
+
+    // Get xassida
+    const xassida = await get('SELECT * FROM xassidas WHERE id = ?', [req.params.id]);
+    if (!xassida) {
+      return res.status(404).json({ error: 'Xassida not found' });
+    }
+
+    // Create filename
+    const ext = req.file.mimetype === 'audio/mpeg' ? 'mp3' : 
+               req.file.mimetype === 'audio/wav' ? 'wav' : 
+               req.file.mimetype === 'audio/ogg' ? 'ogg' : 
+               req.file.mimetype === 'audio/webm' ? 'webm' : 'm4a';
+    const filename = `${req.params.id}-${Date.now()}.${ext}`;
+    const filePath = path.join(audioDir, filename);
+
+    // Ensure directory exists
+    await ensureAudioDir();
+
+    // Save file
+    await fs.writeFile(filePath, req.file.buffer);
+
+    // Generate audio URL (relative to public directory)
+    const audioUrl = `/audios/${filename}`;
+
+    // Update xassida with audio URL
+    await run(
+      'UPDATE xassidas SET audio_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [audioUrl, req.params.id]
+    );
+
+    res.json({
+      message: 'Audio uploaded successfully',
+      audioUrl,
+      filename
+    });
+  } catch (error: any) {
+    console.error('Audio upload error:', error);
     res.status(500).json({ error: error.message });
   }
 });
