@@ -122,6 +122,10 @@ export function XassidasAdmin() {
   const [editingXassida, setEditingXassida] = useState<Xassida | null>(null);
   const [showEditAuthorDialog, setShowEditAuthorDialog] = useState(false);
   const [editingAuthor, setEditingAuthor] = useState<Author | null>(null);
+  const [showAudioUploadDialog, setShowAudioUploadDialog] = useState(false);
+  const [audioUploadingXassidaId, setAudioUploadingXassidaId] = useState<string | null>(null);
+  const [audioUploadProgress, setAudioUploadProgress] = useState(0);
+  const [audioUploadError, setAudioUploadError] = useState('');
 
   const totalVersePages = Math.max(1, Math.ceil(editorVerses.length / VERSES_PER_PAGE));
   const verseStartIndex = (currentVersePage - 1) * VERSES_PER_PAGE;
@@ -152,7 +156,7 @@ export function XassidasAdmin() {
     });
   };
 
-  const editXassidaForm = useForm({ defaultValues: { title: '', description: '' } });
+  const editXassidaForm = useForm({ defaultValues: { title: '', description: '', author_id: '' } });
   const editAuthorForm = useForm({ defaultValues: { name: '', description: '', photo_url: '', tradition: '' } });
 
   const updateAuthorMutation = useMutation({
@@ -382,11 +386,11 @@ export function XassidasAdmin() {
   });
 
   const updateXassidaMutation = useMutation({
-    mutationFn: async (data: { id: string; title: string; description?: string }) => {
+    mutationFn: async (data: { id: string; title: string; description?: string; author_id?: string }) => {
       const response = await fetch(`${API_URL}/xassidas/${data.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: data.title, description: data.description || '' })
+        body: JSON.stringify({ title: data.title, description: data.description || '', author_id: data.author_id })
       });
 
       if (!response.ok) {
@@ -400,7 +404,7 @@ export function XassidasAdmin() {
       queryClient.invalidateQueries({ queryKey: ['xassidas'] });
       setShowEditXassidaDialog(false);
       setEditingXassida(null);
-      editXassidaForm.reset({ title: '', description: '' });
+      editXassidaForm.reset({ title: '', description: '', author_id: '' });
     },
     onError: (error: any) => {
       alert(`Erreur modification: ${error?.message || 'Impossible de modifier la xassida'}`);
@@ -437,7 +441,8 @@ export function XassidasAdmin() {
     setEditingXassida(xassida);
     editXassidaForm.reset({
       title: xassida.title || '',
-      description: xassida.description || ''
+      description: xassida.description || '',
+      author_id: xassida.author_id || ''
     });
     setShowEditXassidaDialog(true);
   };
@@ -446,6 +451,67 @@ export function XassidasAdmin() {
     const confirmed = window.confirm(`Supprimer la xassida "${xassida.title}" ? Cette action est irréversible.`);
     if (!confirmed) return;
     await deleteXassidaMutation.mutateAsync(xassida.id);
+  };
+
+  // Handle audio upload
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>, xassidaId: string) => {
+    if (!e.target.files?.[0]) return;
+
+    const file = e.target.files[0];
+    // Validate it's an audio file
+    if (!file.type.startsWith('audio/')) {
+      setAudioUploadError('Veuillez sélectionner un fichier audio valide (MP3, WAV, OGG, etc.)');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('xassida_id', xassidaId);
+
+    setAudioUploadError('');
+    setAudioUploadProgress(0);
+    setAudioUploadingXassidaId(xassidaId);
+
+    try {
+      const data = await new Promise<any>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${API_URL}/xassidas/${xassidaId}/upload-audio`);
+
+        xhr.upload.onprogress = (event) => {
+          if (!event.lengthComputable) return;
+          const percent = Math.round((event.loaded / event.total) * 100);
+          setAudioUploadProgress(percent);
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(JSON.parse(xhr.responseText));
+            } catch {
+              reject(new Error('Réponse serveur invalide après upload audio'));
+            }
+            return;
+          }
+          reject(new Error(`Upload échoué (${xhr.status})`));
+        };
+
+        xhr.onerror = () => reject(new Error('Erreur réseau pendant l\'upload audio'));
+        xhr.send(formData);
+      });
+
+      setAudioUploadError('');
+      alert('✅ Audio uploadé avec succès!');
+      setShowAudioUploadDialog(false);
+      // Reset file input
+      const fileInput = document.querySelector(`input[data-audio-upload="${xassidaId}"]`) as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+    } catch (error) {
+      console.error('Audio upload error:', error);
+      setAudioUploadError(error instanceof Error ? error.message : 'Erreur inconnue pendant upload');
+    } finally {
+      setAudioUploadingXassidaId(null);
+      setAudioUploadProgress(0);
+    }
   };
 
   // Handle PDF upload with progress
@@ -905,6 +971,48 @@ export function XassidasAdmin() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Audio upload dialog */}
+          <Dialog open={showAudioUploadDialog} onOpenChange={setShowAudioUploadDialog}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Uploader un audio</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">Sélectionnez un fichier audio (MP3, WAV, OGG, etc.)</p>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Fichier audio</label>
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    onChange={(e) => {
+                      if (editingXassida) {
+                        handleAudioUpload(e, editingXassida.id);
+                      }
+                    }}
+                    className="border rounded px-3 py-2 w-full"
+                    disabled={!!audioUploadingXassidaId}
+                  />
+                </div>
+
+                {audioUploadingXassidaId && (
+                  <div className="space-y-2">
+                    <div className="w-full h-2 bg-muted rounded overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all"
+                        style={{ width: `${audioUploadProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Upload en cours: {audioUploadProgress}%</p>
+                  </div>
+                )}
+
+                {audioUploadError && (
+                  <p className="text-xs text-red-600">{audioUploadError}</p>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <Dialog open={showEditXassidaDialog} onOpenChange={setShowEditXassidaDialog}>
             <DialogContent className="max-w-lg">
               <DialogHeader>
@@ -917,7 +1025,8 @@ export function XassidasAdmin() {
                   updateXassidaMutation.mutate({
                     id: editingXassida.id,
                     title: values.title,
-                    description: values.description
+                    description: values.description,
+                    author_id: values.author_id
                   });
                 })}
               >
@@ -930,6 +1039,19 @@ export function XassidasAdmin() {
                   {editXassidaForm.formState.errors.title && (
                     <p className="text-xs text-red-600">{editXassidaForm.formState.errors.title.message}</p>
                   )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Auteur</label>
+                  <select
+                    {...editXassidaForm.register('author_id')}
+                    className="border rounded px-3 py-2 w-full"
+                    disabled={updateXassidaMutation.isPending}
+                  >
+                    <option value="">-- Sélectionner un auteur --</option>
+                    {authors.map((a: Author) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Description</label>
@@ -1179,6 +1301,17 @@ export function XassidasAdmin() {
                           </div>
                         </DialogContent>
                       </Dialog>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setEditingXassida(x);
+                          setShowAudioUploadDialog(true);
+                        }}
+                        disabled={audioUploadingXassidaId === x.id}
+                      >
+                        🎵 Audio
+                      </Button>
                       <Button
                         size="sm"
                         variant="outline"
