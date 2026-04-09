@@ -73,3 +73,4 @@ coverage
 .nyc_output
 .vercel
 .env*.local
+.deploy-secrets

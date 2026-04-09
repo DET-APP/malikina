@@ -1,0 +1,27 @@
+name: Deploy API → DigitalOcean
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: root
+          key: ${{ secrets.DO_SSH_KEY }}
+          timeout: 120s
+          script: |
+            cd /var/www/malikina-api
+            git pull origin main
+            cd api
+            npm install --legacy-peer-deps
+            npm run build
+            pm2 restart malikina-api
+            echo "Deployed at $(date)"
