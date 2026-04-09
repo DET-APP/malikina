@@ -24,6 +24,7 @@ export interface APIXassida {
   author_name: string;
   description?: string;
   verse_count: number;
+  audio_url?: string;
   created_at: string;
 }
 

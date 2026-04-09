@@ -182,9 +182,19 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
   // Audio
   useEffect(() => {
     setAudioUrl(undefined);
-    if (selectedQassida.audioUrl) { setAudioUrl(selectedQassida.audioUrl); return; }
+    // First check if API returned audio_url from database
+    if (apiDetail?.audio_url) { 
+      setAudioUrl(apiDetail.audio_url); 
+      return; 
+    }
+    // Then check if selectedQassida has audioUrl
+    if (selectedQassida.audioUrl) { 
+      setAudioUrl(selectedQassida.audioUrl); 
+      return; 
+    }
+    // Finally try to fetch from Supabase
     fetchAudioUrl(selectedQassida.id).then(setAudioUrl);
-  }, [selectedQassida.id]);
+  }, [selectedQassida.id, apiDetail?.audio_url]);
 
   // Copy verse — fallback for mobile / non-HTTPS
   const copyVerse = useCallback((verse: XassidaVerse) => {
