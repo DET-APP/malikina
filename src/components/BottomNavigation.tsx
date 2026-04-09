@@ -34,7 +34,7 @@ const BottomNavigation = ({ activeScreen, onNavigate }: BottomNavigationProps) =
     >
       {/* Barre avec couleur du design app */}
       <div className="relative h-20 bg-card border-t border-border shadow-lg rounded-t-3xl">
-        <div className="max-w-lg mx-auto h-full flex items-end justify-between px-4 pb-4">
+        <div className="max-w-lg mx-auto h-full flex items-end justify-between px-6 pb-4">
           {navItems.map((item, index) => {
             const isActive = activeIndex === index;
             
@@ -44,22 +44,32 @@ const BottomNavigation = ({ activeScreen, onNavigate }: BottomNavigationProps) =
                 {isActive ? (
                   <motion.button
                     onClick={() => onNavigate(item.id)}
-                    className="absolute -top-8 w-16 h-16 rounded-full bg-primary flex items-center justify-center shadow-lg"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
+                    className="absolute -top-10 w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-xl"
+                    initial={{ scale: 0, y: 10 }}
+                    animate={{ scale: 1, y: 0 }}
+                    exit={{ scale: 0, y: 10 }}
                     transition={{ type: "spring", stiffness: 300, damping: 25 }}
                   >
-                    <item.icon className="w-8 h-8 text-primary-foreground" />
+                    <item.icon className="w-10 h-10 text-primary-foreground" />
                   </motion.button>
                 ) : (
-                  /* Icône inactive dans la barre */
-                  <motion.button
-                    onClick={() => onNavigate(item.id)}
-                    className="flex flex-col items-center gap-1.5 relative transition-colors duration-200 text-muted-foreground hover:text-foreground"
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <item.icon className="w-6 h-6" />
-                  </motion.button>
+                  /* Icône inactive dans la barre avec point indicateur */
+                  <div className="flex flex-col items-center gap-1 relative">
+                    <motion.button
+                      onClick={() => onNavigate(item.id)}
+                      className="flex items-center justify-center transition-colors duration-200 text-muted-foreground hover:text-foreground"
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <item.icon className="w-6 h-6" />
+                    </motion.button>
+                    {/* Petit point vert indicateur */}
+                    <motion.div
+                      className="w-1.5 h-1.5 rounded-full bg-primary"
+                      initial={{ opacity: 0, scale: 0 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.1 }}
+                    />
+                  </div>
                 )}
               </div>
             );
