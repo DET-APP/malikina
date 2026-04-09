@@ -84,7 +84,7 @@ router.get('/:id/verses', async (req: Request, res: Response) => {
 // CREATE xassida
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { title, author_id, description } = req.body;
+    const { title, author_id, description, audio_url } = req.body;
     
     if (!title || !author_id) {
       return res.status(400).json({ error: 'Title and author_id required' });
@@ -92,9 +92,9 @@ router.post('/', async (req: Request, res: Response) => {
 
     const id = uuid();
     await run(
-      `INSERT INTO xassidas (id, title, author_id, description) 
-       VALUES (?, ?, ?, ?)`,
-      [id, title, author_id, description]
+      `INSERT INTO xassidas (id, title, author_id, description, audio_url) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [id, title, author_id, description, audio_url || '']
     );
 
     const xassida = await get('SELECT * FROM xassidas WHERE id = ?', [id]);
@@ -107,12 +107,12 @@ router.post('/', async (req: Request, res: Response) => {
 // UPDATE xassida
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { title, description } = req.body;
+    const { title, description, audio_url } = req.body;
     
     await run(
-      `UPDATE xassidas SET title = ?, description = ?, updated_at = CURRENT_TIMESTAMP 
+      `UPDATE xassidas SET title = ?, description = ?, audio_url = ?, updated_at = CURRENT_TIMESTAMP 
        WHERE id = ?`,
-      [title, description, req.params.id]
+      [title, description, audio_url || '', req.params.id]
     );
 
     const xassida = await get('SELECT * FROM xassidas WHERE id = ?', [req.params.id]);

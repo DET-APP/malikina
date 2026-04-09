@@ -35,6 +35,8 @@ interface Xassida {
   author_id: string;
   author_name?: string;
   description?: string;
+  audio_url?: string;
+  youtube_id?: string;
   verse_count: number;
 }
 
@@ -152,7 +154,7 @@ export function XassidasAdmin() {
     });
   };
 
-  const editXassidaForm = useForm({ defaultValues: { title: '', description: '' } });
+  const editXassidaForm = useForm({ defaultValues: { title: '', description: '', youtube_url: '', audio_url: '' } });
   const editAuthorForm = useForm({ defaultValues: { name: '', description: '', photo_url: '', tradition: '' } });
 
   const updateAuthorMutation = useMutation({
@@ -226,7 +228,9 @@ export function XassidasAdmin() {
       author_id: '',
       author_name: '',
       author_description: '',
-      description: ''
+      description: '',
+      youtube_url: '',
+      audio_url: ''
     }
   });
 
@@ -273,7 +277,8 @@ export function XassidasAdmin() {
           body: JSON.stringify({
             title: data.title.trim(),
             author_id: authorId,
-            description: data.description?.trim() || ''
+            description: data.description?.trim() || '',
+            audio_url: data.audio_url?.trim() || ''
           })
         });
 
@@ -282,6 +287,27 @@ export function XassidasAdmin() {
         }
 
         const xassidaData = await xassidaResponse.json();
+
+        // Handle youtube_url if provided
+        if (data.youtube_url && data.youtube_url.trim()) {
+          try {
+            const setYoutubeResponse = await fetch(`${API_URL}/xassidas/${xassidaData.id}/set-youtube-id`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ youtube_url: data.youtube_url.trim() })
+            });
+
+            if (!setYoutubeResponse.ok) {
+              const payload = await setYoutubeResponse.json().catch(() => ({}));
+              console.warn('Avertissement: Youtube ID n\'a pas pu être défini', payload.error);
+              // Don't throw - the xassida was still created successfully
+            } else {
+              console.log('✅ YouTube ID défini avec succès');
+            }
+          } catch (error) {
+            console.warn('Erreur lors de la définition du YouTube ID:', error);
+          }
+        }
 
         // Optional: upload PDF during xassida creation and auto-save extracted verses
         if (newXassidaPdf) {
@@ -342,7 +368,9 @@ export function XassidasAdmin() {
         author_id: '',
         author_name: '',
         author_description: '',
-        description: ''
+        description: '',
+        youtube_url: '',
+        audio_url: ''
       });
       setNewXassidaPdf(null);
       setNewXassidaPdfProgress(0);
@@ -382,11 +410,16 @@ export function XassidasAdmin() {
   });
 
   const updateXassidaMutation = useMutation({
-    mutationFn: async (data: { id: string; title: string; description?: string }) => {
+    mutationFn: async (data: { id: string; title: string; description?: string; youtube_url?: string; audio_url?: string }) => {
+      // First, update the xassida basic info
       const response = await fetch(`${API_URL}/xassidas/${data.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: data.title, description: data.description || '' })
+        body: JSON.stringify({ 
+          title: data.title, 
+          description: data.description || '',
+          audio_url: data.audio_url || ''
+        })
       });
 
       if (!response.ok) {
@@ -394,13 +427,30 @@ export function XassidasAdmin() {
         throw new Error(payload.error || 'Impossible de modifier la xassida');
       }
 
-      return response.json();
+      const xassidaData = await response.json();
+
+      // If youtube_url is provided, also set it
+      if (data.youtube_url && data.youtube_url.trim()) {
+        const setYoutubeResponse = await fetch(`${API_URL}/xassidas/${data.id}/set-youtube-id`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ youtube_url: data.youtube_url.trim() })
+        });
+
+        if (!setYoutubeResponse.ok) {
+          const payload = await setYoutubeResponse.json().catch(() => ({}));
+          console.warn('Avertissement: Youtube ID n\'a pas pu être défini', payload.error);
+          // Don't throw - the xassida was still updated successfully
+        }
+      }
+
+      return xassidaData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['xassidas'] });
       setShowEditXassidaDialog(false);
       setEditingXassida(null);
-      editXassidaForm.reset({ title: '', description: '' });
+      editXassidaForm.reset({ title: '', description: '', youtube_url: '', audio_url: '' });
     },
     onError: (error: any) => {
       alert(`Erreur modification: ${error?.message || 'Impossible de modifier la xassida'}`);
@@ -437,7 +487,9 @@ export function XassidasAdmin() {
     setEditingXassida(xassida);
     editXassidaForm.reset({
       title: xassida.title || '',
-      description: xassida.description || ''
+      description: xassida.description || '',
+      youtube_url: xassida.youtube_id ? `https://www.youtube.com/watch?v=${xassida.youtube_id}` : '',
+      audio_url: xassida.audio_url || ''
     });
     setShowEditXassidaDialog(true);
   };
@@ -839,6 +891,30 @@ export function XassidasAdmin() {
                     />
                   </div>
 
+                  {/* YouTube URL */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">🎵 URL YouTube (optionnel)</label>
+                    <Input 
+                      {...xassidaForm.register('youtube_url')} 
+                      placeholder="https://www.youtube.com/watch?v=... ou https://youtu.be/..."
+                      type="url"
+                      disabled={createXassidaMutation.isPending}
+                    />
+                    <p className="text-xs text-muted-foreground">La vidéo YouTube sera accessible comme audio</p>
+                  </div>
+
+                  {/* Audio URL */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">🔗 URL Audio Directe (optionnel)</label>
+                    <Input 
+                      {...xassidaForm.register('audio_url')} 
+                      placeholder="https://example.com/audio.mp3"
+                      type="url"
+                      disabled={createXassidaMutation.isPending}
+                    />
+                    <p className="text-xs text-muted-foreground">Lien direct vers un fichier audio MP3</p>
+                  </div>
+
                   {/* Optional PDF upload at creation time */}
                   <div className="space-y-2 border-t pt-4">
                     <label className="text-sm font-medium">PDF de la xassida (optionnel)</label>
@@ -917,7 +993,9 @@ export function XassidasAdmin() {
                   updateXassidaMutation.mutate({
                     id: editingXassida.id,
                     title: values.title,
-                    description: values.description
+                    description: values.description,
+                    youtube_url: values.youtube_url,
+                    audio_url: values.audio_url
                   });
                 })}
               >
@@ -938,6 +1016,26 @@ export function XassidasAdmin() {
                     rows={3}
                     disabled={updateXassidaMutation.isPending}
                   />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">🎵 URL YouTube</label>
+                  <Input
+                    {...editXassidaForm.register('youtube_url')}
+                    placeholder="https://www.youtube.com/watch?v=... ou https://youtu.be/..."
+                    type="url"
+                    disabled={updateXassidaMutation.isPending}
+                  />
+                  <p className="text-xs text-muted-foreground">La vidéo YouTube sera streamée comme audio</p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">🔗 URL Audio Directe</label>
+                  <Input
+                    {...editXassidaForm.register('audio_url')}
+                    placeholder="https://example.com/audio.mp3"
+                    type="url"
+                    disabled={updateXassidaMutation.isPending}
+                  />
+                  <p className="text-xs text-muted-foreground">Lien direct vers un fichier audio MP3</p>
                 </div>
                 <Button type="submit" className="w-full" disabled={updateXassidaMutation.isPending}>
                   {updateXassidaMutation.isPending ? 'Mise à jour...' : 'Sauvegarder les modifications'}
