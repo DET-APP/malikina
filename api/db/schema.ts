@@ -84,11 +84,22 @@ export async function initDatabase() {
         )
       `);
 
-      // Migration: Add youtube_id column if not exists (for existing DBs)
+      // Add youtube_id column if it doesn't exist (migration for existing tables)
       database.run(`
-        ALTER TABLE xassidas ADD COLUMN youtube_id TEXT DEFAULT NULL
-      `, (err) => {
-        // Ignore error if column already exists
+        PRAGMA table_info(xassidas)
+      `, (err, rows: any) => {
+        if (!err && rows) {
+          const hasYoutubeId = rows.some((row: any) => row.name === 'youtube_id');
+          if (!hasYoutubeId) {
+            database.run(`ALTER TABLE xassidas ADD COLUMN youtube_id TEXT`, (alterErr) => {
+              if (!alterErr) {
+                console.log('✅ Migration: Added youtube_id column to xassidas table');
+              } else if (!alterErr.message.includes('duplicate column')) {
+                console.warn('⚠️  Could not add youtube_id column:', alterErr.message);
+              }
+            });
+          }
+        }
       });
 
       // Verses table

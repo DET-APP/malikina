@@ -29,6 +29,14 @@ export interface APIXassida {
   created_at: string;
 }
 
+export interface AudioInfo {
+  type: 'local' | 'youtube';
+  url?: string;
+  video_id?: string;
+  embed_url?: string;
+  watch_url?: string;
+}
+
 const toStableNumericId = (value: string): number => {
   const compact = value.replace(/-/g, '').slice(0, 12);
   const parsed = Number.parseInt(compact, 16);
@@ -40,19 +48,20 @@ const API_URL =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://malikina-api.onrender.com/api');
 
-/** Audio mapping — add URLs here for xassidas */
-const audioMapping: Record<number, string> = {
-  // Format: numericId: "audio_url"
-  // Example: 12345: "https://example.com/audio.mp3"
+/** Fetch audio info (local or YouTube) from API endpoint */
+const fetchAudioInfo = async (xassidaId: string): Promise<AudioInfo | null> => {
+  try {
+    const res = await fetch(`${API_URL}/xassidas/${xassidaId}/audio`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (error) {
+    console.error('Failed to fetch audio info:', error);
+    return null;
+  }
 };
 
 /** Fetch audio URL from xassida.sn for a given xassida numeric ID */
 const fetchAudioUrl = async (xassidaNumericId: number): Promise<string | null> => {
-  // First check manual mapping
-  if (audioMapping[xassidaNumericId]) {
-    return audioMapping[xassidaNumericId];
-  }
-  
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/audio?xassida_id=eq.${xassidaNumericId}&select=file&limit=1`,
@@ -135,6 +144,7 @@ export const useXassidas = () => {
     isFromAPI: apiXassidas.length > 0,
     refetch: xassidaQuery.refetch,
     fetchAudioUrl,
+    fetchAudioInfo,
   };
 };
 

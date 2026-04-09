@@ -5,7 +5,6 @@ import multer from 'multer';
 import path from 'path';
 import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
-import ytdl from 'ytdl-core';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const router = Router();
@@ -85,7 +84,7 @@ router.get('/:id/verses', async (req: Request, res: Response) => {
 // CREATE xassida
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { title, author_id, description } = req.body;
+    const { title, author_id, description, audio_url } = req.body;
     
     if (!title || !author_id) {
       return res.status(400).json({ error: 'Title and author_id required' });
@@ -93,9 +92,9 @@ router.post('/', async (req: Request, res: Response) => {
 
     const id = uuid();
     await run(
-      `INSERT INTO xassidas (id, title, author_id, description) 
-       VALUES (?, ?, ?, ?)`,
-      [id, title, author_id, description]
+      `INSERT INTO xassidas (id, title, author_id, description, audio_url) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [id, title, author_id, description, audio_url || '']
     );
 
     const xassida = await get('SELECT * FROM xassidas WHERE id = ?', [id]);
@@ -108,12 +107,12 @@ router.post('/', async (req: Request, res: Response) => {
 // UPDATE xassida
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { title, description } = req.body;
+    const { title, description, audio_url } = req.body;
     
     await run(
-      `UPDATE xassidas SET title = ?, description = ?, updated_at = CURRENT_TIMESTAMP 
+      `UPDATE xassidas SET title = ?, description = ?, audio_url = ?, updated_at = CURRENT_TIMESTAMP 
        WHERE id = ?`,
-      [title, description, req.params.id]
+      [title, description, audio_url || '', req.params.id]
     );
 
     const xassida = await get('SELECT * FROM xassidas WHERE id = ?', [req.params.id]);
@@ -444,9 +443,9 @@ router.post('/:id/set-youtube-id', async (req: Request, res: Response) => {
     
     // Try different YouTube URL formats
     if (youtube_url.includes('youtube.com/watch?v=')) {
-      youtubeId = youtube_url.split('v=')[1]?.split('&')[0];
+      youtubeId = youtube_url.split('v=')[1]?.split('&')[0]?.split('?')[0];
     } else if (youtube_url.includes('youtu.be/')) {
-      youtubeId = youtube_url.split('youtu.be/')[1];
+      youtubeId = youtube_url.split('youtu.be/')[1]?.split('?')[0]?.split('&')[0];
     } else if (youtube_url.match(/^[a-zA-Z0-9_-]{11}$/)) {
       // Already a video ID
       youtubeId = youtube_url;
@@ -483,7 +482,7 @@ router.post('/:id/set-youtube-id', async (req: Request, res: Response) => {
   }
 });
 
-// STREAM audio from YouTube
+// GET audio or YouTube info
 router.get('/:id/audio', async (req: Request, res: Response) => {
   try {
     const xassida = await get('SELECT * FROM xassidas WHERE id = ?', [req.params.id]);
@@ -491,48 +490,27 @@ router.get('/:id/audio', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Xassida not found' });
     }
 
-    // Use audio_url if it exists (local file)
+    // Return local audio if available
     if (xassida.audio_url) {
-      return res.redirect(xassida.audio_url);
-    }
-
-    // Fall back to YouTube if youtube_id exists
-    if (!xassida.youtube_id) {
-      return res.status(404).json({ error: 'No audio or YouTube ID available' });
-    }
-
-    // Stream from YouTube
-    const videoUrl = `https://www.youtube.com/watch?v=${xassida.youtube_id}`;
-    
-    try {
-      const info = await ytdl.getInfo(videoUrl);
-      const audioFormat = ytdl.chooseFormat(info.formats, { quality: 'lowestaudio', filter: 'audioonly' });
-
-      if (!audioFormat) {
-        return res.status(404).json({ error: 'No audio format found' });
-      }
-
-      // Set correct audio headers
-      res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Accept-Ranges', 'bytes');
-      res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
-
-      // Stream
-      const stream = ytdl(videoUrl, { format: audioFormat });
-      stream.pipe(res);
-
-      stream.on('error', (error) => {
-        console.error('YouTube stream error:', error);
-        if (!res.headersSent) {
-          res.status(500).json({ error: 'Failed to stream YouTube audio' });
-        }
+      return res.json({ 
+        type: 'local',
+        url: xassida.audio_url 
       });
-    } catch (error) {
-      console.error('YouTube fetch error:', error);
-      res.status(500).json({ error: 'Failed to get YouTube audio' });
     }
+
+    // Return YouTube info if available
+    if (xassida.youtube_id) {
+      return res.json({ 
+        type: 'youtube',
+        video_id: xassida.youtube_id,
+        embed_url: `https://www.youtube.com/embed/${xassida.youtube_id}`,
+        watch_url: `https://www.youtube.com/watch?v=${xassida.youtube_id}`
+      });
+    }
+
+    return res.status(404).json({ error: 'No audio available' });
   } catch (error: any) {
-    console.error('Audio streaming error:', error);
+    console.error('Audio retrieval error:', error);
     res.status(500).json({ error: error.message });
   }
 });
