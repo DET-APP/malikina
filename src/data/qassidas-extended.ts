@@ -1,12 +1,12 @@
 /**
- * Extended Xassidas Data (IDs 111-174)
+ * Extended Xassidas Data (IDs 111-165)
  * Fetched from xassida.sn API
  */
 
 import type { Qassida } from './qassidasData';
 
-// Extended qassidas from xassida.sn (IDs 111-174)
-export const qassidas111to174: Qassida[] = [
+// Extended qassidas from xassida.sn (IDs 111-165)
+export const qassidas111to165: Qassida[] = [
   // 111-120
   { id: 111, title: "Yaa Rabb", arabic: "يَا رَبِّ", author: "Seydi El Hadji Malick Sy", confraternity: "Tidjane", isFavorite: false },
   { id: 112, title: "Qassida Al-Nur", arabic: "قَصِيدَةُ النُّورِ", author: "Serigne Cheikh Anta Diop", confraternity: "Tidjane", isFavorite: false },
@@ -67,7 +67,7 @@ export const qassidas111to174: Qassida[] = [
   { id: 159, title: "Bayan Al-Khair", arabic: "بَيَانُ الْخَيْرِ", author: "Mansour Sy Malick", confraternity: "Tidjane", isFavorite: false },
   { id: 160, title: "Sirat Al-Uns", arabic: "سِيرَةُ الْأُنْسِ", author: "Shaykh Ibrahim Niasse", confraternity: "Tidjane", isFavorite: false },
   
-  // 161-174
+  // 161-165
   { id: 161, title: "Wasl Al-Ahbab", arabic: "وَصْلُ الْأَحْبَابِ", author: "Seydi El Hadji Malick Sy", confraternity: "Tidjane", isFavorite: false },
   { id: 162, title: "Qawfia Sharifa", arabic: "قَافِيَةٌ شَرِيفَةٌ", author: "Serigne Cheikh Anta Diop", confraternity: "Tidjane", isFavorite: false },
   { id: 163, title: "Tiraz Al-Takmil", arabic: "تِرَازُ التَّكْمِيلِ", author: "Serigne Cheikh Tidiane Sy", confraternity: "Tidjane", isFavorite: false },
@@ -81,14 +81,14 @@ export const qassidas111to174: Qassida[] = [
   { id: 171, title: "Kasr Al-Kibar", arabic: "كَسْرُ الْكِبَارِ", author: "Serigne Abdou Aziz Sy Dabakh", confraternity: "Tidjane", isFavorite: false },
   { id: 172, title: "Qanat Al-Baraj", arabic: "قَنَاةُ الْبَرَاجِ", author: "Serigne Babacar Sy", confraternity: "Tidjane", isFavorite: false },
   { id: 173, title: "Tiba Al-Asl", arabic: "طِيبَةُ الْأَصْلِ", author: "Mansour Sy Malick", confraternity: "Tidjane", isFavorite: false },
-  { id: 174, title: "Dhiya Al-Hana", arabic: "ذِيَاءُ الْهَنَاءِ", author: "Shaykh Ibrahim Niasse", confraternity: "Tidjane", isFavorite: false },
+  { id: 165, title: "Dhiya Al-Hana", arabic: "ذِيَاءُ الْهَنَاءِ", author: "Shaykh Ibrahim Niasse", confraternity: "Tidjane", isFavorite: false },
 ];
 
 /**
  * Merge original qassidas with extended ones
  */
 export function mergeQassidas(original: Qassida[]): Qassida[] {
-  const merged = [...original, ...qassidas111to174];
+  const merged = [...original, ...qassidas111to165];
   // Remove duplicates based on ID
   const seen = new Set<number>();
   return merged.filter(q => {

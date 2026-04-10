@@ -71,6 +71,8 @@ export async function initDatabase() {
         CREATE TABLE IF NOT EXISTS xassidas (
           id TEXT PRIMARY KEY,
           title TEXT NOT NULL,
+          arabic_name TEXT,
+          categorie TEXT DEFAULT 'Autre',
           author_id TEXT NOT NULL,
           description TEXT,
           audio_url TEXT,
@@ -96,6 +98,42 @@ export async function initDatabase() {
                 console.log('✅ Migration: Added youtube_id column to xassidas table');
               } else if (!alterErr.message.includes('duplicate column')) {
                 console.warn('⚠️  Could not add youtube_id column:', alterErr.message);
+              }
+            });
+          }
+          
+          // Add arabic_name column if it doesn't exist (migration for existing tables)
+          const hasArabicName = rows.some((row: any) => row.name === 'arabic_name');
+          if (!hasArabicName) {
+            database.run(`ALTER TABLE xassidas ADD COLUMN arabic_name TEXT`, (alterErr) => {
+              if (!alterErr) {
+                console.log('✅ Migration: Added arabic_name column to xassidas table');
+              } else if (!alterErr.message.includes('duplicate column')) {
+                console.warn('⚠️  Could not add arabic_name column:', alterErr.message);
+              }
+            });
+          }
+          
+          // Add categorie column if it doesn't exist (migration for existing tables)
+          const hasCategorie = rows.some((row: any) => row.name === 'categorie');
+          if (!hasCategorie) {
+            database.run(`ALTER TABLE xassidas ADD COLUMN categorie TEXT DEFAULT 'Autre'`, (alterErr) => {
+              if (!alterErr) {
+                console.log('✅ Migration: Added categorie column to xassidas table');
+              } else if (!alterErr.message.includes('duplicate column')) {
+                console.warn('⚠️  Could not add categorie column:', alterErr.message);
+              }
+            });
+          }
+
+          // Add audio_url column if it doesn't exist (migration for existing tables)
+          const hasAudioUrl = rows.some((row: any) => row.name === 'audio_url');
+          if (!hasAudioUrl) {
+            database.run(`ALTER TABLE xassidas ADD COLUMN audio_url TEXT`, (alterErr) => {
+              if (!alterErr) {
+                console.log('✅ Migration: Added audio_url column to xassidas table');
+              } else if (!alterErr.message.includes('duplicate column')) {
+                console.warn('⚠️  Could not add audio_url column:', alterErr.message);
               }
             });
           }
@@ -144,62 +182,83 @@ async function count_authors(): Promise<number> {
   });
 }
 
-async function seedDatabase() {
+export async function seedDatabase() {
   try {
-    // Import sample data
-    const { abada, khilassZahab } = await import('../../src/data/maodoXassidas.js');
-    const { v4: uuid } = await import('uuid');
+    console.log('🌱 seedDatabase() started');
 
-    const samples = [
-      { data: abada, name: 'Maodo', desc: 'Grand saint musulman tidjiane', tradition: 'Tidjiane', birth: 1883, death: 1968 },
-      { data: khilassZahab, name: 'Maodo', desc: 'Khilāṣ al-Dhahab', tradition: 'Tidjiane', birth: 1883, death: 1968 }
-    ];
-
-    for (const item of samples) {
-      const authorId = uuid();
-      await run(
-        `INSERT INTO authors (id, name, description, tradition, birth_year, death_year) VALUES (?, ?, ?, ?, ?, ?)`,
-        [authorId, item.name, item.desc, item.tradition, item.birth, item.death]
-      );
-
-      const xassidaId = uuid();
-      const title = item.data.name || 'Xassida';
-      const chapterCount = item.data.chapters?.length || 1;
-      
-      await run(
-        `INSERT INTO xassidas (id, title, author_id, description, chapter_count, verse_count) VALUES (?, ?, ?, ?, ?, ?)`,
-        [xassidaId, title, authorId, `Xassida by ${item.name}`, chapterCount, 0]
-      );
-
-      // Add verses if available
-      let verseCount = 0;
-      if (item.data.chapters) {
-        for (let chIdx = 0; chIdx < item.data.chapters.length; chIdx++) {
-          const chapter = item.data.chapters[chIdx];
-          if (chapter.verses) {
-            for (let vIdx = 0; vIdx < chapter.verses.length; vIdx++) {
-              const verse = chapter.verses[vIdx] as any;
-              const transcription = verse.transliteration || verse.transcription || '';
-              const translationFr = verse.translation_fr || verse.translations?.fr || '';
-              const translationEn = verse.translation_en || verse.translations?.en || '';
-              await run(
-                `INSERT INTO verses (id, xassida_id, chapter_number, verse_number, verse_key, text_arabic, transcription, translation_fr, translation_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [uuid(), xassidaId, chIdx + 1, vIdx + 1, `${title}:${chIdx + 1}:${vIdx + 1}`, verse.text || '', transcription, translationFr, translationEn]
-              );
-              verseCount++;
-            }
-          }
-        }
-      }
-
-      await run(`UPDATE xassidas SET verse_count = ? WHERE id = ?`, [verseCount, xassidaId]);
-      console.log(`✅ Seeded: ${title} (${verseCount} verses)`);
+    // Check if database is already populated
+    console.log('📊 Counting existing xassidas...');
+    const count = await get('SELECT COUNT(*) as cnt FROM xassidas', []);
+    const existingXassidas = (count as any)?.cnt ?? 0;
+    console.log(`✅ Count result: ${existingXassidas} xassidas`);
+    
+    // Only seed if database is empty
+    if (existingXassidas > 0) {
+      console.log(`📚 Base déjà peuplée (${existingXassidas} xassidas) — seed ignoré.`);
+      return;
     }
 
-    console.log('✅ Database seeded successfully');
+    console.log('🌱 Seeding database avec données de test...');
+    
+    // Import UUID
+    console.log('📦 Importing uuid...');
+    const { v4: uuid } = await import('uuid');
+    console.log('✅ UUID imported');
+    
+    // Create a test author
+    console.log('👤 Creating test author...');
+    const authorId = uuid();
+    await run(
+      `INSERT INTO authors (id, name, description, tradition, birth_year, death_year) VALUES (?, ?, ?, ?, ?, ?)`,
+      [authorId, 'Seydina Cheikh', 'Fondateur de la brotherhood mouride', 'Mouride', 1853, 1927]
+    );
+    console.log('✅ Author créé');
+
+    // Create a test xassida with minimal data
+    console.log('📖 Creating test xassida...');
+    const xassidaId = uuid();
+    await run(
+      `INSERT INTO xassidas (id, title, arabic_name, categorie, author_id, description, chapter_count, verse_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        xassidaId, 
+        'Khilāṣ al-Dhahab', 
+        'خلاصة الذهب',
+        'Eloge du Prophéte',
+        authorId, 
+        'Xassida de Seydina Cheikh', 
+        1, 
+        0
+      ]
+    );
+    console.log('✅ Xassida créée');
+
+    // Add a few test verses
+    console.log('📝 Creating 3 test verses...');
+    for (let i = 1; i <= 3; i++) {
+      console.log(`   Verse ${i}...`);
+      await run(
+        `INSERT INTO verses (id, xassida_id, chapter_number, verse_number, verse_key, text_arabic, transcription) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          uuid(),
+          xassidaId,
+          1,
+          i,
+          `khilash:1:${i}`,
+          `الآية ${i}`,
+          `Transcription of verse ${i}`
+        ]
+      );
+    }
+    console.log('✅ 3 verses créés');
+
+    // Update verse count
+    console.log('🔄 Updating verse count...');
+    await run(`UPDATE xassidas SET verse_count = 3 WHERE id = ?`, [xassidaId]);
+
+    console.log('✅ Database seeded successfully with minimal test data');
   } catch (error) {
     console.error('❌ Seeding failed:', error);
-    throw error;
+    // Don't throw - allow server to continue
   }
 }
 

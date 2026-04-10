@@ -16,6 +16,7 @@ interface QassidasScreenProps {
 const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAuthorId, setSelectedAuthorId] = useState<number | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
   const [selectedQassida, setSelectedQassida] = useState<Qassida | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -36,6 +37,15 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
     if (target) setSelectedQassida(target);
   }, [initialQassidaId, allQassidas]);
 
+  // Get unique categories from xassidas (if available via API)
+  const uniqueCategories = Array.from(
+    new Set(
+      allQassidas
+        .filter((q) => (q as any).categorie)
+        .map((q) => (q as any).categorie)
+    )
+  ).sort() as string[];
+
   const filteredQassidas = allQassidas.filter((q) => {
     const matchesSearch =
       q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -43,8 +53,11 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
     const matchesAuthor = selectedAuthorId
       ? authorsData.find((a) => a.id === selectedAuthorId)?.fullName === q.author
       : true;
+    const matchesCategory = selectedCategory
+      ? (q as any).categorie === selectedCategory
+      : true;
     const matchesFavorite = showFavorites ? isFavorite(q.id) : true;
-    return matchesSearch && matchesAuthor && matchesFavorite;
+    return matchesSearch && matchesAuthor && matchesCategory && matchesFavorite;
   });
 
   const handleNext = () => {
@@ -170,6 +183,53 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
                   </div>
                   <span className="truncate max-w-[80px]">{author.shortName}</span>
                   <span className={`text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 ${isActive ? "bg-white/20" : "bg-muted-foreground/20"}`}>
+                    {count}
+                  </span>
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Category filter ────────────────────────────────────── */}
+      {!isLoading && !error && uniqueCategories.length > 0 && (
+        <div className="px-4 pt-5 pb-3 border-b border-border/20">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">
+            Par catégorie
+          </p>
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {/* Toutes */}
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                selectedCategory === null
+                  ? "bg-secondary text-secondary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              Toutes
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ml-1.5 inline-block ${selectedCategory === null ? "bg-white/20" : "bg-muted-foreground/20"}`}>
+                {filteredQassidas.length}
+              </span>
+            </button>
+
+            {uniqueCategories.map((category) => {
+              const count = allQassidas.filter((q) => (q as any).categorie === category).length;
+              const isActive = selectedCategory === category;
+              return (
+                <motion.button
+                  key={category}
+                  onClick={() => setSelectedCategory(isActive ? null : category)}
+                  whileTap={{ scale: 0.95 }}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    isActive
+                      ? "bg-secondary text-secondary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  {category}
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full ml-1.5 inline-block ${isActive ? "bg-white/20" : "bg-muted-foreground/20"}`}>
                     {count}
                   </span>
                 </motion.button>

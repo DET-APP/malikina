@@ -26,6 +26,8 @@ export interface APIXassida {
   verse_count: number;
   audio_url?: string;
   youtube_id?: string;
+  arabic_name?: string;
+  categorie?: string;
   created_at: string;
 }
 
@@ -82,7 +84,7 @@ const convertAPIXassidaToLocal = (apiXassida: APIXassida, authorName: string): Q
   id: toStableNumericId(apiXassida.id),
   apiId: apiXassida.id,
   title: apiXassida.title,
-  arabic: '',
+  arabic: apiXassida.arabic_name || '',
   author: authorName,
   confraternity: '',
   verseCount: apiXassida.verse_count,

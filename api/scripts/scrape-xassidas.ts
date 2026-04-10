@@ -1,6 +1,6 @@
 /**
  * Scraper xassida.sn → SQLite  (v2 — Supabase REST API)
- * Récupère les xassidas 111→174 avec leurs versets depuis l'API Supabase
+ * Récupère les xassidas 111→165 avec leurs versets depuis l'API Supabase
  * de xassida.sn (clé anon publique extraite du bundle JS) et les importe
  * dans la base de données locale.
  *
@@ -13,7 +13,7 @@ import { v4 as uuid } from 'uuid';
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const START_ID  = 111;
-const END_ID    = 174;
+const END_ID    = 165;
 const DELAY_MS  = 200; // délai poli entre requêtes
 
 const SUPABASE_URL = 'https://api.xassida.sn';
@@ -185,7 +185,7 @@ async function main() {
   await initDatabase();
   console.log('');
 
-  // 1. Fetch all xassidas 111–174 with their author in one query
+  // 1. Fetch all xassidas 111–165 with their author in one query
   console.log(`📡 Récupération des xassidas ${START_ID}–${END_ID} depuis api.xassida.sn...`);
   const xassidas = await supabaseGet<RemoteXassida>(
     `xassida?id=gte.${START_ID}&id=lte.${END_ID}&select=id,name,slug,author_id,author(id,name,tariha,picture)&order=id`,
