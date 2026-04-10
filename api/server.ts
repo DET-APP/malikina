@@ -275,7 +275,12 @@ const openApiSpec = swaggerJsdoc({
 });
 
 // Middleware
-const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:8080,http://localhost:5173').split(',').map(s => s.trim());
+const frontendUrl = process.env.FRONTEND_URL || '';
+const defaultOrigins = ['http://localhost:8080', 'http://localhost:5173', 'https://malikina.vercel.app'];
+const allowedOrigins = frontendUrl 
+  ? frontendUrl.split(',').map(s => s.trim())
+  : defaultOrigins;
+
 // En production, autoriser aussi les demandes sans origin et les déploiements provisoires
 app.use(cors({
   origin: (origin, callback) => {
@@ -283,9 +288,11 @@ app.use(cors({
     if (!origin) return callback(null, true);
     // Check against allowed origins
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    // In production, allow sslip.io domains (temporary DigitalOcean URLs)
-    if (process.env.NODE_ENV === 'production' && origin?.includes('sslip.io')) {
-      return callback(null, true);
+    // In production, allow *.vercel.app and *.sslip.io domains
+    if (process.env.NODE_ENV === 'production') {
+      if (origin?.includes('vercel.app') || origin?.includes('sslip.io')) {
+        return callback(null, true);
+      }
     }
     callback(new Error(`CORS: origin ${origin} not allowed`));
   },
