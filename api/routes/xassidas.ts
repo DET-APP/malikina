@@ -35,6 +35,7 @@ router.get('/', async (req: Request, res: Response) => {
         COALESCE(x.youtube_id, '') as youtube_id,
         COALESCE(x.categorie, 'Autre') as categorie,
         COALESCE(x.verse_count, 0) as verse_count,
+        (SELECT COUNT(*) FROM verses WHERE xassida_id = x.id) as actual_verse_count,
         x.created_at,
         a.id::text as author_id,
         a.name as author_name
@@ -80,10 +81,23 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     // Get verses
     const versesResult = await pool.query(`
-      SELECT id, xassida_id, verse_number, COALESCE(content_ar, '') as content_ar, COALESCE(translation_fr, '') as translation_fr, audio_url
+      SELECT 
+        id, 
+        xassida_id, 
+        chapter_number, 
+        verse_number, 
+        verse_key,
+        text_arabic,
+        transcription,
+        translation_fr,
+        translation_en,
+        words,
+        audio_url,
+        created_at,
+        updated_at
       FROM verses
       WHERE xassida_id = $1
-      ORDER BY verse_number ASC
+      ORDER BY chapter_number ASC, verse_number ASC
     `, [id]);
 
     const xassida = xassidaResult.rows[0];
@@ -98,14 +112,28 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// GET verses of xassida
+// GET verses of xassida (with all fields in correct format)
 router.get('/:id/verses', async (req: Request, res: Response) => {
   try {
     const result = await pool.query(`
-      SELECT id, xassida_id, verse_number, content_ar as text_arabic, translation_fr as text_french, audio_url
+      SELECT 
+        id, 
+        xassida_id, 
+        chapter_number, 
+        verse_number, 
+        verse_key,
+        text_arabic,
+        transcription,
+        translation_fr,
+        translation_en,
+        words,
+        audio_url,
+        notes,
+        created_at,
+        updated_at
       FROM verses
       WHERE xassida_id = $1
-      ORDER BY verse_number ASC
+      ORDER BY chapter_number ASC, verse_number ASC
     `, [req.params.id]);
     res.json(result.rows);
   } catch (error: any) {
