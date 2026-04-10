@@ -3,7 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
-import { initDatabase, seedDatabase } from './db/schema.js';
+import { seedDatabase } from './db/seed.js';
+import { pool } from './db/config.js';
 import { xassidaRoutes } from './routes/xassidas.js';
 import { authorRoutes } from './routes/authors.js';
 import path from 'path';
@@ -301,19 +302,24 @@ app.use(EXPRESS.urlencoded({ limit: '50mb', extended: true }));
 // Serve audio files statically
 app.use('/audios', EXPRESS.static(path.join(__dirname, 'public/audios')));
 
-// Initialize database
-await initDatabase();
-console.log('⏳ Attending 1 second for DB to be ready...');
-await new Promise(r => setTimeout(r, 1000));
+// Initialize PostgreSQL
+console.log('⏳ Connecting to PostgreSQL database...');
+try {
+  const result = await pool.query('SELECT 1');
+  console.log('✅ PostgreSQL connected');
+} catch (err) {
+  console.error('❌ PostgreSQL connection failed:', err);
+  process.exit(1);
+}
 
 // Auto-seed: seed database with sample data if empty
 await seedDatabase();
 
 // Optional: run scraper in background if SCRAPER_ENABLED=true
 if (process.env.SCRAPER_ENABLED === 'true') {
-  import('./db/schema.js').then(async ({ get }) => {
-    const row = await get('SELECT COUNT(*) as cnt FROM xassidas', []);
-    const cnt = (row as any)?.cnt ?? 0;
+  try {
+    const result = await pool.query('SELECT COUNT(*) as cnt FROM xassidas');
+    const cnt = (result.rows[0] as any)?.cnt ?? 0;
     if (cnt === 0) {
       console.log('🌱 Base vide — démarrage du scraper en arrière-plan...');
       import('./scripts/scrape-xassidas.js').catch(err =>
@@ -322,7 +328,9 @@ if (process.env.SCRAPER_ENABLED === 'true') {
     } else {
       console.log(`📚 Base déjà peuplée (${cnt} xassidas) — scraper ignoré.`);
     }
-  }).catch(() => {});
+  } catch (err) {
+    console.log('⚠️  Scraper check skipped:', err);
+  }
 }
 
 // Routes
