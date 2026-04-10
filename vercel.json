@@ -4,7 +4,7 @@
   "framework": "vite",
   "trailingSlash": false,
   "env": {
-    "VITE_API_URL": "https://165-245-211-201.sslip.io/api"
+    "VITE_API_URL": "http://165-245-211-201.sslip.io/api"
   },
   "git": {
     "deploymentEnabled": {
