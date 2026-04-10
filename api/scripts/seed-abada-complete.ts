@@ -1,4 +1,4 @@
-import pool from '../db.js';
+import { query as pool } from '../db/config.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const abadaVerses = [
@@ -25,7 +25,7 @@ async function seedAbadaVerses() {
     console.log('🔄 Seeding Abada verses with correct format...\n');
 
     // Delete existing verses for xassida_id = 1
-    await pool.query('DELETE FROM verses WHERE xassida_id = 1');
+    await pool('DELETE FROM verses WHERE xassida_id = 1');
     console.log('✅ Cleared existing verses for Abada');
 
     // Insert new verses
@@ -34,7 +34,7 @@ async function seedAbadaVerses() {
       const chapterNumber = 1;
       const verseKey = `${chapterNumber}:${verse.num}`;
 
-      await pool.query(
+      await pool(
         `INSERT INTO verses 
         (xassida_id, verse_number, chapter_number, verse_key, content, content_ar, translation_fr, transcription, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
