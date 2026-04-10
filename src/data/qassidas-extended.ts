@@ -1,11 +1,10 @@
 /**
  * Extended Xassidas Data (IDs 111-165)
- * Fetched from xassida.sn API
  */
 
 import type { Qassida } from './qassidasData';
 
-// Extended qassidas from xassida.sn (IDs 111-165)
+// Extended qassidas (IDs 111-165)
 export const qassidas111to165: Qassida[] = [
   // 111-120
   { id: 111, title: "Yaa Rabb", arabic: "يَا رَبِّ", author: "Seydi El Hadji Malick Sy", confraternity: "Tidjane", isFavorite: false },

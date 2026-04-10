@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Script to scrape xassidas from xassida.sn
+ * Script to scrape xassidas
  * Downloads xassida data (111-165) and generates qassidas-extended.ts
  */
 
@@ -9,12 +9,12 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const BASE_URL = 'https://www.xassida.sn/api/xassida';
+const BASE_URL = '';
 const START_ID = 111;
 const END_ID = 165;
 const OUTPUT_FILE = path.join(__dirname, '../src/data/qassidas-extended.ts');
 
-// Configuration mapping for authors from xassida.sn API
+// Configuration mapping for authors
 const authorMapping = {
   "Seydi El Hadji Malick Sy": "Seydi El Hadji Malick Sy",
   "Serigne Cheikh Anta Diop": "Serigne Cheikh Anta Diop",
@@ -89,7 +89,6 @@ function generateTypeScriptCode(xassidas) {
   
   const code = `/**
  * Extended Xassidas Data
- * Generated from xassida.sn API
  * IDs: 111-165
  */
 

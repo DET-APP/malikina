@@ -5,7 +5,7 @@ const SUPABASE_ANON_KEY =
   'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.' +
   'eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTcyNjUzMjUyMCwiZXhwIjo0ODgyMjA2MTIwLCJyb2xlIjoiYW5vbiJ9.' +
   'IbM1B5YYZOXq47F8lPxuNvKtQiMMaYCKQBJTonYq8aQ';
-const SUPABASE_URL = 'https://api.xassida.sn';
+const SUPABASE_URL = ''; // Removed xassida.sn dependency
 
 // API Author interface
 export interface APIAuthor {
@@ -62,7 +62,7 @@ const fetchAudioInfo = async (xassidaId: string): Promise<AudioInfo | null> => {
   }
 };
 
-/** Fetch audio URL from xassida.sn for a given xassida numeric ID */
+/** Fetch audio URL for a given xassida numeric ID */
 const fetchAudioUrl = async (xassidaNumericId: number): Promise<string | null> => {
   try {
     const res = await fetch(

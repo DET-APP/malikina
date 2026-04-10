@@ -1,8 +1,7 @@
 /**
- * Scraper xassida.sn → SQLite  (v2 — Supabase REST API)
- * Récupère les xassidas 111→165 avec leurs versets depuis l'API Supabase
- * de xassida.sn (clé anon publique extraite du bundle JS) et les importe
- * dans la base de données locale.
+ * Scraper Xassidas → SQLite  (v2 — Legacy Supabase API)
+ * Récupère les xassidas 111→165 avec leurs versets depuis l'API
+ * et les importe dans la base de données locale.
  *
  * Usage: cd api && npm run scrape
  */
@@ -16,9 +15,8 @@ const START_ID  = 111;
 const END_ID    = 165;
 const DELAY_MS  = 200; // délai poli entre requêtes
 
-const SUPABASE_URL = 'https://api.xassida.sn';
-// Clé anon publique — intentionnellement embarquée dans le bundle JS de xassida.sn.
-// L'accès en lecture est contrôlé par les règles RLS côté Supabase, pas par le secret de la clé.
+const SUPABASE_URL = ''; // Removed xassida.sn dependency
+// Legacy API configuration - Anon public key
 const SUPABASE_ANON_KEY =
   'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.' +
   'eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTcyNjUzMjUyMCwiZXhwIjo0ODgyMjA2MTIwLCJyb2xlIjoiYW5vbiJ9.' +
@@ -186,7 +184,7 @@ async function main() {
   console.log('');
 
   // 1. Fetch all xassidas 111–165 with their author in one query
-  console.log(`📡 Récupération des xassidas ${START_ID}–${END_ID} depuis api.xassida.sn...`);
+  console.log(`📡 Récupération des xassidas ${START_ID}–${END_ID}...`);
   const xassidas = await supabaseGet<RemoteXassida>(
     `xassida?id=gte.${START_ID}&id=lte.${END_ID}&select=id,name,slug,author_id,author(id,name,tariha,picture)&order=id`,
   );

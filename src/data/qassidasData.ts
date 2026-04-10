@@ -29,7 +29,7 @@ export const authorsData: Author[] = [
     fullName: "Seydi El Hadji Malick Sy",
     shortName: "El Hadj Malick Sy",
     arabic: "سَيِّدِي الْحَاجُّ مَالِكْ سِي",
-    imageUrl: "https://api.xassida.sn/storage/v1/object/public/images/authors/el_hadj_malick_sy_profile.png",
+    imageUrl: "",
     confraternity: "Tidjane",
     bio: "Fondateur de la Tidjaniyya au Sénégal"
   },
@@ -38,7 +38,7 @@ export const authorsData: Author[] = [
     fullName: "Serigne Cheikh Anta Diop",
     shortName: "Cheikh Anta Diop",
     arabic: "سِرِينْ الشَّيْخُ أَنْتَا",
-    imageUrl: "https://api.xassida.sn/storage/v1/object/public/images/authors/babacar_sy_profile.png",
+    imageUrl: "",
     confraternity: "Tidjane",
     bio: "Disciple et successeur"
   },
@@ -47,7 +47,7 @@ export const authorsData: Author[] = [
     fullName: "Serigne Cheikh Tidiane Sy",
     shortName: "Cheikh Tidiane Sy",
     arabic: "سِرِينْ الشَّيْخُ تِيْجَانِي سِي",
-    imageUrl: "https://api.xassida.sn/storage/v1/object/public/images/authors/cheikh_tidiane_sy_profile.png",
+    imageUrl: "",
     confraternity: "Tidjane",
     bio: "Héritier de la tradition"
   },
@@ -56,7 +56,7 @@ export const authorsData: Author[] = [
     fullName: "Serigne Abdou Aziz Sy Dabakh",
     shortName: "Abdou Aziz Sy",
     arabic: "سِرِينْ عَبْدُو الْعَزِيزِ سِي دَبَّاخْ",
-    imageUrl: "https://api.xassida.sn/storage/v1/object/public/images/authors/abdou_aziz_sy_profile.png",
+    imageUrl: "",
     confraternity: "Tidjane",
     bio: "Grand savant et poète"
   },
@@ -65,7 +65,7 @@ export const authorsData: Author[] = [
     fullName: "Serigne Babacar Sy",
     shortName: "Babacar Sy",
     arabic: "سِرِينْ بَابَاكَرْ سِي",
-    imageUrl: "https://api.xassida.sn/storage/v1/object/public/images/authors/babacar_sy_profile.png",
+    imageUrl: "",
     confraternity: "Tidjane",
     bio: "Compilateur et conservateur"
   },
@@ -74,7 +74,7 @@ export const authorsData: Author[] = [
     fullName: "Mansour Sy Malick",
     shortName: "Mansour Sy",
     arabic: "مَنْصُورْ سِي مَالِكْ",
-    imageUrl: "https://api.xassida.sn/storage/v1/object/public/images/authors/mansour_sy_malick_profile.png",
+    imageUrl: "",
     confraternity: "Tidjane",
     bio: "Poète spirituel"
   },
@@ -83,7 +83,7 @@ export const authorsData: Author[] = [
     fullName: "Shaykh Ibrahim Niasse",
     shortName: "Ibrahim Niasse",
     arabic: "شَيْخُ إِبْرَاهِيمُ نِيَاسْ",
-    imageUrl: "https://api.xassida.sn/storage/v1/object/public/images/authors/ibrahim_niasse_profile.png",
+    imageUrl: "",
     confraternity: "Tidjane",
     bio: "Maître spirituel et enseignant du Coran"
   },

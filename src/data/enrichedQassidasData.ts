@@ -60,7 +60,7 @@ export const enrichedQassidasData: Record<number, EnrichedQassida> = {
 `
   },
 
-// Seydi El Hadji Malick Sy - Adabul Masjid (#145 on xassida.sn)
+  // Seydi El Hadji Malick Sy - Adabul Masjid
   2: {
     fullText: `وَمَنْ يُرِدْ دُخُولَ مَسْجِدٍ فَلَا بُدَ مِنَ النِّيَاتِ نِلْتَ الْأَمَلَا
 يَنْوِي بِأَنَّ ذَاكَ بَيْتُ للَهِ دَاخِلُهُ فَزَائِرٌ للَهِ
@@ -199,7 +199,7 @@ export const enrichedQassidasData: Record<number, EnrichedQassida> = {
   },
 
   // Mansour Sy Malick
-// Mansour Sy Malick - Araftu Li Salma (#157 on xassida.sn)
+  // Mansour Sy Malick - Araftu Li Salma
   13: {
     fullText: `عَرَفْتُ لِسَلْمَى بِالْيَفَاعِ مُغَانِيَا
 غَدَتْ لِسِوَارِ الْمُعْصَرَاتِ بَوَالِيَا
