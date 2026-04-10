@@ -1,15 +1,16 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuid } from 'uuid';
-import { all, get, run } from '../db/schema.js';
+import { pool } from '../db/config.js';
 
 const router = Router();
 
 // GET all authors
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const authors = await all('SELECT * FROM authors ORDER BY name ASC');
-    res.json(authors);
+    const result = await pool.query('SELECT * FROM authors ORDER BY name ASC');
+    res.json(result.rows);
   } catch (error: any) {
+    console.error('Error fetching authors:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -17,14 +18,20 @@ router.get('/', async (req: Request, res: Response) => {
 // GET single author
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const author = await get('SELECT * FROM authors WHERE id = ?', [req.params.id]);
-    if (!author) {
+    const authorResult = await pool.query('SELECT * FROM authors WHERE id = $1', [req.params.id]);
+    if (authorResult.rows.length === 0) {
       return res.status(404).json({ error: 'Author not found' });
     }
     
-    const xassidas = await all('SELECT id, title, verse_count FROM xassidas WHERE author_id = ?', [req.params.id]);
-    res.json({ ...author, xassidas });
+    const xassidaResult = await pool.query(
+      'SELECT id, title FROM xassidas WHERE author_id = $1',
+      [req.params.id]
+    );
+    
+    const author = authorResult.rows[0];
+    res.json({ ...author, xassidas: xassidaResult.rows });
   } catch (error: any) {
+    console.error('Error fetching author:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -39,15 +46,16 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     const id = uuid();
-    await run(
+    const result = await pool.query(
       `INSERT INTO authors (id, name, description, photo_url, birth_year, death_year, tradition)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [id, name, description, photo_url, birth_year, death_year, tradition]
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, name, description, photo_url, birth_year, death_year, tradition`,
+      [id, name, description || null, photo_url || null, birth_year || null, death_year || null, tradition || null]
     );
 
-    const author = await get('SELECT * FROM authors WHERE id = ?', [id]);
-    res.status(201).json(author);
+    res.status(201).json(result.rows[0]);
   } catch (error: any) {
+    console.error('Error creating author:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -57,15 +65,26 @@ router.put('/:id', async (req: Request, res: Response) => {
   try {
     const { name, description, photo_url, birth_year, death_year, tradition } = req.body;
     
-    await run(
-      `UPDATE authors SET name = ?, description = ?, photo_url = ?, birth_year = ?, death_year = ?, tradition = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE id = ?`,
-      [name, description, photo_url, birth_year, death_year, tradition, req.params.id]
+    const result = await pool.query(
+      `UPDATE authors 
+       SET name = COALESCE($1, name),
+           description = COALESCE($2, description),
+           photo_url = COALESCE($3, photo_url),
+           birth_year = COALESCE($4, birth_year),
+           death_year = COALESCE($5, death_year),
+           tradition = COALESCE($6, tradition)
+       WHERE id = $7
+       RETURNING id, name, description, photo_url, birth_year, death_year, tradition`,
+      [name || null, description || null, photo_url || null, birth_year || null, death_year || null, tradition || null, req.params.id]
     );
 
-    const author = await get('SELECT * FROM authors WHERE id = ?', [req.params.id]);
-    res.json(author);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Author not found' });
+    }
+
+    res.json(result.rows[0]);
   } catch (error: any) {
+    console.error('Error updating author:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -73,16 +92,25 @@ router.put('/:id', async (req: Request, res: Response) => {
 // DELETE author
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    // Delete all xassidas and verses first
-    const xassidas = await all('SELECT id FROM xassidas WHERE author_id = ?', [req.params.id]);
-    for (const x of xassidas) {
-      await run('DELETE FROM verses WHERE xassida_id = ?', [x.id]);
+    // Delete all verses first (cascade via xassida_id)
+    await pool.query(
+      `DELETE FROM verses WHERE xassida_id IN (SELECT id FROM xassidas WHERE author_id = $1)`,
+      [req.params.id]
+    );
+
+    // Delete all xassidas
+    await pool.query('DELETE FROM xassidas WHERE author_id = $1', [req.params.id]);
+
+    // Delete author
+    const result = await pool.query('DELETE FROM authors WHERE id = $1 RETURNING id', [req.params.id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Author not found' });
     }
-    await run('DELETE FROM xassidas WHERE author_id = ?', [req.params.id]);
-    await run('DELETE FROM authors WHERE id = ?', [req.params.id]);
-    
-    res.json({ message: 'Author deleted' });
+
+    res.json({ message: 'Author deleted', id: req.params.id });
   } catch (error: any) {
+    console.error('Error deleting author:', error);
     res.status(500).json({ error: error.message });
   }
 });
