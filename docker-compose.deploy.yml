@@ -70,6 +70,26 @@ services:
           cpus: '0.25'
           memory: 256M
 
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: malikina-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-docker.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+    networks:
+      - malikina-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
 volumes:
   postgres_data:
     driver: local
