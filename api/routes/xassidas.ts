@@ -26,7 +26,7 @@ async function ensureAudioDir() {
 router.get('/', async (req: Request, res: Response) => {
   try {
     const result = await pool.query(`
-      SELECT x.id, x.title, x.description, x.created_at, a.id as author_id, a.name as author_name
+      SELECT x.id, x.title, x.description, x.arabic_name, x.audio_url, x.youtube_id, x.categorie, x.verse_count, x.created_at, a.id as author_id, a.name as author_name
       FROM xassidas x 
       LEFT JOIN authors a ON x.author_id = a.id
       ORDER BY x.created_at DESC
