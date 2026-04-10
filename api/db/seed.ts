@@ -1,106 +1,82 @@
-import { run, getDb } from './schema.js';
-import { v4 as uuid } from 'uuid';
+import { query } from './config.js';
 
-// Import depuis le fichier existant
-import { abada, khilassZahab } from '../../src/data/maodoXassidas.js';
-
-const xassidas = [
+// Sample data for seeding
+const authors = [
   {
-    data: abada,
-    authorName: 'Maodo',
-    authorDesc: 'Grand saint musulman tidjiane',
+    name: 'cheikh-anta-diop',
+    fullName: 'Cheikh Anta Diop',
+    arabic: 'الشيخ انطا ديوب',
+    description: 'Savant sénégalais et auteur de xassidas spirituelles',
     tradition: 'Tidjiane',
-    birthYear: 1883,
-    deathYear: 1968
+    birthYear: 1923,
+    deathYear: 2007
   },
   {
-    data: khilassZahab,
-    authorName: 'Maodo',
-    authorDesc: 'Même période que Abāda',
+    name: 'babacar-sy',
+    fullName: 'Babacar Sy',
+    arabic: 'بابا كار سي',
+    description: 'Auteur de xassidas célèbres',
+    tradition: 'Tidjiane',
+    birthYear: 1915,
+    deathYear: 1995
+  },
+  {
+    name: 'maodo',
+    fullName: 'Maodo',
+    arabic: 'معوض',
+    description: 'Grand saint musulman tidjiane',
     tradition: 'Tidjiane',
     birthYear: 1883,
     deathYear: 1968
   }
 ];
 
-async function importData() {
-  console.log('🔄 Import des xassidas existantes...');
+export async function seedDatabase() {
+  try {
+    console.log('Starting database seed...');
+    
+    // Check if authors exist
+    const result = await query('SELECT COUNT(*) as count FROM authors');
+    if (result.rows[0].count > 0) {
+      console.log('✓ Database already seeded, skipping...');
+      return;
+    }
 
-  for (const item of xassidas) {
-    try {
-      // Créer ou récupérer l'auteur
-      const authorId = uuid();
-      await run(
-        `INSERT INTO authors (id, name, description, tradition, birth_year, death_year)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [authorId, item.authorName, item.authorDesc, item.tradition, item.birthYear, item.deathYear]
+    // Insert sample authors
+    for (const author of authors) {
+      await query(
+        'INSERT INTO authors (name, full_name, arabic, description, tradition, birth_year, death_year) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [author.name, author.fullName, author.arabic, author.description, author.tradition, author.birthYear, author.deathYear]
       );
-      console.log(`✅ Auteur créé: ${item.authorName}`);
+      console.log(`✓ Author created: ${author.fullName}`);
+    }
 
-      // Créer la xassida
-      const xassidaId = uuid();
-      const title = item.data.name || 'Xassida';
-      await run(
-        `INSERT INTO xassidas (id, title, author_id, description, chapter_count)
-         VALUES (?, ?, ?, ?, ?)`,
-        [xassidaId, title, authorId, `Xassida by ${item.authorName}`, item.data.chapters.length]
+    // Insert sample xassida
+    const diop = await query('SELECT id FROM authors WHERE name = $1', ['cheikh-anta-diop']);
+    if (diop.rows.length > 0) {
+      await query(
+        'INSERT INTO xassidas (title, author_id, description, verse_count, categorie) VALUES ($1, $2, $3, $4, $5)',
+        [
+          'Tamurul Layali',
+          diop.rows[0].id,
+          'Une célèbre xassida tidjiane',
+          10,
+          'spirituelle'
+        ]
       );
-      console.log(`✅ Xassida créée: ${title}`);
+      console.log('✓ Sample xassida created');
+    }
 
-      // Ajouter les versets
-      let verseCount = 0;
-      for (const chapter of item.data.chapters) {
-        for (const verse of chapter.verses) {
-          const verseId = uuid();
-          const translations = verse.translations || [];
-          let translationFr = '';
-          let translationEn = '';
-
-          for (const trans of translations) {
-            if (trans.lang === 'fr') translationFr = trans.text;
-            if (trans.lang === 'en') translationEn = trans.text;
-          }
-
-          const words = verse.words ? JSON.stringify(verse.words) : '[]';
-
-          await run(
-            `INSERT INTO verses (id, xassida_id, chapter_number, verse_number, verse_key, text_arabic, transcription, translation_fr, translation_en, words)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              verseId,
-              xassidaId,
-              chapter.number,
-              verse.number,
-              verse.key,
-              verse.text,
-              verse.transcription || '',
-              translationFr,
-              translationEn,
-              words
-            ]
-          );
-          verseCount++;
-        }
-      }
-
-      // Mettre à jour le compteur de versets
-      await run(
-        `UPDATE xassidas SET verse_count = ? WHERE id = ?`,
-        [verseCount, xassidaId]
-      );
-
-      console.log(`✅ ${verseCount} versets importés`);
-      console.log('');
-    } catch (error) {
-      console.error(`❌ Erreur pour ${item.data.name}:`, error);
+    console.log('✅ Database seed completed');
+  } catch (error) {
+    console.error('❌ Seed error:', error);
+    if (error instanceof Error && error.message.includes('already exists')) {
+      console.log('Tables already exist, continuing...');
     }
   }
-
-  console.log('✅ Import terminé!');
-  process.exit(0);
 }
 
-importData().catch(error => {
-  console.error('Erreur:', error);
-  process.exit(1);
-});
+// Run if executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  seedDatabase().catch(console.error);
+}
