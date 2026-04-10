@@ -276,10 +276,17 @@ const openApiSpec = swaggerJsdoc({
 
 // Middleware
 const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:8080,http://localhost:5173').split(',').map(s => s.trim());
+// En production, autoriser aussi les demandes sans origin et les déploiements provisoires
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (curl, Postman, same-origin)
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    if (!origin) return callback(null, true);
+    // Check against allowed origins
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // In production, allow sslip.io domains (temporary DigitalOcean URLs)
+    if (process.env.NODE_ENV === 'production' && origin?.includes('sslip.io')) {
+      return callback(null, true);
+    }
     callback(new Error(`CORS: origin ${origin} not allowed`));
   },
   credentials: true
@@ -348,4 +355,6 @@ app.listen(PORT, () => {
   console.log(`   DELETE /api/xassidas/:id`);
   console.log(`   GET  /api/xassidas/:id/verses`);
   console.log(`   POST /api/xassidas/:id/verses`);
+  console.log(`   POST /api/xassidas/:id/upload-pdf`);
+  console.log(`   POST /api/xassidas/admin/import-translations`);
 });
