@@ -11,7 +11,7 @@ import { Plus, Edit2, Trash2, Upload, Save, ChevronLeft, ChevronRight, Loader2 }
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://malikina-api.onrender.com/api');
+  (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://165-245-211-201.sslip.io/api');
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
 const ADMIN_SESSION_KEY = 'malikina-admin-unlocked';
 

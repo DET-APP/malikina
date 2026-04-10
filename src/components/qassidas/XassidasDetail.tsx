@@ -188,7 +188,7 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
     
     // Get the API base URL
     const API_BASE = import.meta.env.VITE_API_URL ||
-      (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://malikina-api.onrender.com/api');
+      (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://165-245-211-201.sslip.io/api');
     
     // First check if API returned audio_url from database
     if (apiDetail?.audio_url) { 

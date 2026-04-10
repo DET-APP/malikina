@@ -30,7 +30,7 @@ if [ -f "api/.env" ]; then
         echo -e "${YELLOW}⚠${NC} OCR_SPACE_API_KEY non trouvé"
     fi
 else
-    echo -e "${YELLOW}⚠${NC} api/.env n'existe pas (pas grave pour production Render)"
+    echo -e "${YELLOW}⚠${NC} api/.env n'existe pas (pas grave pour production Docker)"
 fi
 
 echo ""
