@@ -50,6 +50,60 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
+// ADMIN: Import/Update translations for verses (MUST BE BEFORE /:id)
+router.post('/admin/import-translations', async (req: Request, res: Response) => {
+  try {
+    const { translations } = req.body;
+
+    if (!Array.isArray(translations)) {
+      return res.status(400).json({ error: 'translations must be an array' });
+    }
+
+    let updated = 0;
+    const errors: string[] = [];
+
+    for (const trans of translations) {
+      try {
+        const { verse_id, translation_fr, translation_en, transcription } = trans;
+
+        if (!verse_id) {
+          errors.push('Missing verse_id');
+          continue;
+        }
+
+        const result = await pool.query(`
+          UPDATE verses
+          SET 
+            translation_fr = COALESCE($1, translation_fr),
+            translation_en = COALESCE($2, translation_en),
+            transcription = COALESCE($3, transcription),
+            updated_at = NOW()
+          WHERE id = $4
+          RETURNING id
+        `, [translation_fr || null, translation_en || null, transcription || null, verse_id]);
+
+        if (result.rows.length > 0) {
+          updated++;
+        } else {
+          errors.push(`Verse ${verse_id} not found`);
+        }
+      } catch (err: any) {
+        errors.push(`Error updating verse: ${err.message}`);
+      }
+    }
+
+    res.json({
+      message: 'Import completed',
+      updated,
+      total: translations.length,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error: any) {
+    console.error('Error importing translations:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET single xassida with verses
 router.get('/:id', async (req: Request, res: Response) => {
   try {
@@ -252,60 +306,6 @@ router.post('/:id/upload-audio', upload.single('file'), async (req: Request, res
     console.error('Audio upload error:', error);
     res.status(500).json({ error: error.message });
   }
-// ADMIN: Import/Update translations for verses
-router.post('/admin/import-translations', async (req: Request, res: Response) => {
-  try {
-    const { translations } = req.body;
-
-    if (!Array.isArray(translations)) {
-      return res.status(400).json({ error: 'translations must be an array' });
-    }
-
-    let updated = 0;
-    const errors: string[] = [];
-
-    for (const trans of translations) {
-      try {
-        const { verse_id, translation_fr, translation_en, transcription } = trans;
-
-        if (!verse_id) {
-          errors.push('Missing verse_id');
-          continue;
-        }
-
-        const result = await pool.query(`
-          UPDATE verses
-          SET 
-            translation_fr = COALESCE($1, translation_fr),
-            translation_en = COALESCE($2, translation_en),
-            transcription = COALESCE($3, transcription),
-            updated_at = NOW()
-          WHERE id = $4
-          RETURNING id
-        `, [translation_fr || null, translation_en || null, transcription || null, verse_id]);
-
-        if (result.rows.length > 0) {
-          updated++;
-        } else {
-          errors.push(`Verse ${verse_id} not found`);
-        }
-      } catch (err: any) {
-        errors.push(`Error updating verse: ${err.message}`);
-      }
-    }
-
-    res.json({
-      message: 'Import completed',
-      updated,
-      total: translations.length,
-      errors: errors.length > 0 ? errors : undefined
-    });
-  } catch (error: any) {
-    console.error('Error importing translations:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 });
 
 // UPLOAD PDF and extract verses
