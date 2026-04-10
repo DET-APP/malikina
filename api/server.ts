@@ -275,7 +275,8 @@ const openApiSpec = swaggerJsdoc({
 });
 
 // Middleware
-// Accept all origins - CORS is open for development/debugging
+// Si en production, accepter toutes les origins pour debug
+const allowAllOrigins = process.env.NODE_ENV === 'production';
 const frontendUrl = process.env.FRONTEND_URL || '';
 const defaultOrigins = ['http://localhost:8080', 'http://localhost:5173', 'https://malikina.vercel.app'];
 const allowedOrigins = frontendUrl 
@@ -283,10 +284,16 @@ const allowedOrigins = frontendUrl
   : defaultOrigins;
 
 app.use(cors({
-  origin: true, // Accept all origins
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, Postman, same-origin)
+    if (!origin) return callback(null, true);
+    // In production, allow all origins for now
+    if (allowAllOrigins) return callback(null, true);
+    // Check against allowed origins
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
+  credentials: true
 }));
 app.use(EXPRESS.json({ limit: '50mb' }));
 app.use(EXPRESS.urlencoded({ limit: '50mb', extended: true }));

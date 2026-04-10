@@ -74,3 +74,4 @@ coverage
 .vercel
 .env*.local
 .deploy-secrets
+api/.env
