@@ -544,16 +544,11 @@ export function XassidasAdmin() {
 
   const importXassidaTranslationsMutation = useMutation({
     mutationFn: async ({ xassidaId, translations }: { xassidaId: string; translations: any[] }) => {
-      // Si le JSON a déjà xassida_id, utiliser tel quel. Sinon, l'ajouter
-      const enrichedTranslations = translations.map((t) => {
-        if (t.xassida_id) {
-          return t; // JSON a déjà xassida_id
-        }
-        return {
-          xassida_id: xassidaId,
-          ...t
-        };
-      });
+      // Toujours utiliser l'ID de la xassida sélectionnée, ignorer celui du JSON
+      const enrichedTranslations = translations.map((t) => ({
+        ...t,
+        xassida_id: xassidaId
+      }));
       
       const response = await fetch(`${API_URL}/xassidas/admin/import-translations`, {
         method: 'POST',
