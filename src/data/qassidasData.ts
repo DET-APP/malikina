@@ -121,14 +121,14 @@ export const qassidasData: Qassida[] = [
 ];
 
 // Import extended xassidas
-import { qassidas111to174 } from './qassidas-extended';
+import { qassidas111to165 } from './qassidas-extended';
 
 /**
- * Get all qassidas (original + extended from 111-174)
+ * Get all qassidas (original + extended from 111-165)
  * @returns Combined array of all qassidas sorted by ID
  */
 export function getAllQassidas(): Qassida[] {
-  const all = [...qassidasData, ...qassidas111to174];
+  const all = [...qassidasData, ...qassidas111to165];
   // Remove duplicates based on ID
   const seen = new Set<number>();
   return all.filter(q => {

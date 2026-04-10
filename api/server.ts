@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
-import { initDatabase } from './db/schema.js';
+import { initDatabase, seedDatabase } from './db/schema.js';
 import { xassidaRoutes } from './routes/xassidas.js';
 import { authorRoutes } from './routes/authors.js';
 import path from 'path';
@@ -292,9 +292,14 @@ app.use('/audios', EXPRESS.static(path.join(__dirname, 'public/audios')));
 
 // Initialize database
 await initDatabase();
+console.log('⏳ Attending 1 second for DB to be ready...');
+await new Promise(r => setTimeout(r, 1000));
 
-// Auto-seed: run scraper in background if DB is empty and AUTO_SEED_DB=true
-if (process.env.AUTO_SEED_DB === 'true') {
+// Auto-seed: seed database with sample data if empty
+await seedDatabase();
+
+// Optional: run scraper in background if SCRAPER_ENABLED=true
+if (process.env.SCRAPER_ENABLED === 'true') {
   import('./db/schema.js').then(async ({ get }) => {
     const row = await get('SELECT COUNT(*) as cnt FROM xassidas', []);
     const cnt = (row as any)?.cnt ?? 0;

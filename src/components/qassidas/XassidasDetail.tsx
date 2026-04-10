@@ -319,11 +319,9 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
               <AlignLeft className="w-3.5 h-3.5" /> Translitération
             </button>
           )}
-          {hasTranslation && (
-            <button onClick={() => setShowTl((s) => !s)} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${showTranslation ? active : ctrlBtn}`}>
-              <Languages className="w-3.5 h-3.5" /> Traduction
-            </button>
-          )}
+          <button onClick={() => setShowTl((s) => !s)} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${showTranslation ? active : ctrlBtn}`}>
+            <Languages className="w-3.5 h-3.5" /> Traduction
+          </button>
           {apiVerses.length > 0 && (
             <button onClick={() => { setShowSearch((s) => !s); if (showSearch) setVerseSearch(""); }} className={`ml-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${showSearch ? active : ctrlBtn}`}>
               {showSearch ? <X className="w-3.5 h-3.5" /> : <Search className="w-3.5 h-3.5" />}

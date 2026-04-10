@@ -1,73 +1,123 @@
-# Welcome to your Lovable project
+# 🕌 Malikina - Islamic Education & Community Platform
 
-## Project info
+**Al Moutahabbina Fillahi** (الطريقة التيجانية) — A Progressive Web App for Islamic education, prayer times, Quran viewing, and community connection.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 🌟 Features
 
-## How can I edit this code?
+- ✅ **Prayer Times** — Live prayer schedule with notifications
+- ✅ **Quran Viewer** — Full Qur'anic text with translations
+- ✅ **Xassidas** — Tidjiane spiritual poems & teachings
+- ✅ **Islamic Calendar** — Hijri calendar & Islamic dates
+- ✅ **Offline Support** — Full PWA with service worker caching
+- ✅ **Mobile-First** — Responsive design for all devices
+- ✅ **Multi-Language** — Arabic, French, English support
 
-There are several ways of editing your application.
+## 🚀 Quick Start
 
-**Use Lovable**
+### Prerequisites
+- Node.js v18+ (v20 recommended)
+- npm or bun
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### Setup
 
-Changes made via Lovable will be committed automatically to this repo.
+```bash
+# Clone repository
+git clone https://github.com/DET-APP/malikina.git
+cd malikina
 
-**Use your preferred IDE**
+# Install dependencies
+npm install
+cd api && npm install && cd ..
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+# Start development
+npm run dev              # Frontend on http://localhost:8080
+cd api && npm run dev    # API on http://localhost:5000 (separate terminal)
 ```
 
-**Edit a file directly in GitHub**
+### Build & Deploy
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+# Frontend
+npm run build            # Creates dist/
+npm run preview          # Preview production build
 
-**Use GitHub Codespaces**
+# API
+cd api && npm run build  # Creates dist/
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 📁 Project Structure
 
-## What technologies are used for this project?
+```
+malikina/
+├── src/                 ← React frontend (Vite)
+├── api/                 ← Express API server
+├── public/              ← Static assets & PWA config
+└── scripts/             ← Build & deployment scripts
+```
 
-This project is built with:
+### Key Technologies
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- **Frontend**: React 18, TypeScript, Tailwind CSS, shadcn-ui
+- **Backend**: Node.js, Express, SQLite
+- **Data Fetching**: TanStack Query (React Query)
+- **Forms**: React Hook Form + Zod validation
+- **Animations**: Framer Motion
+- **PWA**: Service Worker, offline support, install prompt
 
-## How can I deploy this project?
+## 📚 Available Scripts
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+```bash
+# Frontend
+npm run dev              # Start dev server (port 8080)
+npm run build            # Production build
+npm run lint             # Run ESLint
+npm run preview          # Preview production build
 
-## Can I connect a custom domain to my Lovable project?
+# API
+cd api && npm run dev    # Start API server (port 5000)
+cd api && npm run build  # Build API
+```
 
-Yes, you can!
+## 🔧 Configuration
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- **Frontend**: See `vite.config.ts`, `tailwind.config.ts`
+- **API**: See `api/server.ts`, `api/db/schema.ts`
+- **Environment**: `.env.local` (frontend), `api/.env` (backend)
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## 📖 Documentation
+
+- **[CLAUDE.md](CLAUDE.md)** — Development guidelines & conventions
+- **[QUICK-REFERENCE.md](QUICK-REFERENCE.md)** — Quick reference guide
+- **[PWA-README.md](PWA-README.md)** — PWA features & setup
+
+## 🌐 Deployment
+
+### Frontend (Vercel)
+```bash
+npm run build
+# Deploy dist/ to Vercel
+```
+
+### API (Render)
+```bash
+cd api && npm run build
+# Deploy to Render Web Service
+```
+
+See `render.yaml` and `vercel.json` for deployment config.
+
+## 🤝 Contributing
+
+1. Create a feature branch: `git checkout -b feature/your-feature`
+2. Make your changes
+3. Commit: `git commit -am 'Add feature'`
+4. Push: `git push origin feature/your-feature`
+5. Open a Pull Request
+
+## 📝 License
+
+Private project — All rights reserved.
+
+---
+
+**Ready to contribute?** Check [CLAUDE.md](CLAUDE.md) for development guidelines!

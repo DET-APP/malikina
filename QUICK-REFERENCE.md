@@ -1,259 +1,166 @@
-# 📋 Quick Reference Card - Xassidas Integration
+# 📋 Quick Reference - Malikina Islamic Education PWA
 
-## Folder Locations
+## Project Structure
 
 ```
-your-malikina-project/
-├── extracted-xassidas/              ← 📚 Documentation HERE
-│   ├── README.md                    ← START HERE
-│   ├── EXTRACTION-GUIDE.md          ← Data structure
-│   ├── DOWNLOAD-LINKS.md            ← Download commands
-│   ├── import-instructions.md       ← Integration steps
-│   └── data-index.json              ← Metadata
+malikina/
+├── api/                             ← Express API server (port 5000)
+│   ├── routes/                      ← REST API endpoints
+│   ├── db/                          ← SQLite database & schema
+│   ├── public/audios/               ← Audio files for Xassidas
+│   └── server.ts
 │
-├── scripts/
-│   └── download-xassidas.sh         ← 🚀 Run this to download
+├── src/                             ← Frontend (Vite + React)
+│   ├── components/
+│   │   ├── screens/                 ← Full-page views (Home, Prayer, Quran, etc.)
+│   │   ├── shared/                  ← Reusable components
+│   │   └── ui/                      ← shadcn-ui components
+│   ├── hooks/                       ← Custom hooks (usePrayerTimes, etc.)
+│   ├── services/                    ← API integrations
+│   └── data/
+│       ├── abada.json               ← Xassida verses
+│       ├── enrichedQassidasData.ts  ← Local Xassida data
+│       └── frenchSurahNames.ts      ← Quran surah names
 │
-├── src/data/                        ← Files download here
-│   ├── abada.json                   (to be created)
-│   ├── maodo-xassidas.json          (to be created)
-│   └── abouna.json                  (to be created)
+├── public/                          ← Static assets
+│   ├── manifest.json                ← PWA manifest
+│   ├── service-worker.js            ← PWA offline support
+│   └── icons/                       ← PWA app icons
 │
-├── EXTRACTION-SUMMARY.md            ← This overview
-├── XASSIDA-DATA-IMPLEMENTATION.md   ← Full guide
-└── ...
+└── scripts/                         ← Build & deploy scripts
 ```
 
 ---
 
-## 🎯 3-Minute Quick Start
+## ⚡ Quick Start Commands
 
-### 1. Download
+### Frontend
 ```bash
-cd /Users/user/Desktop/projects/personnel-projects/malikina
-./scripts/download-xassidas.sh
+npm run dev              # Start dev server (http://localhost:8080)
+npm run build            # Production build
+npm run lint             # Run ESLint
+npm run preview          # Preview production build
 ```
 
-### 2. Create Types
-Create `src/data/xassidaTypes.ts`:
-```typescript
-export interface XassidasWord {
-  position: number;
-  text: string;
-  transcription: string;
-}
-
-export interface XassidasVerse {
-  number: number;
-  key: string;
-  text: string;
-  words: XassidasWord[];
-  translations: Array<{ lang: string; text: string }>;
-}
-
-export interface XassidasWork {
-  name: string;
-  chapters: Array<{
-    name: string;
-    number: number;
-    verses: XassidasVerse[];
-  }>;
-  translated_lang: string[];
-}
-```
-
-### 3. Use It
-```typescript
-import abada from './abada.json';
-const verses = abada.chapters[0].verses; // 125+!
-```
-
----
-
-## 📊 Data at a Glance
-
-| File | Size | Verses | Status |
-|------|------|--------|--------|
-| abada.json | 85 KB | 125+ | Ready |
-| maodo-xassidas.json | 200 KB | Multi-chapter | Ready |
-| abouna.json | 45 KB | 29+ | Ready |
-
----
-
-## 🔗 One-Line Download Commands
-
+### API
 ```bash
-# Abāda (125+ verses with FR/EN)
-curl -o src/data/abada.json "https://raw.githubusercontent.com/AlKountiyou/xassidas/main/xassidas/tidjian/maodo/abada/abada.json"
+cd api && npm run dev    # Start API server (http://localhost:5000)
+cd api && npm run build  # Compile TypeScript
+cd api && npm run db:migrate  # Run database migrations
+```
 
-# Khilās-Zahab (in maodo xassidas.json)
-curl -o src/data/maodo-xassidas.json "https://raw.githubusercontent.com/AlKountiyou/xassidas/main/xassidas/tidjian/maodo/xassidas.json"
+### Full Stack
+```bash
+# Terminal 1: API
+cd api && npm run dev
 
-# Abouna (29+ verses, no translations)
-curl -o src/data/abouna.json "https://raw.githubusercontent.com/AlKountiyou/xassidas/main/xassidas/tidjian/serigne-cheikh/abouna/abouna.json"
+# Terminal 2: Frontend
+npm run dev
 ```
 
 ---
 
-## 📖 Documentation Map
+## � Core Features
 
-| File | Purpose | Read Time |
-|------|---------|-----------|
-| README.md | Overview & stats | 10 min |
-| EXTRACTION-GUIDE.md | Data structure | 15 min |
-| import-instructions.md | Integration | 20 min |
-| DOWNLOAD-LINKS.md | Download help | 5 min |
-| data-index.json | Metadata (ref) | 5 min |
-| XASSIDA-DATA-IMPLEMENTATION.md | Full guide | 30 min |
-
----
-
-## ✅ Implementation Checklist
-
-- [ ] Read EXTRACTION-SUMMARY.md (this file)
-- [ ] Read README.md in extracted-xassidas/
-- [ ] Run `./scripts/download-xassidas.sh`
-- [ ] Validate JSON with `jq empty src/data/*.json`
-- [ ] Create xassidaTypes.ts
-- [ ] Create importedXassidas.ts
-- [ ] Test with `console.log(importedXassidas['abada'])`
-- [ ] Update QassidasScreen.tsx
-- [ ] Test in browser
-- [ ] Deploy to staging
-- [ ] User testing
-- [ ] Production release
+| Feature | Status | Location |
+|---------|--------|----------|
+| Prayer Times | ✅ Live | `hooks/usePrayerTimes.ts` |
+| Quran Viewer | ✅ Live | `components/screens/QuranScreen.tsx` |
+| Xassidas | ✅ Live | `components/screens/QassidaScreen.tsx` |
+| Islamic Calendar | ✅ Live | `components/screens/CalendarScreen.tsx` |
+| PWA (Offline) | ✅ Live | `public/service-worker.js` |
+| Push Notifications | ✅ Live | `hooks/useNotifications.ts` |
 
 ---
 
-## 🆘 Common Issues
+## ✅ Development Checklist
+
+- [ ] Install dependencies: `npm install && cd api && npm install`
+- [ ] Start API: `cd api && npm run dev`
+- [ ] Start frontend: `npm run dev`
+- [ ] Check browser: http://localhost:8080
+- [ ] Run linter: `npm run lint`
+- [ ] Build: `npm run build`
+- [ ] Test PWA offline mode
+- [ ] Verify all screens load
+
+---
+
+## 🆘 Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
-| "Command not found: jq" | Install: `brew install jq` |
-| "JSON file not found" | Run: `./scripts/download-xassidas.sh` |
-| "Module not found" | Check paths in import statements |
-| "Arabic not displaying" | Ensure UTF-8 encoding & `dir="rtl"` in CSS |
-| "No TypeScript errors but data undefined" | Check that JSON files downloaded |
+| Port 8080 already in use | Change in `vite.config.ts`: `server.port` |
+| API not connecting | Ensure `VITE_API_URL=http://localhost:5000/api` in `.env.local` |
+| PWA not showing install prompt | Check DevTools → Application → Manifest |
+| Icons not displaying | Verify icon files in `public/icons/` |
+| Arabic text rendering issues | Check UTF-8 encoding, use `font-arabic` class |
+| Build failures | Run `npm run lint` to check errors first |
 
 ---
 
-## 🎓 What You Get
+## � Key Technologies
 
-```
-✅ 180+ authentic Tidjiane xassida verses
-✅ Full diacritical marks (tashkīl)
-✅ Word-level ISO 233-2 phonetic transcriptions
-✅ French & English translations (Abāda & Khilās-Zahab)
-✅ Professional scholarly quality
-✅ Production-ready JSON format
-✅ Complete documentation & integration guide
-```
-
----
-
-## 📧 File Summary
-
-### Created for You:
-1. ✅ **extracted-xassidas/README.md** — Project overview
-2. ✅ **extracted-xassidas/EXTRACTION-GUIDE.md** — Data reference
-3. ✅ **extracted-xassidas/DOWNLOAD-LINKS.md** — Download options
-4. ✅ **extracted-xassidas/import-instructions.md** — Integration steps
-5. ✅ **extracted-xassidas/data-index.json** — Metadata index
-6. ✅ **scripts/download-xassidas.sh** — Download automation
-7. ✅ **XASSIDA-DATA-IMPLEMENTATION.md** — Full implementation manual
-8. ✅ **EXTRACTION-SUMMARY.md** — This file
-
-### Download URLs Ready:
-- Abāda: https://raw.githubusercontent.com/AlKountiyou/xassidas/main/xassidas/tidjian/maodo/abada/abada.json
-- Khilās-Zahab: https://raw.githubusercontent.com/AlKountiyou/xassidas/main/xassidas/tidjian/maodo/xassidas.json
-- Abouna: https://raw.githubusercontent.com/AlKountiyou/xassidas/main/xassidas/tidjian/serigne-cheikh/abouna/abouna.json
+- **React 18** + React Router v6 for navigation
+- **TypeScript** with loose type checking (intentional)
+- **Tailwind CSS** + shadcn-ui for beautiful UI
+- **Framer Motion** for smooth animations
+- **TanStack Query (React Query)** for data fetching
+- **React Hook Form** + Zod for form validation
+- **Recharts** for data visualization
+- **Service Worker** for offline support (PWA)
 
 ---
 
-## ⚡ Fast Track Implementation
+## 📚 Key Files
 
-```bash
-# 1. Download data (auto-validates)
-./scripts/download-xassidas.sh
-
-# 2. Verify files
-ls -lh src/data/*.json
-
-# 3. Quick test
-jq '.chapters[0].verses[0]' src/data/abada.json
-
-# 4. Check verse count
-echo "Abāda verses:" $(jq '.chapters[0].verses | length' src/data/abada.json)
-echo "Abouna verses:" $(jq '.chapters[0].verses | length' src/data/abouna.json)
-
-# 5. Ready to integrate!
-echo "✅ Data ready for integration!"
-```
+| File | Purpose |
+|------|---------|
+| `src/pages/Index.tsx` | Main layout & screen routing |
+| `src/components/screens/` | Full-page views (8 screens) |
+| `src/hooks/usePrayerTimes.ts` | Prayer times fetching |
+| `src/services/quranApi.ts` | Quran API integration |
+| `api/server.ts` | Express API server |
+| `public/service-worker.js` | PWA caching strategy |
 
 ---
 
-## 💼 Project Stats
+## 🚀 Getting Started
 
-- **Extraction Date**: March 26, 2026
-- **Source Repo**: https://github.com/AlKountiyou/xassidas
-- **Data Completeness**: 100%
-- **Integration Time**: 20-30 minutes
+1. **Setup**
+   ```bash
+   npm install
+   cd api && npm install
+   ```
 
----
+2. **Run Development**
+   ```bash
+   # Terminal 1: API
+   cd api && npm run dev
+   
+   # Terminal 2: Frontend
+   npm run dev
+   ```
 
-## 🎤 OCR Configuration for PDF Extraction
+3. **Access**
+   - Frontend: http://localhost:8080
+   - API: http://localhost:5000/api
+   - Swagger Docs: http://localhost:5000/api-docs
 
-### Quick Links
-| Action | Link |
-|--------|------|
-| Get API Key | https://ocr.space/ocrapi |
-| Render Dashboard | https://render.com/dashboard |
-| Malikina API Service | https://render.com/dashboard → malikina-api |
-| Deploy Logs | https://malikina-api.onrender.com/logs |
-
-### Fast Setup (3 steps)
-```bash
-# 1. Get API from https://ocr.space/ocrapi (free 25/day)
-# Check email for OCR_SPACE_API_KEY
-
-# 2. Add to Render
-# https://render.com/dashboard 
-# → malikina-api → Environment
-# Add: OCR_SPACE_API_KEY, OCR_SPACE_LANGUAGE=ara, OCR_SPACE_ENGINE=2
-
-# 3. Test
-curl -X POST -F 'file=@document.pdf' \
-  https://malikina-api.onrender.com/api/xassidas/1/upload-pdf
-# Response: {"extraction_method":"ocr-space"}
-```
-
-### Test Locally
-```bash
-cd api && npm run dev          # Terminal 1
-npm run dev                     # Terminal 2 (main app)
-
-# Add to api/.env
-echo "OCR_SPACE_API_KEY=your_key" >> api/.env
-
-# Upload test PDF
-curl -X POST -F 'file=@test.pdf' http://localhost:5000/api/xassidas/1/upload-pdf
-```
-
-### Full Setup Guide
-See: [OCR-SPACE-SETUP.md](OCR-SPACE-SETUP.md)
-- **Total Files Created**: 8 documentation files + 1 script
-- **Quality**: Production-ready
+4. **Build & Deploy**
+   ```bash
+   npm run build         # Frontend
+   cd api && npm run build  # API
+   ```
 
 ---
 
-## 🚀 Your Next Step
+## 📖 More Information
 
-Open: **extracted-xassidas/README.md**
-
-Then run: **./scripts/download-xassidas.sh**
-
-Then follow: **extracted-xassidas/import-instructions.md**
+- **Development** → CLAUDE.md
+- **PWA Features** → PWA-README.md
+- **Project Info** → README.md
 
 ---
 
-**Everything is ready. Download and integrate!** ✨
+**Ready to develop!** 🎯

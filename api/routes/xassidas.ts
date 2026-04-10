@@ -82,19 +82,27 @@ router.get('/:id/verses', async (req: Request, res: Response) => {
 });
 
 // CREATE xassida
+// Valid categories for xassidas
+const VALID_CATEGORIES = ['Dua', 'Eloge du Prophéte', 'Eloge de Seydina Cheikh', 'Fiqh Sharia', 'Fiqh Tariqa', 'Autre'];
+
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { title, author_id, description, audio_url } = req.body;
+    const { title, author_id, description, audio_url, arabic_name, categorie } = req.body;
     
     if (!title || !author_id) {
       return res.status(400).json({ error: 'Title and author_id required' });
     }
 
+    // Validate categorie if provided
+    if (categorie && !VALID_CATEGORIES.includes(categorie)) {
+      return res.status(400).json({ error: `Invalid categorie. Must be one of: ${VALID_CATEGORIES.join(', ')}` });
+    }
+
     const id = uuid();
     await run(
-      `INSERT INTO xassidas (id, title, author_id, description, audio_url) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [id, title, author_id, description, audio_url || '']
+      `INSERT INTO xassidas (id, title, author_id, description, audio_url, arabic_name, categorie) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [id, title, author_id, description, audio_url || '', arabic_name || '', categorie || 'Autre']
     );
 
     const xassida = await get('SELECT * FROM xassidas WHERE id = ?', [id]);
@@ -107,12 +115,17 @@ router.post('/', async (req: Request, res: Response) => {
 // UPDATE xassida
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { title, description, audio_url } = req.body;
+    const { title, description, audio_url, arabic_name, categorie } = req.body;
+    
+    // Validate categorie if provided
+    if (categorie && !VALID_CATEGORIES.includes(categorie)) {
+      return res.status(400).json({ error: `Invalid categorie. Must be one of: ${VALID_CATEGORIES.join(', ')}` });
+    }
     
     await run(
-      `UPDATE xassidas SET title = ?, description = ?, audio_url = ?, updated_at = CURRENT_TIMESTAMP 
+      `UPDATE xassidas SET title = ?, description = ?, audio_url = ?, arabic_name = ?, categorie = ?, updated_at = CURRENT_TIMESTAMP 
        WHERE id = ?`,
-      [title, description, audio_url || '', req.params.id]
+      [title, description, audio_url || '', arabic_name || '', categorie || 'Autre', req.params.id]
     );
 
     const xassida = await get('SELECT * FROM xassidas WHERE id = ?', [req.params.id]);
@@ -511,6 +524,83 @@ router.get('/:id/audio', async (req: Request, res: Response) => {
     return res.status(404).json({ error: 'No audio available' });
   } catch (error: any) {
     console.error('Audio retrieval error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET valid categories for xassidas
+router.get('/admin/categories', async (req: Request, res: Response) => {
+  res.json({ categories: VALID_CATEGORIES });
+});
+
+// POST import translations for verses
+router.post('/admin/import-translations', async (req: Request, res: Response) => {
+  try {
+    const translations = req.body;
+
+    if (!Array.isArray(translations)) {
+      return res.status(400).json({ error: 'Expected an array of translations' });
+    }
+
+    if (translations.length === 0) {
+      return res.status(400).json({ error: 'No translations provided' });
+    }
+
+    // Validate format
+    const invalid = translations.filter(
+      (t) => !t.xassida_id || t.verse_number === undefined || !t.translation_fr
+    );
+    if (invalid.length > 0) {
+      return res.status(400).json({
+        error: `Invalid format in ${invalid.length} entries. Each must have: xassida_id, verse_number, translation_fr`
+      });
+    }
+
+    let successCount = 0;
+    let errorCount = 0;
+    const errors: string[] = [];
+
+    for (const { xassida_id, verse_number, translation_fr } of translations) {
+      try {
+        // Verify xassida exists
+        const xassida = await get('SELECT id FROM xassidas WHERE id = ?', [xassida_id]);
+        if (!xassida) {
+          errors.push(`Verse ${verse_number}: Xassida ${xassida_id} not found`);
+          errorCount++;
+          continue;
+        }
+
+        // Verify verse exists
+        const verse = await get(
+          'SELECT id FROM verses WHERE xassida_id = ? AND verse_number = ?',
+          [xassida_id, verse_number]
+        );
+        if (!verse) {
+          errors.push(`Xassida ${xassida_id}: Verse ${verse_number} not found`);
+          errorCount++;
+          continue;
+        }
+
+        // Update translation_fr
+        await run(
+          'UPDATE verses SET translation_fr = ? WHERE xassida_id = ? AND verse_number = ?',
+          [translation_fr, xassida_id, verse_number]
+        );
+        successCount++;
+      } catch (err: any) {
+        errorCount++;
+        errors.push(`Verse ${verse_number}: ${err.message}`);
+      }
+    }
+
+    res.json({
+      message: `Import complete: ${successCount} translations added`,
+      successCount,
+      errorCount,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error: any) {
+    console.error('Translation import error:', error);
     res.status(500).json({ error: error.message });
   }
 });

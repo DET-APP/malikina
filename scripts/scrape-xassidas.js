@@ -2,7 +2,7 @@
 
 /**
  * Script to scrape xassidas from xassida.sn
- * Downloads xassida data (111-174) and generates qassidas-extended.ts
+ * Downloads xassida data (111-165) and generates qassidas-extended.ts
  */
 
 const https = require('https');
@@ -11,7 +11,7 @@ const path = require('path');
 
 const BASE_URL = 'https://www.xassida.sn/api/xassida';
 const START_ID = 111;
-const END_ID = 174;
+const END_ID = 165;
 const OUTPUT_FILE = path.join(__dirname, '../src/data/qassidas-extended.ts');
 
 // Configuration mapping for authors from xassida.sn API
@@ -90,12 +90,12 @@ function generateTypeScriptCode(xassidas) {
   const code = `/**
  * Extended Xassidas Data
  * Generated from xassida.sn API
- * IDs: 111-174
+ * IDs: 111-165
  */
 
 import type { Qassida } from './qassidasData';
 
-export const qassidas111to174: Qassida[] = ${JSON.stringify(validData, null, 2)};
+export const qassidas111to165: Qassida[] = ${JSON.stringify(validData, null, 2)};
 
 /**
  * Combined qassidas (original + extended)
@@ -105,7 +105,7 @@ export function getAllQassidas(originalQassidas: Qassida[]): Qassida[] {
   const seenExternalIds = new Set();
   const merged = [
     ...originalQassidas,
-    ...qassidas111to174.filter(q => {
+    ...qassidas111to165.filter(q => {
       if (seenExternalIds.has(q.id)) return false;
       seenExternalIds.add(q.id);
       return true;
