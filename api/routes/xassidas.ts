@@ -49,7 +49,7 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// GET single xassida with verses
+// GET single xassida with verses (14 complete fields)
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -78,12 +78,15 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Xassida not found' });
     }
 
-    // Get verses
+    // Get verses with ALL 14 fields
     const versesResult = await pool.query(`
-      SELECT id, xassida_id, verse_number, COALESCE(content_ar, '') as content_ar, COALESCE(translation_fr, '') as translation_fr, audio_url
+      SELECT 
+        id, xassida_id, chapter_number, verse_number, verse_key,
+        text_arabic, transcription, translation_fr, translation_en,
+        words, audio_url, notes, created_at, updated_at
       FROM verses
       WHERE xassida_id = $1
-      ORDER BY verse_number ASC
+      ORDER BY chapter_number ASC, verse_number ASC
     `, [id]);
 
     const xassida = xassidaResult.rows[0];
@@ -98,14 +101,17 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// GET verses of xassida
+// GET verses of xassida (ALL 14 fields)
 router.get('/:id/verses', async (req: Request, res: Response) => {
   try {
     const result = await pool.query(`
-      SELECT id, xassida_id, verse_number, content_ar as text_arabic, translation_fr as text_french, audio_url
+      SELECT 
+        id, xassida_id, chapter_number, verse_number, verse_key,
+        text_arabic, transcription, translation_fr, translation_en,
+        words, audio_url, notes, created_at, updated_at
       FROM verses
       WHERE xassida_id = $1
-      ORDER BY verse_number ASC
+      ORDER BY chapter_number ASC, verse_number ASC
     `, [req.params.id]);
     res.json(result.rows);
   } catch (error: any) {
@@ -242,6 +248,60 @@ router.post('/:id/upload-pdf', upload.single('file'), async (req: Request, res: 
     });
   } catch (error: any) {
     console.error('Error uploading PDF:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ADMIN: Import/Update translations for verses
+router.post('/admin/import-translations', async (req: Request, res: Response) => {
+  try {
+    const { translations } = req.body;
+
+    if (!Array.isArray(translations)) {
+      return res.status(400).json({ error: 'translations must be an array' });
+    }
+
+    let updated = 0;
+    const errors: string[] = [];
+
+    for (const trans of translations) {
+      try {
+        const { verse_id, translation_fr, translation_en, transcription } = trans;
+
+        if (!verse_id) {
+          errors.push('Missing verse_id');
+          continue;
+        }
+
+        const result = await pool.query(`
+          UPDATE verses
+          SET 
+            translation_fr = COALESCE($1, translation_fr),
+            translation_en = COALESCE($2, translation_en),
+            transcription = COALESCE($3, transcription),
+            updated_at = NOW()
+          WHERE id = $4
+          RETURNING id
+        `, [translation_fr || null, translation_en || null, transcription || null, verse_id]);
+
+        if (result.rows.length > 0) {
+          updated++;
+        } else {
+          errors.push(`Verse ${verse_id} not found`);
+        }
+      } catch (err: any) {
+        errors.push(`Error updating verse: ${err.message}`);
+      }
+    }
+
+    res.json({
+      message: 'Import completed',
+      updated,
+      total: translations.length,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error: any) {
+    console.error('Error importing translations:', error);
     res.status(500).json({ error: error.message });
   }
 });
