@@ -30,11 +30,11 @@ router.get('/', async (req: Request, res: Response) => {
         x.id::text,
         x.title,
         x.description,
-        x.arabic_name,
-        x.audio_url,
-        x.youtube_id,
-        x.categorie,
-        x.verse_count,
+        COALESCE(x.arabic_name, '') as arabic_name,
+        COALESCE(x.audio_url, '') as audio_url,
+        COALESCE(x.youtube_id, '') as youtube_id,
+        COALESCE(x.categorie, 'Autre') as categorie,
+        COALESCE(x.verse_count, 0) as verse_count,
         x.created_at,
         a.id::text as author_id,
         a.name as author_name
@@ -60,11 +60,11 @@ router.get('/:id', async (req: Request, res: Response) => {
         x.id::text,
         x.title,
         x.description,
-        x.arabic_name,
-        x.audio_url,
-        x.youtube_id,
-        x.categorie,
-        x.verse_count,
+        COALESCE(x.arabic_name, '') as arabic_name,
+        COALESCE(x.audio_url, '') as audio_url,
+        COALESCE(x.youtube_id, '') as youtube_id,
+        COALESCE(x.categorie, 'Autre') as categorie,
+        COALESCE(x.verse_count, 0) as verse_count,
         x.created_at,
         a.id::text as author_id,
         a.name as author_name,
@@ -80,7 +80,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     // Get verses
     const versesResult = await pool.query(`
-      SELECT id, xassida_id, verse_number, content_ar, translation_fr, audio_url
+      SELECT id, xassida_id, verse_number, COALESCE(content_ar, '') as content_ar, COALESCE(translation_fr, '') as translation_fr, audio_url
       FROM verses
       WHERE xassida_id = $1
       ORDER BY verse_number ASC

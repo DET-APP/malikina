@@ -39,11 +39,13 @@ export interface AudioInfo {
   watch_url?: string;
 }
 
-const toStableNumericId = (value: string): number => {
-  const compact = value.replace(/-/g, '').slice(0, 12);
+const toStableNumericId = (value: any): number => {
+  // Convert to string first if it's a number
+  const str = typeof value === 'number' ? String(value) : String(value || '');
+  const compact = str.replace(/-/g, '').slice(0, 12);
   const parsed = Number.parseInt(compact, 16);
   if (Number.isFinite(parsed) && parsed > 0) return parsed;
-  return value.split('').reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) % 2147483647, 7);
+  return str.split('').reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) % 2147483647, 7);
 };
 
 const API_URL =
