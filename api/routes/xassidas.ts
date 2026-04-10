@@ -26,7 +26,18 @@ async function ensureAudioDir() {
 router.get('/', async (req: Request, res: Response) => {
   try {
     const result = await pool.query(`
-      SELECT x.id, x.title, x.description, x.arabic_name, x.audio_url, x.youtube_id, x.categorie, x.verse_count, x.created_at, a.id as author_id, a.name as author_name
+      SELECT 
+        x.id::text,
+        x.title,
+        x.description,
+        x.arabic_name,
+        x.audio_url,
+        x.youtube_id,
+        x.categorie,
+        x.verse_count,
+        x.created_at,
+        a.id::text as author_id,
+        a.name as author_name
       FROM xassidas x 
       LEFT JOIN authors a ON x.author_id = a.id
       ORDER BY x.created_at DESC
@@ -45,7 +56,19 @@ router.get('/:id', async (req: Request, res: Response) => {
     
     // Get xassida
     const xassidaResult = await pool.query(`
-      SELECT x.id, x.title, x.description, x.created_at, a.id as author_id, a.name as author_name, a.photo_url
+      SELECT 
+        x.id::text,
+        x.title,
+        x.description,
+        x.arabic_name,
+        x.audio_url,
+        x.youtube_id,
+        x.categorie,
+        x.verse_count,
+        x.created_at,
+        a.id::text as author_id,
+        a.name as author_name,
+        a.photo_url
       FROM xassidas x 
       LEFT JOIN authors a ON x.author_id = a.id
       WHERE x.id = $1
@@ -57,7 +80,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     // Get verses
     const versesResult = await pool.query(`
-      SELECT id, xassida_id, verse_number, text_arabic, text_french, audio_url
+      SELECT id, xassida_id, verse_number, content_ar, translation_fr, audio_url
       FROM verses
       WHERE xassida_id = $1
       ORDER BY verse_number ASC
@@ -79,7 +102,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.get('/:id/verses', async (req: Request, res: Response) => {
   try {
     const result = await pool.query(`
-      SELECT id, xassida_id, verse_number, text_arabic, text_french, audio_url
+      SELECT id, xassida_id, verse_number, content_ar as text_arabic, translation_fr as text_french, audio_url
       FROM verses
       WHERE xassida_id = $1
       ORDER BY verse_number ASC

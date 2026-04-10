@@ -7,7 +7,7 @@ const router = Router();
 // GET all authors
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const result = await pool.query('SELECT * FROM authors ORDER BY name ASC');
+    const result = await pool.query('SELECT id::text, name, full_name, arabic, description, photo_url, tradition, birth_year, death_year, bio, created_at, updated_at FROM authors ORDER BY name ASC');
     res.json(result.rows);
   } catch (error: any) {
     console.error('Error fetching authors:', error);
@@ -18,13 +18,13 @@ router.get('/', async (req: Request, res: Response) => {
 // GET single author
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const authorResult = await pool.query('SELECT * FROM authors WHERE id = $1', [req.params.id]);
+    const authorResult = await pool.query('SELECT id::text, name, full_name, arabic, description, photo_url, tradition, birth_year, death_year, bio, created_at, updated_at FROM authors WHERE id = $1', [req.params.id]);
     if (authorResult.rows.length === 0) {
       return res.status(404).json({ error: 'Author not found' });
     }
     
     const xassidaResult = await pool.query(
-      'SELECT id, title FROM xassidas WHERE author_id = $1',
+      'SELECT id::text, title FROM xassidas WHERE author_id = $1',
       [req.params.id]
     );
     
