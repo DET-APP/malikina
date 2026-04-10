@@ -135,15 +135,16 @@ async function insertVerses(
 
     await query(
       `INSERT INTO verses 
-        (xassida_id, verse_number, chapter_number, verse_key, text_arabic, transcription, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
+        (xassida_id, verse_number, chapter_number, verse_key, text_arabic, transcription, content, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
       [
         xassidaId,
         verse.number,
         chapterNumber,
         verseKey,
         verse.text,
-        verse.transcription || null
+        verse.transcription || null,
+        verse.text
       ]
     );
     count++;
