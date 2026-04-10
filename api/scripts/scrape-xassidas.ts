@@ -15,7 +15,7 @@ const START_ID  = 111;
 const END_ID    = 165;
 const DELAY_MS  = 200; // délai poli entre requêtes
 
-const SUPABASE_URL = ''; // Removed xassida.sn dependency
+const SUPABASE_URL = 'https://api.xassida.sn';
 // Legacy API configuration - Anon public key
 const SUPABASE_ANON_KEY =
   'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.' +
