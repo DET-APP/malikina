@@ -6,8 +6,8 @@
 
 import { query } from '../db/config.js';
 
-const START_ID = 111;
-const END_ID = 165;
+const START_ID = 138;
+const END_ID = 138;
 const DELAY_MS = 300; // Increased from 200ms
 const API_TIMEOUT_MS = 15000; // 15 second timeout per request
 const MAX_RETRIES = 3;
