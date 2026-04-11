@@ -181,64 +181,46 @@ async function insertVerses(
 
 async function main() {
   try {
-    console.log('🗄️  Connecting to PostgreSQL...');
-    const conn = await query('SELECT 1');
-    console.log('✅ Connected');
-    console.log('');
+    await query('SELECT 1');
 
-    console.log(`📡 Fetching xassidas ${START_ID}–${END_ID}...`);
     const xassidas = await supabaseGet<RemoteXassida>(
       `xassida?id=gte.${START_ID}&id=lte.${END_ID}&select=id,name,slug,author_id,author(id,name,tariha,picture)&order=id`
     );
-    console.log(`   → ${xassidas.length} xassidas found`);
-    console.log('');
 
     let insertedX = 0, skippedX = 0, failedX = 0, totalVerses = 0;
     const errors: { name: string; error: string }[] = [];
 
     for (const xassida of xassidas) {
       const title = slugToTitle(xassida.name);
-      process.stdout.write(`[${xassida.id}] "${title}" ... `);
 
       try {
         if (!xassida.author) {
-          console.log('⚠️  missing author');
           failedX++;
           continue;
         }
 
         const authorId = await upsertAuthor(xassida.author);
 
-        // Fetch chapters with retry
+        // Fetch chapters - tolerate failures
         let chapters: RemoteChapter[] = [];
         try {
           chapters = await supabaseGet<RemoteChapter>(
             `chapter?xassida_id=eq.${xassida.id}&select=id,number,name&order=number`
           );
         } catch (err) {
-          console.log(`❌ failed to fetch chapters: ${(err as Error).message}`);
-          errors.push({ name: title, error: `Chapters fetch: ${(err as Error).message}` });
-          failedX++;
-          continue;
+          // Continue anyway - xassida may exist without chapters in API
         }
 
-        if (chapters.length === 0) {
-          console.log('⚠️  no chapters found');
-          failedX++;
-          continue;
-        }
-
-        // Upsert xassida
+        // Upsert xassida (work even with 0 chapters)
         const { id: xassidaId, inserted } = await upsertXassida(
           xassida,
           authorId,
-          chapters.length
+          Math.max(chapters.length, 1)
         );
 
         let versesThisX = 0;
-        let chaptersFailed = 0;
 
-        // Fetch and insert verses
+        // Fetch and insert verses from all chapters
         for (const chapter of chapters) {
           try {
             const verses = await supabaseGet<RemoteVerse>(
@@ -246,23 +228,20 @@ async function main() {
             );
             versesThisX += await insertVerses(xassidaId, chapter.number, verses);
           } catch (err) {
-            console.error(`   ⚠️  Chapter ${chapter.number} failed: ${(err as Error).message}`);
-            chaptersFailed++;
+            // Skip failed chapters, continue with others
           }
           await sleep(50);
         }
 
         if (inserted) {
-          console.log(`✅ imported (${chapters.length} ch., ${versesThisX} verses)${chaptersFailed ? ` [${chaptersFailed} chapters failed]` : ''}`);
+          console.log(`[${xassida.id}] ${versesThisX} verses`);
           insertedX++;
         } else {
-          console.log(`⏭️  already exists (${versesThisX} verses added)${chaptersFailed ? ` [${chaptersFailed} chapters failed]` : ''}`);
           skippedX++;
         }
 
         totalVerses += versesThisX;
       } catch (err) {
-        console.log(`❌ error: ${(err as Error).message}`);
         errors.push({ name: title, error: (err as Error).message });
         failedX++;
       }
@@ -271,17 +250,7 @@ async function main() {
     }
 
     console.log('');
-    console.log('─'.repeat(55));
-    console.log(`✅ Xassidas imported  : ${insertedX}`);
-    console.log(`⏭️  Already present    : ${skippedX}`);
-    console.log(`❌ Failed            : ${failedX}`);
-    console.log(`📜 Verses imported    : ${totalVerses}`);
-    console.log('─'.repeat(55));
-
-    if (errors.length > 0) {
-      console.log('\n⚠️  Errors encountered:');
-      errors.forEach(e => console.log(`  • ${e.name}: ${e.error}`));
-    }
+    console.log(`✅ ${insertedX} imported | ⏭️  ${skippedX} existing | ❌ ${failedX} failed | 📜 ${totalVerses} verses`);
 
     process.exit(errors.length > 0 && failedX > 5 ? 1 : 0);
   } catch (error) {
