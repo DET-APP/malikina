@@ -4,6 +4,7 @@ import multer from 'multer';
 import path from 'path';
 import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
+import { spawn } from 'child_process';
 import { pool } from '../db/config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -100,6 +101,106 @@ router.post('/admin/import-translations', async (req: Request, res: Response) =>
     });
   } catch (error: any) {
     console.error('Error importing translations:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST admin: Re-scrape all xassidas
+router.post('/admin/rescrape', async (req: Request, res: Response) => {
+  try {
+    // Check if scraper is already running
+    const result = await pool.query(`SELECT COUNT(*) FROM information_schema.processlist WHERE info LIKE '%scrape%'`).catch(() => ({ rows: [{ count: 0 }] }));
+    
+    // Spawn scraper process
+    const scraper = spawn('npm', ['run', 'scrape'], {
+      cwd: path.join(__dirname, '..'),
+      detached: true,
+      stdio: 'pipe'
+    });
+    
+    let output = '';
+    scraper.stdout?.on('data', (data) => {
+      output += data.toString();
+      console.log('Scraper:', output.split('\n').pop());
+    });
+    
+    scraper.stderr?.on('data', (data) => {
+      console.error('Scraper error:', data.toString());
+    });
+    
+    // Unref so process doesn't keep parent alive
+    scraper.unref();
+    
+    res.json({
+      message: 'Scraper started in background',
+      status: 'running',
+      pid: scraper.pid,
+      note: 'Check API logs for progress. Scraper will retry failed requests.'
+    });
+  } catch (error: any) {
+    console.error('Error starting scraper:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET admin: Check data integrity
+router.get('/admin/integrity-check', async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        x.id,
+        x.title,
+        COUNT(DISTINCT v.chapter_number) as chapters,
+        COUNT(DISTINCT v.verse_number) as verses,
+        COUNT(DISTINCT CASE WHEN v.text_arabic IS NOT NULL THEN 1 END) as verses_with_arabic,
+        COUNT(DISTINCT CASE WHEN v.transcription IS NOT NULL THEN 1 END) as verses_with_transcription,
+        COUNT(DISTINCT CASE WHEN v.translation_fr IS NOT NULL THEN 1 END) as verses_with_french,
+        CASE 
+          WHEN COUNT(DISTINCT v.verse_number) = 0 THEN 'MISSING'
+          WHEN COUNT(DISTINCT v.verse_number) < 10 THEN 'INCOMPLETE'
+          WHEN COUNT(DISTINCT CASE WHEN v.transcription IS NULL THEN 1 END) > 0 THEN 'MISSING_TRANSCRIPTION'
+          WHEN COUNT(DISTINCT CASE WHEN v.text_arabic IS NULL THEN 1 END) > 0 THEN 'MISSING_ARABIC'
+          ELSE 'OK'
+        END as status
+      FROM xassidas x 
+      LEFT JOIN verses v ON x.id = v.xassida_id
+      GROUP BY x.id, x.title
+      ORDER BY verses ASC, x.id ASC
+    `);
+    
+    const summary = {
+      total: result.rows.length,
+      ok: result.rows.filter((r: any) => r.status === 'OK').length,
+      incomplete: result.rows.filter((r: any) => r.status === 'INCOMPLETE').length,
+      missing: result.rows.filter((r: any) => r.status === 'MISSING').length,
+      issues: result.rows.filter((r: any) => r.status !== 'OK')
+    };
+    
+    res.json({ summary, details: result.rows });
+  } catch (error: any) {
+    console.error('Error checking integrity:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET admin: Data statistics
+router.get('/admin/stats', async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        'xassidas' as type, COUNT(*) as count FROM xassidas
+      UNION ALL
+      SELECT 'verses' as type, COUNT(*) as count FROM verses
+      UNION ALL
+      SELECT 'authors' as type, COUNT(*) as count FROM authors
+      UNION ALL
+      SELECT 'verses_with_translations' as type, COUNT(*) as count FROM verses WHERE translation_fr IS NOT NULL
+    `);
+    
+    const stats = Object.fromEntries(result.rows.map((r: any) => [r.type, r.count]));
+    res.json(stats);
+  } catch (error: any) {
+    console.error('Error fetching stats:', error);
     res.status(500).json({ error: error.message });
   }
 });
