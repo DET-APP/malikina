@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci
+RUN npm install --legacy-peer-deps --no-audit
 
 # Copy source code
 COPY . .
@@ -27,7 +27,7 @@ RUN apk add --no-cache dumb-init
 COPY package*.json ./
 
 # Install production dependencies only
-RUN npm ci --only=production
+RUN npm install --production --legacy-peer-deps --no-audit
 
 # Copy built code from builder
 COPY --from=builder /app/dist ./dist
