@@ -26,7 +26,7 @@ DELETE /api/authors/:id          # Supprimer auteur
 ```
 GET    /api/xassidas             # Liste toutes les xassidas
 POST   /api/xassidas             # Créer xassida
-GET    /api/xassidas/:id         # Détails xassida avec versets
+GET    /api/xassidas/:id         # Détails xassida avec vers
 PUT    /api/xassidas/:id         # Modifier xassida
 DELETE /api/xassidas/:id         # Supprimer xassida
 ```
@@ -35,7 +35,7 @@ DELETE /api/xassidas/:id         # Supprimer xassida
 ```
 GET    /api/xassidas/:id/verses  # Liste versets d'une xassida
 POST   /api/xassidas/:id/verses  # Ajouter versets
-POST   /api/xassidas/:id/upload-pdf  # Upload PDF → extraction versets
+POST   /api/xassidas/:id/upload-pdf  # Upload PDF → extraction vers
 ```
 
 ## 📝 Examples
@@ -61,7 +61,7 @@ curl -X POST http://localhost:5000/api/xassidas \
   -d '{
     "title": "Abāda",
     "author_id": "uuid-from-author",
-    "description": "Xassida majeure avec 125 versets"
+    "description": "Xassida majeure avec 125 vers"
   }'
 ```
 
