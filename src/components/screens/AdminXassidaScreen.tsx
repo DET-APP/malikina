@@ -43,6 +43,14 @@ interface Xassida {
   categorie?: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  order_index?: number;
+}
+
 const VERSES_CHUNK_SIZE = 100;
 const VERSES_PER_PAGE = 20;
 const MIN_VERSE_FONT_SIZE = 24;
@@ -96,6 +104,11 @@ export function XassidasAdmin() {
   const [xassidaImportTranslations, setXassidaImportTranslations] = useState<Record<string, string>>({});
   const [xassidaImportErrors, setXassidaImportErrors] = useState<Record<string, string>>({});
   const [xassidaImportSuccess, setXassidaImportSuccess] = useState<Record<string, string>>({});
+
+  // Categories management state
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
+  const [showEditCategoryDialog, setShowEditCategoryDialog] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
     const saveVersesInChunks = async (
       xassidaId: string,
@@ -264,11 +277,10 @@ export function XassidasAdmin() {
   });
 
   // Fetch categories
-  const { data: categoriesData = {} } = useQuery({
+  const { data: categories = [] } = useQuery({
     queryKey: ['xassida-categories'],
-    queryFn: () => fetch(`${API_URL}/xassidas/admin/categories`).then(r => r.json())
+    queryFn: () => fetch(`${API_URL}/categories`).then(r => r.json()).catch(() => [])
   });
-  const categories = categoriesData.categories || [];
 
   // Create author
   const authorForm = useForm();
@@ -649,6 +661,86 @@ export function XassidasAdmin() {
     }
   });
 
+  // Categories CRUD mutations
+  const createCategoryForm = useForm({ defaultValues: { name: '', description: '', color: '#666666' } });
+  const editCategoryForm = useForm({ defaultValues: { name: '', description: '', color: '#666666' } });
+
+  const createCategoryMutation = useMutation({
+    mutationFn: async (data: { name: string; description?: string; color?: string }) => {
+      const response = await fetch(`${API_URL}/categories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error('Impossible de créer la catégorie');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['xassida-categories'] });
+      createCategoryForm.reset();
+      setShowCategoryDialog(false);
+    },
+    onError: (error: any) => {
+      alert(`Erreur: ${error?.message || 'Impossible de créer la catégorie'}`);
+    }
+  });
+
+  const updateCategoryMutation = useMutation({
+    mutationFn: async (data: { id: string; name?: string; description?: string; color?: string }) => {
+      const response = await fetch(`${API_URL}/categories/${data.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: data.name, description: data.description, color: data.color })
+      });
+      if (!response.ok) throw new Error('Impossible de modifier la catégorie');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['xassida-categories'] });
+      editCategoryForm.reset();
+      setShowEditCategoryDialog(false);
+      setEditingCategory(null);
+    },
+    onError: (error: any) => {
+      alert(`Erreur: ${error?.message || 'Impossible de modifier la catégorie'}`);
+    }
+  });
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`${API_URL}/categories/${id}`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || 'Impossible de supprimer la catégorie');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['xassida-categories'] });
+    },
+    onError: (error: any) => {
+      alert(`Erreur: ${error?.message || 'Impossible de supprimer la catégorie'}`);
+    }
+  });
+
+  const openEditCategoryDialog = (category: Category) => {
+    setEditingCategory(category);
+    editCategoryForm.reset({
+      name: category.name,
+      description: category.description || '',
+      color: category.color || '#666666'
+    });
+    setShowEditCategoryDialog(true);
+  };
+
+  const handleDeleteCategory = async (category: Category) => {
+    const confirmed = window.confirm(`Supprimer la catégorie "${category.name}" ? Cette action est irréversible.`);
+    if (!confirmed) return;
+    await deleteCategoryMutation.mutateAsync(category.id);
+  };
+
   const openEditDialog = (xassida: Xassida) => {
     setEditingXassida(xassida);
     editXassidaForm.reset({
@@ -731,7 +823,7 @@ export function XassidasAdmin() {
     try {
       const response = await fetch(`${API_URL}/xassidas/${xassidaId}/verses`);
       if (!response.ok) {
-        throw new Error(`Impossible de charger les versets (${response.status})`);
+        throw new Error(`Impossible de charger les vers (${response.status})`);
       }
 
       const data = await response.json();
@@ -959,6 +1051,135 @@ export function XassidasAdmin() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Categories Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Catégories</CardTitle>
+              <CardDescription>Gérer les catégories des xassidas</CardDescription>
+            </div>
+            <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
+              <DialogTrigger asChild>
+                <Button><Plus className="w-4 h-4 mr-2" /> Nouvelle catégorie</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Créer une catégorie</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={createCategoryForm.handleSubmit((data) => createCategoryMutation.mutate(data))} className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Nom *</label>
+                    <Input {...createCategoryForm.register('name', { required: true })} placeholder="Ex: Éloge du Prophète" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Description</label>
+                    <Textarea {...createCategoryForm.register('description')} rows={2} placeholder="Description optionnelle" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Couleur</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        {...createCategoryForm.register('color')}
+                        className="w-12 h-10 rounded border cursor-pointer"
+                      />
+                      <Input {...createCategoryForm.register('color')} placeholder="#666666" className="flex-1" />
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full" disabled={createCategoryMutation.isPending}>
+                    {createCategoryMutation.isPending ? 'Création...' : 'Créer'}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Edit category dialog */}
+          <Dialog open={showEditCategoryDialog} onOpenChange={setShowEditCategoryDialog}>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Modifier la catégorie</DialogTitle></DialogHeader>
+              <form onSubmit={editCategoryForm.handleSubmit((data) => {
+                if (!editingCategory) return;
+                updateCategoryMutation.mutate({ id: editingCategory.id, ...data });
+              })} className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Nom *</label>
+                  <Input {...editCategoryForm.register('name', { required: true })} disabled={updateCategoryMutation.isPending} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Description</label>
+                  <Textarea {...editCategoryForm.register('description')} rows={2} disabled={updateCategoryMutation.isPending} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Couleur</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      {...editCategoryForm.register('color')}
+                      className="w-12 h-10 rounded border cursor-pointer"
+                      disabled={updateCategoryMutation.isPending}
+                    />
+                    <Input {...editCategoryForm.register('color')} disabled={updateCategoryMutation.isPending} />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit" className="flex-1" disabled={updateCategoryMutation.isPending}>
+                    {updateCategoryMutation.isPending ? 'Modification...' : 'Modifier'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={updateCategoryMutation.isPending || deleteCategoryMutation.isPending}
+                    onClick={() => handleDeleteCategory(editingCategory!)}
+                  >
+                    {deleteCategoryMutation.isPending ? 'Suppression...' : 'Supprimer'}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Categories list */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {categories && categories.length > 0 ? (
+              categories.map((cat: Category) => (
+                <Card key={cat.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                  <CardContent className="pt-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-4 h-4 rounded flex-shrink-0"
+                            style={{ backgroundColor: cat.color || '#666666' }}
+                          />
+                          <h4 className="font-semibold truncate">{cat.name}</h4>
+                        </div>
+                        {cat.description && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{cat.description}</p>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs flex-shrink-0"
+                        onClick={() => openEditCategoryDialog(cat)}
+                        disabled={updateCategoryMutation.isPending || deleteCategoryMutation.isPending}
+                      >
+                        ✏️
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground col-span-full">Aucune catégorie</p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -1324,7 +1545,7 @@ export function XassidasAdmin() {
                       <h3 className="font-bold text-lg">{x.title}</h3>
                       {x.arabic_name && <p className="text-sm font-arabic text-right text-blue-600">{x.arabic_name}</p>}
                       <p className="text-sm text-gray-600">{x.author_name}</p>
-                      <p className="text-xs text-gray-500 mt-2">📊 {x.verse_count} versets</p>
+                      <p className="text-xs text-gray-500 mt-2">📊 {x.verse_count} vers</p>
                     </div>
 
                     {/* Right: Quick Actions */}
@@ -1360,7 +1581,7 @@ export function XassidasAdmin() {
                                 className="border rounded px-3 py-2 w-full"
                                 disabled={!!uploadingByXassida[x.id]}
                               />
-                              <p className="text-xs text-muted-foreground mt-2">Les versets seront créés automatiquement</p>
+                              <p className="text-xs text-muted-foreground mt-2">Les vers seront créés automatiquement</p>
                             </div>
 
                             {uploadingByXassida[x.id] && (

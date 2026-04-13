@@ -272,8 +272,8 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
           {apiVerses.length > 0 && (
             <p className={`text-xs ${headMut} mt-1`}>
               {filtered.length !== apiVerses.length
-                ? `${filtered.length} / ${apiVerses.length} versets`
-                : `${apiVerses.length} versets`}
+                ? `${filtered.length} / ${apiVerses.length} vers`
+                : `${apiVerses.length} vers`}
               {multipleChapters && ` · ${chapterKeys.length} chapitres`}
             </p>
           )}
@@ -338,7 +338,7 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
                 <input
                   autoFocus
                   type="text"
-                  placeholder="Rechercher dans les versets…"
+                  placeholder="Rechercher dans les vers…"
                   value={verseSearch}
                   onChange={(e) => setVerseSearch(e.target.value)}
                   className={`w-full rounded-xl border pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 ${searchBg}`}
@@ -474,7 +474,7 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
             )}
             {!verseSearch && visibleCount >= filtered.length && filtered.length > PAGE_SIZE && (
               <p className={`text-center text-xs py-4 ${d ? "text-amber-300/40" : "text-muted-foreground/40"}`}>
-                Fin · {filtered.length} versets
+                Fin · {filtered.length} vers
               </p>
             )}
           </>

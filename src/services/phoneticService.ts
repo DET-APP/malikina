@@ -1,5 +1,5 @@
 // src/services/phoneticService.ts
-// Service pour ajouter des transcriptions phonétiques aux versets
+// Service pour ajouter des transcriptions phonétiques aux vers
 
 // Dictionnaire de base pour la transcription phonétique
 const arabicToPhoneticMap: Record<string, string> = {
@@ -47,7 +47,7 @@ const arabicToPhoneticMap: Record<string, string> = {
     'ى': 'ā',
 };
 
-// Base de données de transcriptions pour les versets célèbres
+// Base de données de transcriptions pour les vers célèbres
 const famousVerses: Record<string, string> = {
     // Sourate Al-Fatiha (1-7)
     'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ': 'Bismillāhi r-raḥmāni r-raḥīm',
@@ -124,7 +124,7 @@ export const getPhoneticTranscription = (verseText: string): string => {
     // Nettoyer le texte pour la recherche
     const cleanedVerse = cleanArabicText(verseText);
 
-    // Chercher dans les versets célèbres
+    // Chercher dans les vers célèbres
     for (const [verse, transcription] of Object.entries(famousVerses)) {
         if (cleanedVerse.includes(cleanArabicText(verse))) {
             return transcription;

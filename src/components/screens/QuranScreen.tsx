@@ -101,7 +101,7 @@ const QuranScreen = ({ initialSurahId, initialVerseNumber, onBack }: QuranScreen
     }
   }, [initialSurahId, chapters]);
 
-  // Charger les versets d'une sourate
+  // Charger les vers d'une sourate
   const fetchVerses = async (chapterId: number, style: RecitationStyle) => {
     try {
       setLoadingVerses(true);
@@ -144,7 +144,7 @@ const QuranScreen = ({ initialSurahId, initialVerseNumber, onBack }: QuranScreen
     } catch (error) {
       toast({
         title: "Erreur",
-        description: "Impossible de charger les versets",
+        description: "Impossible de charger les vers",
         variant: "destructive",
       });
     } finally {
