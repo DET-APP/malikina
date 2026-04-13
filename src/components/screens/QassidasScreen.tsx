@@ -39,6 +39,11 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
     setSearchQuery("");
   }, [addToHistory]);
 
+  // Navigate to another xassida from search results
+  const handleNavigateToXassida = useCallback((qassida: Qassida) => {
+    handleQassidasClick(qassida);
+  }, [handleQassidasClick]);
+
   // Navigate to a qassida from favorites list by ID
   const handleFavoriteClick = useCallback((id: number) => {
     const target = allQassidas.find((q) => q.id === id);
@@ -119,6 +124,7 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
         onBack={() => setSelectedQassida(null)}
         onNext={idx < filteredQassidas.length - 1 ? handleNext : undefined}
         onPrevious={idx > 0 ? handlePrevious : undefined}
+        onNavigateToXassida={handleNavigateToXassida}
       />
     );
   }

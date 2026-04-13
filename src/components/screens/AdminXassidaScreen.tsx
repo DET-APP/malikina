@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm } from 'react-hook-form';
-import { Plus, Edit2, Trash2, Upload, Save, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Upload, Save, ChevronLeft, ChevronRight, Loader2, Lock, Users, BookOpen, FileText, Music, Link, Youtube, FolderOpen, Pencil, Globe, BarChart3, Settings } from 'lucide-react';
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
@@ -862,30 +862,50 @@ export function XassidasAdmin() {
 
   if (!isUnlocked) {
     return (
-      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Accès Admin Xassidas</CardTitle>
-            <CardDescription>Entrez le mot de passe pour accéder au panneau d'administration.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleUnlockAdmin} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Mot de passe</label>
-                <Input
-                  type="password"
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  placeholder="••••••••"
-                />
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="bg-gradient-to-br from-primary to-green-dark pt-16 pb-20 px-6 text-center relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />
+          <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-4">
+            <Settings className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-white">Administration</h1>
+          <p className="text-sm text-white/70 mt-2">Gestion des Xassidas</p>
+        </div>
+
+        <div className="flex-1 flex items-start justify-center px-6 -mt-10">
+          <Card className="w-full max-w-md shadow-card">
+            <CardHeader className="text-center pb-2">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                <Lock className="w-5 h-5 text-primary" />
               </div>
-              {authError && (
-                <p className="text-sm text-red-600">{authError}</p>
-              )}
-              <Button type="submit" className="w-full">Déverrouiller</Button>
-            </form>
-          </CardContent>
-        </Card>
+              <CardTitle className="text-lg">Accès protégé</CardTitle>
+              <CardDescription>Entrez le mot de passe pour continuer</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleUnlockAdmin} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Mot de passe</label>
+                  <Input
+                    type="password"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    placeholder="••••••••"
+                    className="h-11"
+                  />
+                </div>
+                {authError && (
+                  <div className="bg-destructive/10 border border-destructive/20 text-destructive px-3 py-2 rounded-lg text-sm text-center">
+                    {authError}
+                  </div>
+                )}
+                <Button type="submit" className="w-full h-11">
+                  <Lock className="w-4 h-4 mr-2" />
+                  Déverrouiller
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
