@@ -26,9 +26,9 @@ CREATE TRIGGER IF NOT EXISTS update_categories_updated_at BEFORE UPDATE ON categ
 
 -- Insert default categories
 INSERT INTO categories (name, description, color, order_index) VALUES
-  ('Eloge du Prophète', 'Xassidas célébrant le Prophète Muhammad', '#FFB347', 1),
-  ('Louange à Dieu', 'Xassidas de louange et gratitude', '#98FB98', 2),
+  (E'Eloge du Prophète', E'Xassidas célébrant le Prophète Muhammad', '#FFB347', 1),
+  (E'Louange à Dieu', E'Xassidas de louange et gratitude', '#98FB98', 2),
   ('Invocation', 'Xassidas et invocations spirituelles', '#87CEEB', 3),
-  ('Sagesse', 'Xassidas d''enseignement et sagesse spirituelle', '#DDA0DD', 4),
-  ('Autre', 'Autres catégories', '#D3D3D3', 5)
+  (E'Sagesse', E'Xassidas d''enseignement et sagesse spirituelle', '#DDA0DD', 4),
+  (E'Autre', E'Autres catégories', '#D3D3D3', 5)
 ON CONFLICT (name) DO NOTHING;
