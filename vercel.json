@@ -3,7 +3,6 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "trailingSlash": false,
-  "functions": {},
   "env": {
     "VITE_API_URL": "https://165-245-211-201.sslip.io/api"
   },
