@@ -183,6 +183,22 @@ router.get('/admin/integrity-check', async (req: Request, res: Response) => {
   }
 });
 
+// GET admin: List categories
+router.get('/admin/categories', async (_req: Request, res: Response) => {
+  try {
+    const result = await pool.query(
+      `SELECT DISTINCT categorie FROM xassidas WHERE categorie IS NOT NULL ORDER BY categorie ASC`
+    );
+    const categories = result.rows.map((r: any) => r.categorie);
+    const defaults = ['Eloge du Prophète', 'Louange à Dieu', 'Invocation', 'Sagesse', 'Autre'];
+    const merged = [...new Set([...defaults, ...categories])].sort();
+    res.json({ categories: merged });
+  } catch (error: any) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET admin: Data statistics
 router.get('/admin/stats', async (req: Request, res: Response) => {
   try {
@@ -300,18 +316,18 @@ router.get('/:id/verses', async (req: Request, res: Response) => {
 // CREATE xassida
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { title, author_id, description } = req.body;
-    
+    const { title, author_id, description, audio_url, arabic_name, categorie } = req.body;
+
     if (!title || !author_id) {
       return res.status(400).json({ error: 'title and author_id are required' });
     }
 
     const id = uuid();
     const result = await pool.query(`
-      INSERT INTO xassidas (id, title, author_id, description, created_at)
-      VALUES ($1, $2, $3, $4, NOW())
-      RETURNING id, title, description, created_at, author_id
-    `, [id, title, author_id, description || null]);
+      INSERT INTO xassidas (id, title, author_id, description, audio_url, arabic_name, categorie, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      RETURNING id, title, description, audio_url, arabic_name, categorie, created_at, author_id
+    `, [id, title, author_id, description || null, audio_url || null, arabic_name || null, categorie || 'Autre']);
 
     res.status(201).json(result.rows[0]);
   } catch (error: any) {
@@ -324,16 +340,19 @@ router.post('/', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { title, description, author_id } = req.body;
+    const { title, description, author_id, audio_url, arabic_name, categorie } = req.body;
 
     const result = await pool.query(`
       UPDATE xassidas
       SET title = COALESCE($1, title),
           description = COALESCE($2, description),
-          author_id = COALESCE($3, author_id)
-      WHERE id = $4
-      RETURNING id, title, description, created_at, author_id
-    `, [title || null, description || null, author_id || null, id]);
+          author_id = COALESCE($3, author_id),
+          audio_url = COALESCE($4, audio_url),
+          arabic_name = COALESCE($5, arabic_name),
+          categorie = COALESCE($6, categorie)
+      WHERE id = $7
+      RETURNING id, title, description, audio_url, arabic_name, categorie, youtube_id, created_at, author_id
+    `, [title || null, description || null, author_id || null, audio_url || null, arabic_name || null, categorie || null, id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Xassida not found' });
@@ -364,6 +383,52 @@ router.delete('/:id', async (req: Request, res: Response) => {
     res.json({ message: 'Xassida deleted', id });
   } catch (error: any) {
     console.error('Error deleting xassida:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// SET youtube ID from URL
+router.post('/:id/set-youtube-id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { youtube_url } = req.body;
+
+    if (!youtube_url) {
+      return res.status(400).json({ error: 'youtube_url is required' });
+    }
+
+    // Extract YouTube ID from various URL formats
+    let youtubeId: string | null = null;
+    try {
+      const url = new URL(youtube_url);
+      if (url.hostname === 'youtu.be') {
+        youtubeId = url.pathname.slice(1);
+      } else if (url.hostname.includes('youtube.com')) {
+        youtubeId = url.searchParams.get('v');
+      }
+    } catch {
+      // Try as raw ID
+      if (/^[a-zA-Z0-9_-]{11}$/.test(youtube_url)) {
+        youtubeId = youtube_url;
+      }
+    }
+
+    if (!youtubeId) {
+      return res.status(400).json({ error: 'Could not extract YouTube ID from URL' });
+    }
+
+    const result = await pool.query(
+      `UPDATE xassidas SET youtube_id = $1 WHERE id = $2 RETURNING id, youtube_id`,
+      [youtubeId, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Xassida not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error: any) {
+    console.error('Error setting YouTube ID:', error);
     res.status(500).json({ error: error.message });
   }
 });

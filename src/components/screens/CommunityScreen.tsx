@@ -2,6 +2,7 @@
 import { motion } from "framer-motion";
 import { Users, Calendar, MessageCircle, Heart, Share2, UserPlus, MapPin, Clock } from "lucide-react";
 import { useState } from "react";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 // Types
 interface CommunityEvent {
@@ -131,10 +132,15 @@ const CommunityScreen = () => {
                 className="bg-gradient-to-b from-primary to-primary/90 pt-12 pb-8 px-6"
                 variants={itemVariants}
             >
-                <h1 className="text-2xl font-bold text-white">Communauté</h1>
-                <p className="text-white/70 text-sm mt-1">
-                    Al Moutahabbina Fillahi
-                </p>
+                <div className="flex items-start justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-white">Communauté</h1>
+                        <p className="text-white/70 text-sm mt-1">
+                            Al Moutahabbina Fillahi
+                        </p>
+                    </div>
+                    <LanguageSwitcher variant="light" />
+                </div>
 
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-4 mt-6">

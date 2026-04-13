@@ -299,8 +299,9 @@ app.use(cors({
 app.use(EXPRESS.json({ limit: '50mb' }));
 app.use(EXPRESS.urlencoded({ limit: '50mb', extended: true }));
 
-// Serve audio files statically
+// Serve static files
 app.use('/audios', EXPRESS.static(path.join(__dirname, 'public/audios')));
+app.use('/photos', EXPRESS.static(path.join(__dirname, 'public/photos')));
 
 // Initialize PostgreSQL
 console.log('⏳ Connecting to PostgreSQL database...');

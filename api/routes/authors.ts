@@ -1,8 +1,24 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuid } from 'uuid';
+import multer from 'multer';
+import path from 'path';
+import { promises as fs } from 'fs';
+import { fileURLToPath } from 'url';
 import { pool } from '../db/config.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const router = Router();
+const upload = multer({ storage: multer.memoryStorage() });
+
+const photosDir = path.join(__dirname, '../public/photos');
+
+async function ensurePhotosDir() {
+  try {
+    await fs.mkdir(photosDir, { recursive: true });
+  } catch (error) {
+    console.error('Error creating photos directory:', error);
+  }
+}
 
 // GET all authors
 router.get('/', async (req: Request, res: Response) => {
@@ -111,6 +127,37 @@ router.delete('/:id', async (req: Request, res: Response) => {
     res.json({ message: 'Author deleted', id: req.params.id });
   } catch (error: any) {
     console.error('Error deleting author:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// UPLOAD photo for author
+router.post('/:id/upload-photo', upload.single('photo'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file provided' });
+    }
+
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedMimes.includes(req.file.mimetype)) {
+      return res.status(400).json({ error: 'Invalid image format. Allowed: JPG, PNG, WebP, GIF' });
+    }
+
+    const ext = req.file.mimetype.split('/')[1] === 'jpeg' ? 'jpg' : req.file.mimetype.split('/')[1];
+    const filename = `${req.params.id}-${Date.now()}.${ext}`;
+    const filePath = path.join(photosDir, filename);
+
+    await ensurePhotosDir();
+    await fs.writeFile(filePath, req.file.buffer);
+
+    const photoUrl = `/photos/${filename}`;
+
+    // Update author's photo_url in database
+    await pool.query('UPDATE authors SET photo_url = $1 WHERE id = $2', [photoUrl, req.params.id]);
+
+    res.json({ message: 'Photo uploaded successfully', photo_url: photoUrl, filename });
+  } catch (error: any) {
+    console.error('Photo upload error:', error);
     res.status(500).json({ error: error.message });
   }
 });

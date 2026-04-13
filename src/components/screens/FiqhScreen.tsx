@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Search, BookOpen, ChevronRight, GraduationCap } from "lucide-react";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const sources = [
   { id: "lakhdari", name: "Al-Lakhdari", arabic: "الأخضري", description: "Fiqh Malékite simplifié" },
@@ -36,9 +37,13 @@ const FiqhScreen = () => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
+          className="flex items-start justify-between"
         >
-          <h1 className="text-2xl font-bold text-primary-foreground">Fiqh</h1>
-          <p className="text-3xl font-arabic text-secondary mt-1">الفقه الإسلامي</p>
+          <div>
+            <h1 className="text-2xl font-bold text-primary-foreground">Fiqh</h1>
+            <p className="text-3xl font-arabic text-secondary mt-1">الفقه الإسلامي</p>
+          </div>
+          <LanguageSwitcher variant="light" />
         </motion.div>
 
         {/* Source Selector */}

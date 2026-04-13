@@ -1,4 +1,5 @@
 import { Home, Clock, BookOpen, BookMarked, Users } from "lucide-react";
+import { useLanguage, TranslationKey } from "@/contexts/LanguageContext";
 
 type Screen = "home" | "prayer" | "quran" | "qassidas" | "community";
 
@@ -7,15 +8,17 @@ interface BottomNavigationProps {
   onNavigate: (screen: Screen) => void;
 }
 
-const navItems = [
-  { id: "home" as Screen, icon: Home, label: "Accueil" },
-  { id: "qassidas" as Screen, icon: BookMarked, label: "Xassidas" },
-  { id: "quran" as Screen, icon: BookOpen, label: "Coran" },
-  { id: "prayer" as Screen, icon: Clock, label: "Prières" },
-  { id: "community" as Screen, icon: Users, label: "Communauté" },
+const navItems: { id: Screen; icon: typeof Home; labelKey: TranslationKey }[] = [
+  { id: "home", icon: Home, labelKey: "navHome" },
+  { id: "qassidas", icon: BookMarked, labelKey: "navXassidas" },
+  { id: "quran", icon: BookOpen, labelKey: "navQuran" },
+  { id: "prayer", icon: Clock, labelKey: "navPrayer" },
+  { id: "community", icon: Users, labelKey: "navCommunity" },
 ];
 
 const BottomNavigation = ({ activeScreen, onNavigate }: BottomNavigationProps) => {
+  const { t } = useLanguage();
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, createElement } from 'react';
 
 const FAVORITES_STORAGE_KEY = 'malikina_favorites';
 
@@ -10,7 +10,21 @@ export interface FavoriteQassida {
   addedAt: number;
 }
 
-export const useFavorites = () => {
+interface FavoritesContextType {
+  favorites: FavoriteQassida[];
+  loading: boolean;
+  addFavorite: (qassida: FavoriteQassida) => void;
+  removeFavorite: (qassidasId: number) => void;
+  toggleFavorite: (qassida: FavoriteQassida) => void;
+  isFavorite: (qassidasId: number) => boolean;
+  clearFavorites: () => void;
+  getFavoritesByAuthor: (author: string) => FavoriteQassida[];
+  count: number;
+}
+
+const FavoritesContext = createContext<FavoritesContextType | null>(null);
+
+export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
   const [favorites, setFavorites] = useState<FavoriteQassida[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -41,7 +55,6 @@ export const useFavorites = () => {
 
   const addFavorite = (qassida: FavoriteQassida) => {
     setFavorites(prev => {
-      // Check if already favorited
       if (prev.some(fav => fav.id === qassida.id)) {
         return prev;
       }
@@ -53,16 +66,16 @@ export const useFavorites = () => {
     setFavorites(prev => prev.filter(fav => fav.id !== qassidasId));
   };
 
+  const isFavorite = (qassidasId: number): boolean => {
+    return favorites.some(fav => fav.id === qassidasId);
+  };
+
   const toggleFavorite = (qassida: FavoriteQassida) => {
     if (isFavorite(qassida.id)) {
       removeFavorite(qassida.id);
     } else {
       addFavorite(qassida);
     }
-  };
-
-  const isFavorite = (qassidasId: number): boolean => {
-    return favorites.some(fav => fav.id === qassidasId);
   };
 
   const clearFavorites = () => {
@@ -73,7 +86,7 @@ export const useFavorites = () => {
     return favorites.filter(fav => fav.author === author);
   };
 
-  return {
+  const value: FavoritesContextType = {
     favorites,
     loading,
     addFavorite,
@@ -84,4 +97,14 @@ export const useFavorites = () => {
     getFavoritesByAuthor,
     count: favorites.length,
   };
+
+  return createElement(FavoritesContext.Provider, { value }, children);
+};
+
+export const useFavorites = (): FavoritesContextType => {
+  const context = useContext(FavoritesContext);
+  if (!context) {
+    throw new Error('useFavorites must be used within a FavoritesProvider');
+  }
+  return context;
 };

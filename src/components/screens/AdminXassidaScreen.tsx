@@ -140,6 +140,8 @@ export function XassidasAdmin() {
   const [editingXassida, setEditingXassida] = useState<Xassida | null>(null);
   const [showEditAuthorDialog, setShowEditAuthorDialog] = useState(false);
   const [editingAuthor, setEditingAuthor] = useState<Author | null>(null);
+  const [authorPhotoFile, setAuthorPhotoFile] = useState<File | null>(null);
+  const [editAuthorPhotoFile, setEditAuthorPhotoFile] = useState<File | null>(null);
 
   const totalVersePages = Math.max(1, Math.ceil(editorVerses.length / VERSES_PER_PAGE));
   const verseStartIndex = (currentVersePage - 1) * VERSES_PER_PAGE;
@@ -170,30 +172,70 @@ export function XassidasAdmin() {
     });
   };
 
-  const editXassidaForm = useForm({ defaultValues: { title: '', description: '', youtube_url: '', audio_url: '', arabic_name: '', categorie: 'Autre' } });
+  const editXassidaForm = useForm({ defaultValues: { title: '', description: '', youtube_url: '', audio_url: '', arabic_name: '', categorie: 'Autre', transcription_fr: '' } });
   const editAuthorForm = useForm({ defaultValues: { name: '', description: '', photo_url: '', tradition: '' } });
 
   const updateAuthorMutation = useMutation({
-    mutationFn: async (data: { id: string; name: string; description?: string; photo_url?: string; tradition?: string }) => {
+    mutationFn: async (data: { id: string; name: string; description?: string; tradition?: string }) => {
       const response = await fetch(`${API_URL}/authors/${data.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: data.name, description: data.description, photo_url: data.photo_url, tradition: data.tradition })
+        body: JSON.stringify({ name: data.name, description: data.description, tradition: data.tradition })
       });
       if (!response.ok) throw new Error('Impossible de modifier l\'auteur');
+
+      // Upload photo if a file was selected
+      if (editAuthorPhotoFile) {
+        const formData = new FormData();
+        formData.append('photo', editAuthorPhotoFile);
+        const uploadRes = await fetch(`${API_URL}/authors/${data.id}/upload-photo`, {
+          method: 'POST',
+          body: formData
+        });
+        if (!uploadRes.ok) {
+          console.warn('Photo upload failed');
+        }
+      }
+
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['authors'] });
       setShowEditAuthorDialog(false);
       setEditingAuthor(null);
+      setEditAuthorPhotoFile(null);
       editAuthorForm.reset();
     },
     onError: (error: any) => alert(`Erreur: ${error?.message}`)
   });
 
+  const deleteAuthorMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`${API_URL}/authors/${id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || 'Impossible de supprimer l\'auteur');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['authors'] });
+      queryClient.invalidateQueries({ queryKey: ['xassidas'] });
+    },
+    onError: (error: any) => alert(`Erreur: ${error?.message}`)
+  });
+
+  const handleDeleteAuthor = async (author: Author) => {
+    const confirmed = window.confirm(
+      `Supprimer l'auteur "${author.name}" et toutes ses xassidas ? Cette action est irréversible.`
+    );
+    if (!confirmed) return;
+    await deleteAuthorMutation.mutateAsync(author.id);
+  };
+
   const openEditAuthorDialog = (author: Author) => {
     setEditingAuthor(author);
+    setEditAuthorPhotoFile(null);
     editAuthorForm.reset({ name: (author as any).name || '', description: (author as any).description || '', photo_url: (author as any).photo_url || '', tradition: (author as any).tradition || '' });
     setShowEditAuthorDialog(true);
   };
@@ -231,15 +273,34 @@ export function XassidasAdmin() {
   // Create author
   const authorForm = useForm();
   const createAuthorMutation = useMutation({
-    mutationFn: (data: any) =>
-      fetch(`${API_URL}/authors`, {
+    mutationFn: async (data: any) => {
+      const response = await fetch(`${API_URL}/authors`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      }).then(r => r.json()),
+        body: JSON.stringify({ name: data.name, description: data.description, tradition: data.tradition })
+      });
+      if (!response.ok) throw new Error('Impossible de créer l\'auteur');
+      const author = await response.json();
+
+      // Upload photo if a file was selected
+      if (authorPhotoFile) {
+        const formData = new FormData();
+        formData.append('photo', authorPhotoFile);
+        const uploadRes = await fetch(`${API_URL}/authors/${author.id}/upload-photo`, {
+          method: 'POST',
+          body: formData
+        });
+        if (!uploadRes.ok) {
+          console.warn('Photo upload failed');
+        }
+      }
+
+      return author;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['authors'] });
       authorForm.reset();
+      setAuthorPhotoFile(null);
       setShowAuthorDialog(false);
     }
   });
@@ -788,22 +849,31 @@ export function XassidasAdmin() {
                 </DialogHeader>
                 <form onSubmit={authorForm.handleSubmit((data) => createAuthorMutation.mutate(data))} className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Nom</label>
-                    <Input {...authorForm.register('name')} />
+                    <label className="text-sm font-medium">Nom *</label>
+                    <Input {...authorForm.register('name', { required: true })} />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Description</label>
-                    <Textarea {...authorForm.register('description')} />
+                    <label className="text-sm font-medium">Description / Bio</label>
+                    <Textarea {...authorForm.register('description')} rows={3} />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">URL Photo</label>
-                    <Input {...authorForm.register('photo_url')} type="url" />
+                    <label className="text-sm font-medium">Photo</label>
+                    <Input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={(e) => setAuthorPhotoFile(e.target.files?.[0] || null)}
+                    />
+                    {authorPhotoFile && (
+                      <p className="text-xs text-muted-foreground">Fichier: {authorPhotoFile.name}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Tradition</label>
                     <Input {...authorForm.register('tradition')} placeholder="Tidjiane, Qadiriyyah, etc." />
                   </div>
-                  <Button type="submit" className="w-full">Créer</Button>
+                  <Button type="submit" className="w-full" disabled={createAuthorMutation.isPending}>
+                    {createAuthorMutation.isPending ? 'Création...' : 'Créer'}
+                  </Button>
                 </form>
               </DialogContent>
             </Dialog>
@@ -816,7 +886,7 @@ export function XassidasAdmin() {
               <DialogHeader><DialogTitle>Modifier l'auteur</DialogTitle></DialogHeader>
               <form onSubmit={editAuthorForm.handleSubmit((v) => {
                 if (!editingAuthor) return;
-                updateAuthorMutation.mutate({ id: editingAuthor.id, ...v });
+                updateAuthorMutation.mutate({ id: editingAuthor.id, name: v.name, description: v.description, tradition: v.tradition });
               })} className="space-y-3">
                 <div className="space-y-1">
                   <label className="text-sm font-medium">Nom *</label>
@@ -827,8 +897,22 @@ export function XassidasAdmin() {
                   <Textarea {...editAuthorForm.register('description')} rows={3} disabled={updateAuthorMutation.isPending} />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm font-medium">URL Photo</label>
-                  <Input {...editAuthorForm.register('photo_url')} type="url" disabled={updateAuthorMutation.isPending} />
+                  <label className="text-sm font-medium">Photo</label>
+                  {editingAuthor?.photo_url && !editAuthorPhotoFile && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <img src={editingAuthor.photo_url} alt="" className="w-12 h-12 rounded-full object-cover" />
+                      <span className="text-xs text-muted-foreground">Photo actuelle</span>
+                    </div>
+                  )}
+                  <Input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={(e) => setEditAuthorPhotoFile(e.target.files?.[0] || null)}
+                    disabled={updateAuthorMutation.isPending}
+                  />
+                  {editAuthorPhotoFile && (
+                    <p className="text-xs text-muted-foreground">Nouveau fichier: {editAuthorPhotoFile.name}</p>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm font-medium">Tradition</label>
@@ -858,9 +942,19 @@ export function XassidasAdmin() {
                       {(author as any).tradition && <p className="text-xs text-primary/70">{(author as any).tradition}</p>}
                       {(author as any).description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{(author as any).description}</p>}
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => openEditAuthorDialog(author)}>
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </Button>
+                    <div className="flex flex-col gap-1">
+                      <Button size="sm" variant="outline" onClick={() => openEditAuthorDialog(author)}>
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDeleteAuthor(author)}
+                        disabled={deleteAuthorMutation.isPending}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
