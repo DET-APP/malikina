@@ -911,37 +911,53 @@ export function XassidasAdmin() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24 space-y-8 p-6">
+    <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Gestion des Xassidas</h1>
-          <p className="text-sm text-muted-foreground mt-2">Créer et gérer les auteurs et xassidas</p>
+      <div className="bg-gradient-to-br from-primary to-green-dark pt-12 pb-8 px-6 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />
+        <div className="flex items-start justify-between relative">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Gestion des Xassidas</h1>
+            <p className="text-sm text-white/70 mt-1">Administration du contenu</p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={handleLockAdmin} className="text-white/80 hover:text-white hover:bg-white/10">
+            <Lock className="w-4 h-4 mr-1.5" />
+            Verrouiller
+          </Button>
         </div>
-        <Button variant="outline" onClick={handleLockAdmin}>Verrouiller</Button>
       </div>
 
-      {/* Dashboard */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Auteurs</CardDescription>
-            <CardTitle>{authors.length}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Xassidas</CardDescription>
-            <CardTitle>{xassidas.length}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Versets (total)</CardDescription>
-            <CardTitle>{totalVerses}</CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
+      <div className="px-5 space-y-6 -mt-4">
+        {/* Dashboard */}
+        <div className="grid grid-cols-3 gap-3">
+          <Card className="shadow-card">
+            <CardContent className="pt-4 pb-3 px-4">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center mb-2">
+                <Users className="w-4 h-4 text-primary" />
+              </div>
+              <p className="text-2xl font-bold text-foreground">{authors.length}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Auteurs</p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-card">
+            <CardContent className="pt-4 pb-3 px-4">
+              <div className="w-9 h-9 rounded-xl bg-secondary/10 flex items-center justify-center mb-2">
+                <BookOpen className="w-4 h-4 text-secondary" />
+              </div>
+              <p className="text-2xl font-bold text-foreground">{xassidas.length}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Xassidas</p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-card">
+            <CardContent className="pt-4 pb-3 px-4">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center mb-2">
+                <BarChart3 className="w-4 h-4 text-primary" />
+              </div>
+              <p className="text-2xl font-bold text-foreground">{totalVerses}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Versets</p>
+            </CardContent>
+          </Card>
+        </div>
 
       {/* Authors Section */}
       <Card>
@@ -1187,11 +1203,11 @@ export function XassidasAdmin() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="text-xs flex-shrink-0"
+                        className="text-xs flex-shrink-0 h-8 w-8 p-0"
                         onClick={() => openEditCategoryDialog(cat)}
                         disabled={updateCategoryMutation.isPending || deleteCategoryMutation.isPending}
                       >
-                        ✏️
+                        <Pencil className="w-3.5 h-3.5" />
                       </Button>
                     </div>
                   </CardContent>
@@ -1233,7 +1249,7 @@ export function XassidasAdmin() {
                       disabled={createXassidaMutation.isPending}
                     />
                     {xassidaForm.formState.errors.title && (
-                      <p className="text-red-500 text-sm">{xassidaForm.formState.errors.title.message}</p>
+                      <p className="text-sm text-destructive">{xassidaForm.formState.errors.title.message}</p>
                     )}
                   </div>
                   
@@ -1275,22 +1291,26 @@ export function XassidasAdmin() {
                     {!createNewAuthorMode && (
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Sélectionner un auteur *</label>
-                        <select 
-                          {...xassidaForm.register('author_id', { required: !createNewAuthorMode ? 'Auteur requis' : false })} 
-                          className="border rounded px-3 py-2 w-full"
+                        <Select
+                          value={xassidaForm.watch('author_id') || ''}
+                          onValueChange={(val) => xassidaForm.setValue('author_id', val)}
                           disabled={createXassidaMutation.isPending}
                         >
-                          <option value="">-- Choisir un auteur --</option>
-                          {authors.length > 0 ? (
-                            authors.map((a: Author) => (
-                              <option key={a.id} value={a.id}>{a.name}</option>
-                            ))
-                          ) : (
-                            <option disabled>Aucun auteur disponible</option>
-                          )}
-                        </select>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choisir un auteur" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {authors.length > 0 ? (
+                              authors.map((a: Author) => (
+                                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="_none" disabled>Aucun auteur disponible</SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
                         {xassidaForm.formState.errors.author_id && (
-                          <p className="text-red-500 text-sm">{xassidaForm.formState.errors.author_id.message}</p>
+                          <p className="text-sm text-destructive">{xassidaForm.formState.errors.author_id.message}</p>
                         )}
                       </div>
                     )}
@@ -1306,7 +1326,7 @@ export function XassidasAdmin() {
                             disabled={createXassidaMutation.isPending}
                           />
                           {xassidaForm.formState.errors.author_name && (
-                            <p className="text-red-500 text-sm">{xassidaForm.formState.errors.author_name.message}</p>
+                            <p className="text-sm text-destructive">{xassidaForm.formState.errors.author_name.message}</p>
                           )}
                         </div>
                         <div className="space-y-2">
@@ -1348,25 +1368,30 @@ export function XassidasAdmin() {
                   {/* Category */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Catégorie</label>
-                    <select 
-                      {...xassidaForm.register('categorie')}
-                      className="border rounded px-3 py-2 w-full"
+                    <Select
+                      value={xassidaForm.watch('categorie') || 'Autre'}
+                      onValueChange={(val) => xassidaForm.setValue('categorie', val)}
                       disabled={createXassidaMutation.isPending}
                     >
-                      {categories.length > 0 ? (
-                        categories.map((cat: string) => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))
-                      ) : (
-                        <option value="Autre">Autre</option>
-                      )}
-                    </select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Catégorie" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.length > 0 ? (
+                          categories.map((cat: Category) => (
+                            <SelectItem key={cat.id || cat.name || cat} value={typeof cat === 'string' ? cat : cat.name}>{typeof cat === 'string' ? cat : cat.name}</SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="Autre">Autre</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
                     <p className="text-xs text-muted-foreground">Catégorie de la xassida</p>
                   </div>
 
                   {/* YouTube URL */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">🎵 URL YouTube (optionnel)</label>
+                    <label className="text-sm font-medium flex items-center gap-1.5"><Youtube className="w-3.5 h-3.5 text-muted-foreground" /> URL YouTube (optionnel)</label>
                     <Input 
                       {...xassidaForm.register('youtube_url')} 
                       placeholder="https://www.youtube.com/watch?v=... ou https://youtu.be/..."
@@ -1378,7 +1403,7 @@ export function XassidasAdmin() {
 
                   {/* Audio URL */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">🔗 URL Audio Directe (optionnel)</label>
+                    <label className="text-sm font-medium flex items-center gap-1.5"><Music className="w-3.5 h-3.5 text-muted-foreground" /> URL Audio Directe (optionnel)</label>
                     <Input 
                       {...xassidaForm.register('audio_url')} 
                       placeholder="https://example.com/audio.mp3"
@@ -1429,13 +1454,13 @@ export function XassidasAdmin() {
                     )}
 
                     {newXassidaPdfError && (
-                      <p className="text-xs text-red-600">{newXassidaPdfError}</p>
+                      <p className="text-xs text-destructive">{newXassidaPdfError}</p>
                     )}
                   </div>
 
                   {/* Error message */}
                   {createXassidaMutation.isError && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+                    <div className="bg-destructive/10 border border-destructive/20 text-destructive px-3 py-2 rounded-lg text-sm">
                       {createXassidaMutation.error instanceof Error ? createXassidaMutation.error.message : 'Une erreur est survenue'}
                     </div>
                   )}
@@ -1481,7 +1506,7 @@ export function XassidasAdmin() {
                     disabled={updateXassidaMutation.isPending}
                   />
                   {editXassidaForm.formState.errors.title && (
-                    <p className="text-xs text-red-600">{editXassidaForm.formState.errors.title.message}</p>
+                    <p className="text-xs text-destructive">{editXassidaForm.formState.errors.title.message}</p>
                   )}
                 </div>
                 <div className="space-y-2">
@@ -1505,19 +1530,24 @@ export function XassidasAdmin() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Catégorie</label>
-                  <select 
-                    {...editXassidaForm.register('categorie')}
-                    className="border rounded px-3 py-2 w-full"
+                  <Select
+                    value={editXassidaForm.watch('categorie') || 'Autre'}
+                    onValueChange={(val) => editXassidaForm.setValue('categorie', val)}
                     disabled={updateXassidaMutation.isPending}
                   >
-                    {categories.length > 0 ? (
-                      categories.map((cat: string) => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))
-                    ) : (
-                      <option value="Autre">Autre</option>
-                    )}
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Catégorie" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.length > 0 ? (
+                        categories.map((cat: Category) => (
+                          <SelectItem key={cat.id || cat.name || cat} value={typeof cat === 'string' ? cat : cat.name}>{typeof cat === 'string' ? cat : cat.name}</SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="Autre">Autre</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-muted-foreground">Catégorie de la xassida</p>
                 </div>
                 <div className="space-y-2">
@@ -1529,7 +1559,7 @@ export function XassidasAdmin() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">🎵 URL YouTube</label>
+                  <label className="text-sm font-medium flex items-center gap-1.5"><Youtube className="w-3.5 h-3.5 text-muted-foreground" /> URL YouTube</label>
                   <Input
                     {...editXassidaForm.register('youtube_url')}
                     placeholder="https://www.youtube.com/watch?v=... ou https://youtu.be/..."
@@ -1539,7 +1569,7 @@ export function XassidasAdmin() {
                   <p className="text-xs text-muted-foreground">La vidéo YouTube sera streamée comme audio</p>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">🔗 URL Audio Directe</label>
+                  <label className="text-sm font-medium flex items-center gap-1.5"><Music className="w-3.5 h-3.5 text-muted-foreground" /> URL Audio Directe</label>
                   <Input
                     {...editXassidaForm.register('audio_url')}
                     placeholder="https://example.com/audio.mp3"
@@ -1555,21 +1585,27 @@ export function XassidasAdmin() {
             </DialogContent>
           </Dialog>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {xassidas.map((x: Xassida) => (
-              <Card key={x.id} className="border">
-                <CardContent className="pt-6">
-                  <div className="flex gap-4">
+              <Card key={x.id} className="border shadow-soft hover:shadow-card transition-shadow">
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex gap-3">
                     {/* Left: Info */}
-                    <div className="flex-1">
-                      <h3 className="font-bold text-lg">{x.title}</h3>
-                      {x.arabic_name && <p className="text-sm font-arabic text-right text-blue-600">{x.arabic_name}</p>}
-                      <p className="text-sm text-gray-600">{x.author_name}</p>
-                      <p className="text-xs text-gray-500 mt-2">📊 {x.verse_count} vers</p>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-base text-foreground truncate">{x.title}</h3>
+                      {x.arabic_name && <p className="text-sm font-arabic text-right text-primary mt-0.5 truncate">{x.arabic_name}</p>}
+                      <p className="text-sm text-muted-foreground mt-0.5">{x.author_name}</p>
+                      <div className="flex items-center gap-1.5 mt-2">
+                        <BarChart3 className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">{x.verse_count} vers</span>
+                        {x.categorie && x.categorie !== 'Autre' && (
+                          <span className="text-xs bg-secondary/10 text-secondary px-2 py-0.5 rounded-full ml-1">{x.categorie}</span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Right: Quick Actions */}
-                    <div className="flex flex-col gap-2 justify-start">
+                    <div className="flex flex-col gap-1.5 justify-start flex-shrink-0">
                       {/* Btn 1: Upload PDF */}
                       <Dialog open={showPdfUploadDialog === x.id} onOpenChange={(open) => {
                         setShowPdfUploadDialog(open ? x.id : null);
@@ -1579,12 +1615,13 @@ export function XassidasAdmin() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-xs"
+                            className="text-xs h-8 px-2.5"
                             onClick={() => {
                               setSelectedXassida(x);
                             }}
                           >
-                            📄 PDF
+                            <FileText className="w-3.5 h-3.5 mr-1" />
+                            PDF
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-md">
@@ -1618,8 +1655,8 @@ export function XassidasAdmin() {
                               </div>
                             )}
                             {uploadErrorByXassida[x.id] && (
-                              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
-                                ❌ {uploadErrorByXassida[x.id]}
+                              <div className="bg-destructive/10 border border-destructive/20 text-destructive px-3 py-2 rounded-lg text-sm">
+                                {uploadErrorByXassida[x.id]}
                               </div>
                             )}
                           </div>
@@ -1638,9 +1675,10 @@ export function XassidasAdmin() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-xs"
+                            className="text-xs h-8 px-2.5"
                           >
-                            🌐 Traduction
+                            <Globe className="w-3.5 h-3.5 mr-1" />
+                            Trad.
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-md">
@@ -1648,7 +1686,7 @@ export function XassidasAdmin() {
                             <DialogTitle>Charger traductions - {x.title}</DialogTitle>
                           </DialogHeader>
                           <div className="space-y-4">
-                            <label className="block text-sm font-medium">📄 Fichier JSON</label>
+                            <label className="block text-sm font-medium">Fichier JSON</label>
                             <input
                               type="file"
                               accept=".json"
@@ -1676,26 +1714,26 @@ export function XassidasAdmin() {
                             <p className="text-xs text-muted-foreground">Format: JSON array avec {'{verse_number, translation_fr}'}</p>
 
                             {xassidaImportTranslations[x.id] && (
-                              <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm">
+                              <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm">
                                 {(() => {
                                   try {
                                     const data = JSON.parse(xassidaImportTranslations[x.id]);
-                                    return <div className="text-blue-700">✅ {data.length} traduction(s) détectée(s)</div>;
+                                    return <div className="text-primary font-medium">{data.length} traduction(s) détectée(s)</div>;
                                   } catch {
-                                    return <div className="text-red-600">❌ JSON invalide</div>;
+                                    return <div className="text-destructive font-medium">JSON invalide</div>;
                                   }
                                 })()}
                               </div>
                             )}
 
                             {xassidaImportErrors[x.id] && (
-                              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
-                                ❌ {xassidaImportErrors[x.id]}
+                              <div className="bg-destructive/10 border border-destructive/20 text-destructive px-3 py-2 rounded-lg text-sm">
+                                {xassidaImportErrors[x.id]}
                               </div>
                             )}
 
                             {xassidaImportSuccess[x.id] && (
-                              <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded text-sm">
+                              <div className="bg-primary/10 border border-primary/20 text-primary px-3 py-2 rounded-lg text-sm font-medium">
                                 {xassidaImportSuccess[x.id]}
                               </div>
                             )}
@@ -1732,22 +1770,23 @@ export function XassidasAdmin() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="text-xs"
+                        className="text-xs h-8 px-2.5"
                         onClick={() => openEditDialog(x)}
                         disabled={updateXassidaMutation.isPending || deleteXassidaMutation.isPending}
                       >
-                        ✏️ Éditer
+                        <Pencil className="w-3.5 h-3.5 mr-1" />
+                        Éditer
                       </Button>
 
                       {/* Btn 4: Delete */}
                       <Button
                         size="sm"
                         variant="destructive"
-                        className="text-xs"
+                        className="text-xs h-8 px-2.5"
                         onClick={() => handleDeleteXassida(x)}
                         disabled={deleteXassidaMutation.isPending || updateXassidaMutation.isPending}
                       >
-                        🗑️
+                        <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
                   </div>
@@ -1759,6 +1798,7 @@ export function XassidasAdmin() {
           {/* Hidden dialog for advanced editing - not used in normal flow */}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
