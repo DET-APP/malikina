@@ -10,7 +10,8 @@
     "start": "node dist/api/server.js",
     "db:migrate": "tsx db/migrate.ts",
     "db:seed": "tsx db/seed.ts",
-    "scrape": "node dist/scripts/scrape-xassidas-pg.js"
+    "scrape": "node dist/scripts/scrape-xassidas-pg.js",
+    "scrape:complete": "tsx scripts/scrape-xassidas-complete.ts"
   },
   "dependencies": {
     "@distube/ytdl": "^2.0.6",
