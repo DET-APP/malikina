@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm } from 'react-hook-form';
-import { Plus, Edit2, Trash2, Upload, Save, ChevronLeft, ChevronRight, Loader2, Lock, Users, BookOpen, FileText, Music, Link, Youtube, FolderOpen, Pencil, Globe, BarChart3, Settings } from 'lucide-react';
+import { Plus, Edit2, Trash2, Upload, Save, ChevronLeft, ChevronRight, Loader2, Lock, Users, BookOpen, FileText, Music, Link, Youtube, FolderOpen, Pencil, Globe, BarChart3, Settings, X } from 'lucide-react';
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
@@ -24,6 +24,7 @@ interface Author {
 
 interface Verse {
   verse_number: number;
+  chapter_number?: number;
   text_arabic: string;
   transcription?: string;
   translation_fr?: string;
@@ -104,6 +105,15 @@ export function XassidasAdmin() {
   const [xassidaImportTranslations, setXassidaImportTranslations] = useState<Record<string, string>>({});
   const [xassidaImportErrors, setXassidaImportErrors] = useState<Record<string, string>>({});
   const [xassidaImportSuccess, setXassidaImportSuccess] = useState<Record<string, string>>({});
+
+  // PDF extraction metadata
+  const [extractedMetadata, setExtractedMetadata] = useState<{
+    detected_author: string | null;
+    detected_title: string | null;
+    introduction: string | null;
+    total_pages: number;
+    total_lines: number;
+  } | null>(null);
 
   // Categories management state
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
@@ -803,6 +813,12 @@ export function XassidasAdmin() {
       const extractedVerses = Array.isArray(data?.verses) ? data.verses : [];
       setEditorVerses(extractedVerses);
       setCurrentVersePage(1);
+      // Save extraction metadata
+      if (data?.metadata) {
+        setExtractedMetadata(data.metadata);
+      }
+      // Close PDF dialog and show editor
+      setShowPdfUploadDialog(null);
     } catch (error) {
       console.error('PDF upload error:', error);
       setUploadErrorByXassida(prev => ({
@@ -831,6 +847,7 @@ export function XassidasAdmin() {
       setSelectedXassida(xassidas.find((item: Xassida) => item.id === xassidaId) || null);
       setEditorVerses(verses);
       setCurrentVersePage(1);
+      setExtractedMetadata(null);
     } catch (error) {
       setUploadErrorByXassida((prev) => ({
         ...prev,
@@ -1595,11 +1612,27 @@ export function XassidasAdmin() {
                       <h3 className="font-bold text-base text-foreground truncate">{x.title}</h3>
                       {x.arabic_name && <p className="text-sm font-arabic text-right text-primary mt-0.5 truncate">{x.arabic_name}</p>}
                       <p className="text-sm text-muted-foreground mt-0.5">{x.author_name}</p>
-                      <div className="flex items-center gap-1.5 mt-2">
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                         <BarChart3 className="w-3.5 h-3.5 text-muted-foreground" />
                         <span className="text-xs text-muted-foreground">{x.verse_count} vers</span>
                         {x.categorie && x.categorie !== 'Autre' && (
                           <span className="text-xs bg-secondary/10 text-secondary px-2 py-0.5 rounded-full ml-1">{x.categorie}</span>
+                        )}
+                        {Number(x.verse_count) > 0 && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs h-6 px-2 ml-auto text-primary"
+                            onClick={() => loadExistingVerses(x.id)}
+                            disabled={!!loadingVersesByXassida[x.id]}
+                          >
+                            {loadingVersesByXassida[x.id] ? (
+                              <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                            ) : (
+                              <Edit2 className="w-3 h-3 mr-1" />
+                            )}
+                            Éditer vers
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -1795,9 +1828,246 @@ export function XassidasAdmin() {
             ))}
           </div>
 
-          {/* Hidden dialog for advanced editing - not used in normal flow */}
         </CardContent>
       </Card>
+
+      {/* ── Verse Editor Panel ──────────────────────────────────── */}
+      {selectedXassida && editorVerses.length > 0 && (
+        <Card className="shadow-card border-primary/30" id="verse-editor">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <CardTitle className="text-lg">
+                  Éditeur de vers — {selectedXassida.title}
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  {editorVerses.length} vers · Page {currentVersePage}/{totalVersePages}
+                </CardDescription>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedXassida(null);
+                    setEditorVerses([]);
+                    setCurrentVersePage(1);
+                    setExtractedMetadata(null);
+                  }}
+                >
+                  <X className="w-4 h-4 mr-1" /> Fermer
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => saveVersesMutation.mutate({ verses: editorVerses })}
+                  disabled={saveVersesMutation.isPending}
+                >
+                  {saveVersesMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-1" />
+                  )}
+                  Sauvegarder
+                </Button>
+              </div>
+            </div>
+
+            {/* Chunk save progress */}
+            {chunkSaveProgress && (
+              <div className="mt-3 space-y-1">
+                <div className="w-full h-2 bg-muted rounded overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${(chunkSaveProgress.current / chunkSaveProgress.total) * 100}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Sauvegarde: lot {chunkSaveProgress.current}/{chunkSaveProgress.total}
+                </p>
+              </div>
+            )}
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            {/* Extracted metadata banner */}
+            {extractedMetadata && (
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-2">
+                <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary" />
+                  Résultat de l'extraction PDF
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                  <div>Pages : <span className="font-medium text-foreground">{extractedMetadata.total_pages}</span></div>
+                  <div>Lignes : <span className="font-medium text-foreground">{extractedMetadata.total_lines}</span></div>
+                </div>
+                {extractedMetadata.detected_author && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Auteur détecté : </span>
+                    <span className="font-arabic font-medium text-primary">{extractedMetadata.detected_author}</span>
+                  </div>
+                )}
+                {extractedMetadata.detected_title && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Titre détecté : </span>
+                    <span className="font-arabic font-medium text-foreground">{extractedMetadata.detected_title}</span>
+                  </div>
+                )}
+                {extractedMetadata.introduction && (
+                  <div className="mt-2">
+                    <p className="text-xs text-muted-foreground mb-1">Introduction détectée :</p>
+                    <div className="bg-card border border-border/50 rounded-lg p-3 text-sm font-arabic text-right leading-relaxed max-h-32 overflow-y-auto">
+                      {extractedMetadata.introduction}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Font size + Add verse controls */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-1 bg-muted/60 rounded-lg px-2 py-1">
+                <button
+                  onClick={() => setEditorFontSize((f) => Math.max(MIN_VERSE_FONT_SIZE, f - 2))}
+                  className="w-7 h-7 rounded text-sm font-bold flex items-center justify-center text-muted-foreground hover:bg-muted"
+                >A−</button>
+                <span className="text-xs w-6 text-center tabular-nums text-muted-foreground">{editorFontSize}</span>
+                <button
+                  onClick={() => setEditorFontSize((f) => Math.min(MAX_VERSE_FONT_SIZE, f + 2))}
+                  className="w-7 h-7 rounded text-sm font-bold flex items-center justify-center text-muted-foreground hover:bg-muted"
+                >A+</button>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setEditorVerses((prev) => [
+                    ...prev,
+                    { verse_number: prev.length + 1, text_arabic: '', transcription: '', translation_fr: '' }
+                  ]);
+                  // Go to last page
+                  const newTotal = Math.ceil((editorVerses.length + 1) / VERSES_PER_PAGE);
+                  setCurrentVersePage(newTotal);
+                }}
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Ajouter un vers
+              </Button>
+              <span className="text-xs text-muted-foreground ml-auto">
+                {editorVerses.length} vers au total
+              </span>
+            </div>
+
+            {/* Verse list (paginated) */}
+            <div className="space-y-3">
+              {paginatedVerses.map((verse, pageIdx) => {
+                const globalIdx = verseStartIndex + pageIdx;
+                return (
+                  <div
+                    key={globalIdx}
+                    className="border border-border/50 rounded-xl p-4 bg-card space-y-3 relative group"
+                  >
+                    {/* Verse number badge + delete */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold">
+                          {verse.verse_number}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Chap. {verse.chapter_number ?? 1}
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => {
+                          setEditorVerses((prev) => {
+                            const next = prev.filter((_, i) => i !== globalIdx);
+                            // Re-number
+                            return next.map((v, i) => ({ ...v, verse_number: i + 1 }));
+                          });
+                        }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+
+                    {/* Arabic text */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Texte arabe</label>
+                      <Textarea
+                        value={verse.text_arabic}
+                        onChange={(e) => handleVerseFieldChange(globalIdx, 'text_arabic', e.target.value)}
+                        className="font-arabic text-right leading-loose min-h-[60px] resize-y"
+                        style={{ fontSize: `${editorFontSize}px` }}
+                        dir="rtl"
+                        rows={2}
+                      />
+                    </div>
+
+                    {/* Transcription */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Transcription (optionnel)</label>
+                      <Input
+                        value={verse.transcription || ''}
+                        onChange={(e) => handleVerseFieldChange(globalIdx, 'transcription', e.target.value)}
+                        placeholder="Transcription phonétique..."
+                        className="text-sm"
+                      />
+                    </div>
+
+                    {/* Translation FR */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Traduction FR (optionnel)</label>
+                      <Input
+                        value={verse.translation_fr || ''}
+                        onChange={(e) => handleVerseFieldChange(globalIdx, 'translation_fr', e.target.value)}
+                        placeholder="Traduction française..."
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Pagination */}
+            {totalVersePages > 1 && (
+              <div className="flex items-center justify-center gap-1 pt-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={currentVersePage <= 1}
+                  onClick={() => setCurrentVersePage((p) => Math.max(1, p - 1))}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                {visiblePageNumbers.map((num) => (
+                  <Button
+                    key={num}
+                    size="sm"
+                    variant={num === currentVersePage ? 'default' : 'ghost'}
+                    onClick={() => setCurrentVersePage(num)}
+                    className="h-8 w-8 p-0 text-xs"
+                  >
+                    {num}
+                  </Button>
+                ))}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={currentVersePage >= totalVersePages}
+                  onClick={() => setCurrentVersePage((p) => Math.min(totalVersePages, p + 1))}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
       </div>
     </div>
   );

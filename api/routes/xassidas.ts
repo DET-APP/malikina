@@ -6,6 +6,7 @@ import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
 import { pool } from '../db/config.js';
+import { extractFromPdf } from '../lib/pdf-extractor.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const router = Router();
@@ -481,15 +482,91 @@ router.post('/:id/upload-pdf', upload.single('file'), async (req: Request, res: 
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // For now, just return success
-    // In a full implementation, you'd extract verses from PDF
+    if (req.file.mimetype !== 'application/pdf') {
+      return res.status(400).json({ error: 'Le fichier doit être un PDF' });
+    }
+
+    console.log(`[PDF] Extraction en cours pour xassida ${req.params.id} (${req.file.originalname}, ${(req.file.size / 1024).toFixed(0)} Ko)`);
+
+    const result = await extractFromPdf(req.file.buffer);
+
+    console.log(`[PDF] Extraction terminée: ${result.verses.length} vers détectés, auteur: ${result.metadata.detected_author || 'inconnu'}`);
+
     res.json({
-      message: 'PDF uploaded',
+      message: 'PDF analysé avec succès',
       xassidaId: req.params.id,
-      filename: req.file.originalname
+      filename: req.file.originalname,
+      verses: result.verses,
+      metadata: result.metadata,
     });
   } catch (error: any) {
-    console.error('Error uploading PDF:', error);
+    console.error('Error extracting PDF:', error);
+    res.status(500).json({ error: `Erreur d'extraction PDF: ${error.message}` });
+  }
+});
+
+// POST verses for a xassida (create or replace)
+router.post('/:id/verses', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { verses, replaceExisting } = req.body;
+
+    if (!Array.isArray(verses) || verses.length === 0) {
+      return res.status(400).json({ error: 'verses doit être un tableau non vide' });
+    }
+
+    // Verify xassida exists
+    const xassidaCheck = await pool.query('SELECT id FROM xassidas WHERE id = $1', [id]);
+    if (xassidaCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Xassida non trouvée' });
+    }
+
+    // Delete existing verses if replacing
+    if (replaceExisting) {
+      await pool.query('DELETE FROM verses WHERE xassida_id = $1', [id]);
+    }
+
+    let inserted = 0;
+    const errors: string[] = [];
+
+    for (const verse of verses) {
+      try {
+        const chapterNum = verse.chapter_number ?? 1;
+        const verseNum = verse.verse_number;
+        const verseKey = `${chapterNum}:${verseNum}`;
+
+        await pool.query(`
+          INSERT INTO verses (xassida_id, verse_number, chapter_number, verse_key, text_arabic, transcription, translation_fr, translation_en, content, created_at, updated_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+        `, [
+          id,
+          verseNum,
+          chapterNum,
+          verseKey,
+          verse.text_arabic || '',
+          verse.transcription || null,
+          verse.translation_fr || null,
+          verse.translation_en || null,
+          verse.text_arabic || '',
+        ]);
+        inserted++;
+      } catch (err: any) {
+        errors.push(`Vers ${verse.verse_number}: ${err.message}`);
+      }
+    }
+
+    // Update verse_count on xassida
+    const countResult = await pool.query('SELECT COUNT(*) as count FROM verses WHERE xassida_id = $1', [id]);
+    await pool.query('UPDATE xassidas SET verse_count = $1 WHERE id = $2', [countResult.rows[0].count, id]);
+
+    res.json({
+      message: `${inserted} vers sauvegardés`,
+      inserted,
+      total: verses.length,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+  } catch (error: any) {
+    console.error('Error saving verses:', error);
     res.status(500).json({ error: error.message });
   }
 });
