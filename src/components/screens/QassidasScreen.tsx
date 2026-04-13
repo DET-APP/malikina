@@ -5,6 +5,7 @@ import { useXassidas } from "@/hooks/useXassidas";
 import { useQassidasHistory } from "@/hooks/useQassidasHistory";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { searchMatch } from "@/lib/utils";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import XassidasList from "@/components/qassidas/XassidasList";
 import XassidasDetail from "@/components/qassidas/XassidasDetail";
@@ -73,8 +74,9 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
 
   const filteredQassidas = allQassidas.filter((q) => {
     const matchesSearch =
-      q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (q.arabic && q.arabic.includes(searchQuery));
+      searchMatch(q.title, searchQuery) ||
+      searchMatch(q.arabic, searchQuery) ||
+      searchMatch(q.author, searchQuery);
     const matchesAuthor = selectedAuthorId
       ? authorsData.find((a) => a.id === selectedAuthorId)?.fullName === q.author
       : true;
@@ -90,9 +92,9 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
     ? allQassidas
         .filter(
           (q) =>
-            q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (q.arabic && q.arabic.includes(searchQuery)) ||
-            q.author.toLowerCase().includes(searchQuery.toLowerCase())
+            searchMatch(q.title, searchQuery) ||
+            searchMatch(q.arabic, searchQuery) ||
+            searchMatch(q.author, searchQuery)
         )
         .slice(0, 6)
     : [];

@@ -12,6 +12,7 @@ import { Heart } from "lucide-react";
 import type { Qassida } from "@/data/qassidasData";
 import { authorsData } from "@/data/qassidasData";
 import { enrichedQassidasData } from "@/data/enrichedQassidasData";
+import { searchMatch } from "@/lib/utils";
 
 interface XassidasDetailProps {
   selectedQassida: Qassida;
@@ -153,10 +154,10 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
       const ch = v.chapter_number ?? 1;
       if (selectedChapter !== null && ch !== selectedChapter) return false;
       if (verseSearch) {
-        const q = verseSearch.toLowerCase();
-        return v.text_arabic.includes(verseSearch) ||
-               (v.transcription?.toLowerCase().includes(q)) ||
-               (v.translation_fr?.toLowerCase().includes(q));
+        // Search with accent-insensitive matching
+        return searchMatch(v.text_arabic, verseSearch) ||
+               searchMatch(v.transcription, verseSearch) ||
+               searchMatch(v.translation_fr, verseSearch);
       }
       return true;
     })
@@ -228,6 +229,21 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
       fallbackCopy(text, succeed);
     }
   }, [showTranscription, showTranslation]);
+
+  // Verse refs for scrolling to search results
+  const verseRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Scroll to verse and highlight it
+  const scrollToVerse = useCallback((verse: XassidaVerse) => {
+    const key = verse.id || `${verse.chapter_number}-${verse.verse_number}`;
+    const ref = verseRefsMap.current.get(key);
+    if (ref) {
+      ref.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Highlight effect
+      ref.classList.add("ring-2", "ring-primary", "rounded-2xl");
+      setTimeout(() => ref.classList.remove("ring-2", "ring-primary", "rounded-2xl"), 2000);
+    }
+  }, []);
 
   const visibleVerses = filtered.slice(0, visibleCount);
 
@@ -349,6 +365,44 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
                   </button>
                 )}
               </div>
+              {/* Search results dropdown */}
+              {verseSearch && filtered.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`mt-2 rounded-xl border overflow-hidden max-h-60 overflow-y-auto ${ctrl}`}
+                >
+                  {filtered.slice(0, 8).map((verse, idx) => (
+                    <button
+                      key={`${verse.chapter_number}-${verse.verse_number}-${idx}`}
+                      onClick={() => scrollToVerse(verse)}
+                      className={`w-full text-left px-4 py-3 border-b last:border-b-0 transition-colors hover:bg-primary/10 active:bg-primary/20`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className={`text-xs font-bold flex-shrink-0 mt-0.5 ${badge}`}>
+                          {verse.verse_number}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-sm leading-snug ${arabicTxt}`} dir="rtl" style={{ fontSize: `${Math.min(16, fontSize)}px` }}>
+                            {verse.text_arabic.substring(0, 60)}{verse.text_arabic.length > 60 ? "…" : ""}
+                          </p>
+                          {verse.transcription && (
+                            <p className={`text-xs italic mt-1 line-clamp-1 ${translit}`}>
+                              {verse.transcription.substring(0, 50)}{verse.transcription.length > 50 ? "…" : ""}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                  {filtered.length > 8 && (
+                    <div className={`px-4 py-2 text-xs text-center ${d ? "text-amber-300/60" : "text-muted-foreground"}`}>
+                      +{filtered.length - 8} résultat{filtered.length - 8 > 1 ? "s" : ""}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+              
               {verseSearch && (
                 <p className={`text-xs mt-1.5 px-1 ${d ? "text-amber-300/50" : "text-muted-foreground/60"}`}>
                   {filtered.length} résultat{filtered.length !== 1 ? "s" : ""}
@@ -408,6 +462,9 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
                       </div>
                     )}
                     <motion.div
+                      ref={(el) => {
+                        if (el) verseRefsMap.current.set(key, el);
+                      }}
                       className={`rounded-2xl border p-4 mb-3 transition-colors ${card}`}
                       initial={{ opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
