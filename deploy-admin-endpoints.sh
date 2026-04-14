@@ -16,7 +16,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "📥 Fetching latest from GitHub..."
 cd "$(dirname "$0")"
 git fetch origin
-git log --oneline -1 origin/main
+git log --oneline -1 origin/dev
 
 # Step 2: Verify branch
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
@@ -30,10 +30,10 @@ echo "  Stashing local changes..."
 git stash
 echo "  Fetching latest..."
 git fetch origin
-echo "  Checking out main..."
-git checkout main
+echo "  Checking out dev..."
+git checkout dev
 echo "  Pulling latest..."
-git pull origin main
+git pull origin dev
 echo "  Latest commit:"
 git log --oneline -1
 SSH_COMMANDS
