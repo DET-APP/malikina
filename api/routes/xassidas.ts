@@ -55,7 +55,11 @@ router.get('/', async (req: Request, res: Response) => {
 // ADMIN: Import/Update translations for verses (MUST BE BEFORE /:id)
 router.post('/admin/import-translations', async (req: Request, res: Response) => {
   try {
-    const { translations, xassida_id } = req.body;
+    // Support both formats:
+    // 1. { translations: [...], xassida_id: "..." }
+    // 2. Direct array [...] (with xassida_id as param)
+    let translations = req.body.translations || req.body;
+    const xassida_id = req.body.xassida_id;
 
     if (!Array.isArray(translations)) {
       return res.status(400).json({ error: 'translations must be an array' });
