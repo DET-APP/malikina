@@ -49,18 +49,25 @@ docker rm -f malikina-db malikina-api malikina-nginx 2>/dev/null || true
 echo "  Removed."
 SSH_COMMANDS
 
-# Step 5: Rebuild and deploy
+# Step 5: Ensure data directory exists
+echo "📁 Ensuring data directories exist..."
+ssh "$SERVER" << 'SSH_COMMANDS'
+mkdir -p /var/lib/malikina/postgres-data
+chmod 755 /var/lib/malikina/postgres-data
+SSH_COMMANDS
+
+# Step 6: Rebuild and deploy
 echo "🔨 Building and deploying..."
 ssh "$SERVER" << SSH_COMMANDS
 cd /var/www/malikina-api
 API_URL=$API_URL docker compose -f $COMPOSE_FILE up -d --build
 SSH_COMMANDS
 
-# Step 6: Wait for startup
+# Step 7: Wait for startup
 echo "⏳ Waiting for services to start..."
 sleep 15
 
-# Step 7: Verify all routes
+# Step 8: Verify all routes
 echo "🧪 Verifying admin endpoints..."
 ssh "$SERVER" << 'SSH_COMMANDS'
 echo "  Testing /api/xassidas/admin/stats..."
@@ -80,7 +87,7 @@ echo "  Checking available endpoints..."
 docker logs malikina-api 2>&1 | grep -A 15 "Available endpoints" || echo "    (Log details not available)"
 SSH_COMMANDS
 
-# Step 8: Check containers status
+# Step 9: Check containers status
 echo ""
 echo "✅ Deployment complete!"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
