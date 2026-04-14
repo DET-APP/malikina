@@ -87,7 +87,45 @@ echo "  Checking available endpoints..."
 docker logs malikina-api 2>&1 | grep -A 15 "Available endpoints" || echo "    (Log details not available)"
 SSH_COMMANDS
 
-# Step 9: Check containers status
+# Step 9: Initialize database if empty
+echo ""
+echo "🗃️  Initializing database if needed..."
+ssh "$SERVER" << 'SSH_COMMANDS'
+COUNT=$(docker exec malikina-db psql -U malikina -d malikina -t -c "SELECT COUNT(*) FROM xassidas;" 2>/dev/null || echo 0)
+
+if [ "$COUNT" -eq 0 ] || [ "$COUNT" = "" ]; then
+  echo "  Database empty, loading bootstrap data..."
+  
+  # Load minimal bootstrap data
+  docker exec -i malikina-db psql -U malikina -d malikina << 'BOOTSTRAP_SQL'
+-- Bootstrap authors
+INSERT INTO authors (name, description, tradition) VALUES 
+  ('Seydi El Hadji Malick Sy', 'Saint-Patron Tidjane', 'Tidjiane'),
+  ('Cheikh Anta Diop', 'Savant sénégalais et auteur', 'Tidjiane'),
+  ('Babacar Sy', 'Auteur de xassidas célèbres', 'Tidjiane')
+ON CONFLICT DO NOTHING;
+
+-- Bootstrap xassidas
+INSERT INTO xassidas (title, author_id, description, verse_count, categorie) 
+SELECT 'Abada', id, 'O eternité - Xassida principale', 16, 'Louange' 
+FROM authors WHERE name = 'Seydi El Hadji Malick Sy'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO xassidas (title, author_id, description, verse_count, categorie) 
+SELECT 'Ya Rabilanah', id, 'Xassida tidjiane', 10, 'Louange' 
+FROM authors WHERE name = 'Cheikh Anta Diop'
+ON CONFLICT DO NOTHING;
+
+BOOTSTRAP_SQL
+  
+  FINAL=$(docker exec malikina-db psql -U malikina -d malikina -t -c "SELECT COUNT(*) FROM xassidas;")
+  echo "  ✅ Loaded $FINAL xassidas"
+else
+  echo "  ✅ Database has $COUNT xassidas (already initialized)"
+fi
+SSH_COMMANDS
+
+# Step 10: Check containers status
 echo ""
 echo "✅ Deployment complete!"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
