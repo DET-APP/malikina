@@ -55,7 +55,7 @@ router.get('/', async (req: Request, res: Response) => {
 // ADMIN: Import/Update translations for verses (MUST BE BEFORE /:id)
 router.post('/admin/import-translations', async (req: Request, res: Response) => {
   try {
-    const { translations } = req.body;
+    const { translations, xassida_id } = req.body;
 
     if (!Array.isArray(translations)) {
       return res.status(400).json({ error: 'translations must be an array' });
@@ -66,10 +66,29 @@ router.post('/admin/import-translations', async (req: Request, res: Response) =>
 
     for (const trans of translations) {
       try {
-        const { verse_id, translation_fr, translation_en, transcription } = trans;
+        const { verse_id, verse_number, translation_fr, translation_en, transcription } = trans;
+        const transXassidaId = trans.xassida_id || xassida_id;
 
-        if (!verse_id) {
-          errors.push('Missing verse_id');
+        let finalVerseId = verse_id;
+
+        // If verse_id not provided but verse_number + xassida_id provided, lookup verse_id
+        if (!finalVerseId && verse_number && transXassidaId) {
+          const verseResult = await pool.query(`
+            SELECT id FROM verses 
+            WHERE xassida_id = $1 AND verse_number = $2
+            LIMIT 1
+          `, [transXassidaId, verse_number]);
+
+          if (verseResult.rows.length > 0) {
+            finalVerseId = verseResult.rows[0].id;
+          } else {
+            errors.push(`Verse ${verse_number} not found in xassida ${transXassidaId}`);
+            continue;
+          }
+        }
+
+        if (!finalVerseId) {
+          errors.push('Missing verse_id or (verse_number + xassida_id)');
           continue;
         }
 
@@ -82,12 +101,12 @@ router.post('/admin/import-translations', async (req: Request, res: Response) =>
             updated_at = NOW()
           WHERE id = $4
           RETURNING id
-        `, [translation_fr || null, translation_en || null, transcription || null, verse_id]);
+        `, [translation_fr || null, translation_en || null, transcription || null, finalVerseId]);
 
         if (result.rows.length > 0) {
           updated++;
         } else {
-          errors.push(`Verse ${verse_id} not found`);
+          errors.push(`Verse ${finalVerseId} not found`);
         }
       } catch (err: any) {
         errors.push(`Error updating verse: ${err.message}`);

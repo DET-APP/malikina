@@ -627,21 +627,20 @@ export function XassidasAdmin() {
 
   const importXassidaTranslationsMutation = useMutation({
     mutationFn: async ({ xassidaId, translations }: { xassidaId: string; translations: any[] }) => {
-      // Toujours utiliser l'ID de la xassida sélectionnée, ignorer celui du JSON
-      const enrichedTranslations = translations.map((t) => ({
-        ...t,
-        xassida_id: xassidaId
-      }));
+      const payload = {
+        xassida_id: xassidaId,
+        translations: translations
+      };
       
       const response = await fetch(`${API_URL}/xassidas/admin/import-translations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(enrichedTranslations)
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.error || 'Erreur lors de l\'import des traductions');
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || 'Erreur lors de l\'import des traductions');
       }
 
       return response.json();
@@ -649,7 +648,7 @@ export function XassidasAdmin() {
     onSuccess: (data, variables) => {
       setXassidaImportSuccess((prev) => ({
         ...prev,
-        [variables.xassidaId]: `✅ ${data.successCount} traductions importées`
+        [variables.xassidaId]: `✅ ${data.updated}/${data.total} traductions importées`
       }));
       setXassidaImportTranslations((prev) => ({
         ...prev,
