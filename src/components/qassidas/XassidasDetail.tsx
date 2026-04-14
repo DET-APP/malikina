@@ -12,12 +12,14 @@ import { Heart } from "lucide-react";
 import type { Qassida } from "@/data/qassidasData";
 import { authorsData } from "@/data/qassidasData";
 import { enrichedQassidasData } from "@/data/enrichedQassidasData";
+import { searchMatch } from "@/lib/utils";
 
 interface XassidasDetailProps {
   selectedQassida: Qassida;
   onBack: () => void;
   onNext?: () => void;
   onPrevious?: () => void;
+  onNavigateToXassida?: (qassida: Qassida, verseNumber?: number) => void;
 }
 
 interface XassidaVerse {
@@ -114,7 +116,7 @@ const fallbackCopy = (text: string, onSuccess: () => void) => {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
-const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: XassidasDetailProps) => {
+const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigateToXassida }: XassidasDetailProps) => {
   const [fontSize, setFontSize]           = useState(20);
   const [darkMode, setDarkMode]           = useState(false);
   const [showTranscription, setShowTr]    = useState(false);
@@ -125,9 +127,10 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
   const [selectedChapter, setChapter]     = useState<number | null>(null);
   const [verseSearch, setVerseSearch]     = useState("");
   const [showSearch, setShowSearch]       = useState(false);
+  const [globalSearchResults, setGlobalSearchResults] = useState<Qassida[]>([]);
 
   const { toggleFavorite, isFavorite } = useFavorites();
-  const { fetchAudioUrl } = useXassidas();
+  const { fetchAudioUrl, xassidas: allXassidas } = useXassidas();
   const favorite = isFavorite(selectedQassida.id);
 
   const author      = authorsData.find((a) => a.fullName === selectedQassida.author);
@@ -153,10 +156,10 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
       const ch = v.chapter_number ?? 1;
       if (selectedChapter !== null && ch !== selectedChapter) return false;
       if (verseSearch) {
-        const q = verseSearch.toLowerCase();
-        return v.text_arabic.includes(verseSearch) ||
-               (v.transcription?.toLowerCase().includes(q)) ||
-               (v.translation_fr?.toLowerCase().includes(q));
+        // Search with accent-insensitive matching
+        return searchMatch(v.text_arabic, verseSearch) ||
+               searchMatch(v.transcription, verseSearch) ||
+               searchMatch(v.translation_fr, verseSearch);
       }
       return true;
     })
@@ -229,6 +232,40 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
     }
   }, [showTranscription, showTranslation]);
 
+  // Verse refs for scrolling to search results
+  const verseRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Scroll to verse and highlight it
+  const scrollToVerse = useCallback((verse: XassidaVerse) => {
+    const key = verse.id || `${verse.chapter_number}-${verse.verse_number}`;
+    const ref = verseRefsMap.current.get(key);
+    if (ref) {
+      ref.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Highlight effect
+      ref.classList.add("ring-2", "ring-primary", "rounded-2xl");
+      setTimeout(() => ref.classList.remove("ring-2", "ring-primary", "rounded-2xl"), 2000);
+    }
+  }, []);
+
+  // Search in other xassidas when local search returns no results
+  useEffect(() => {
+    if (!verseSearch || filtered.length > 0 || !allXassidas) {
+      setGlobalSearchResults([]);
+      return;
+    }
+
+    // Search for matching xassidas in other records
+    const matchingXassidas = allXassidas.filter(
+      (xassida) => 
+        xassida.id !== selectedQassida.id && (
+          searchMatch(xassida.title, verseSearch) ||
+          searchMatch(xassida.author, verseSearch)
+        )
+    );
+    
+    setGlobalSearchResults(matchingXassidas);
+  }, [verseSearch, filtered.length, selectedQassida.id, allXassidas]);
+
   const visibleVerses = filtered.slice(0, visibleCount);
 
   // Theme tokens
@@ -272,8 +309,8 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
           {apiVerses.length > 0 && (
             <p className={`text-xs ${headMut} mt-1`}>
               {filtered.length !== apiVerses.length
-                ? `${filtered.length} / ${apiVerses.length} versets`
-                : `${apiVerses.length} versets`}
+                ? `${filtered.length} / ${apiVerses.length} vers`
+                : `${apiVerses.length} vers`}
               {multipleChapters && ` · ${chapterKeys.length} chapitres`}
             </p>
           )}
@@ -338,7 +375,7 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
                 <input
                   autoFocus
                   type="text"
-                  placeholder="Rechercher dans les versets…"
+                  placeholder="Rechercher dans les vers…"
                   value={verseSearch}
                   onChange={(e) => setVerseSearch(e.target.value)}
                   className={`w-full rounded-xl border pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 ${searchBg}`}
@@ -349,9 +386,97 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
                   </button>
                 )}
               </div>
+              {/* Search results dropdown */}
+              {verseSearch && (filtered.length > 0 || globalSearchResults.length > 0) && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`mt-2 rounded-xl border overflow-hidden max-h-80 overflow-y-auto ${ctrl}`}
+                >
+                  {/* Local results */}
+                  {filtered.length > 0 && (
+                    <>
+                      {filtered.slice(0, 8).map((verse, idx) => (
+                        <button
+                          key={`${verse.chapter_number}-${verse.verse_number}-${idx}`}
+                          onClick={() => scrollToVerse(verse)}
+                          className={`w-full text-left px-4 py-3 border-b transition-colors hover:bg-primary/10 active:bg-primary/20`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <span className={`text-xs font-bold flex-shrink-0 mt-0.5 ${badge}`}>
+                              {verse.verse_number}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className={`text-xs font-semibold mb-1 ${d ? "text-amber-300/60" : "text-muted-foreground/60"}`}>
+                                Dans ce xassida
+                              </p>
+                              <p className={`text-sm leading-snug ${arabicTxt}`} dir="rtl" style={{ fontSize: `${Math.min(16, fontSize)}px` }}>
+                                {verse.text_arabic.substring(0, 60)}{verse.text_arabic.length > 60 ? "…" : ""}
+                              </p>
+                              {verse.transcription && (
+                                <p className={`text-xs italic mt-1 line-clamp-1 ${translit}`}>
+                                  {verse.transcription.substring(0, 50)}{verse.transcription.length > 50 ? "…" : ""}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                      {filtered.length > 8 && (
+                        <div className={`px-4 py-2 text-xs text-center border-b ${d ? "text-amber-300/60" : "text-muted-foreground"}`}>
+                          +{filtered.length - 8} résultat{filtered.length - 8 > 1 ? "s" : ""}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Global results from other xassidas */}
+                  {globalSearchResults.length > 0 && (
+                    <>
+                      {filtered.length > 0 && <div className="h-px bg-border/30" />}
+                      <div className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider ${d ? "text-amber-300/70 bg-amber-900/20" : "text-primary/70 bg-primary/5"}`}>
+                        📚 Autres xassidas
+                      </div>
+                      {globalSearchResults.slice(0, 5).map((qassida) => (
+                        <button
+                          key={qassida.id}
+                          onClick={() => {
+                            if (onNavigateToXassida) {
+                              onNavigateToXassida(qassida);
+                            }
+                          }}
+                          className={`w-full text-left px-4 py-3 border-b last:border-b-0 transition-colors hover:bg-primary/10 active:bg-primary/20`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <span className={`text-xs font-bold flex-shrink-0 mt-0.5 rounded-full w-6 h-6 flex items-center justify-center ${d ? "bg-amber-700/40 text-amber-300" : "bg-primary/10 text-primary"}`}>
+                              📖
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className={`text-sm font-semibold ${arabicTxt}`}>
+                                {qassida.title}
+                              </p>
+                              <p className={`text-xs mt-1 ${translit}`}>
+                                {qassida.author}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                      {globalSearchResults.length > 5 && (
+                        <div className={`px-4 py-2 text-xs text-center ${d ? "text-amber-300/60" : "text-muted-foreground"}`}>
+                          +{globalSearchResults.length - 5} xassida{globalSearchResults.length - 5 > 1 ? "s" : ""}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </motion.div>
+              )}
+              
               {verseSearch && (
                 <p className={`text-xs mt-1.5 px-1 ${d ? "text-amber-300/50" : "text-muted-foreground/60"}`}>
-                  {filtered.length} résultat{filtered.length !== 1 ? "s" : ""}
+                  {filtered.length > 0 ? `${filtered.length} résultat${filtered.length !== 1 ? "s" : ""}` : 
+                   globalSearchResults.length > 0 ? `Pas trouvé ici • ${globalSearchResults.length} autre${globalSearchResults.length > 1 ? "s" : ""} xassida${globalSearchResults.length > 1 ? "s" : ""}` :
+                   "Aucun résultat"}
                 </p>
               )}
             </motion.div>
@@ -408,6 +533,9 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
                       </div>
                     )}
                     <motion.div
+                      ref={(el) => {
+                        if (el) verseRefsMap.current.set(key, el);
+                      }}
                       className={`rounded-2xl border p-4 mb-3 transition-colors ${card}`}
                       initial={{ opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -474,7 +602,7 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious }: Xassida
             )}
             {!verseSearch && visibleCount >= filtered.length && filtered.length > PAGE_SIZE && (
               <p className={`text-center text-xs py-4 ${d ? "text-amber-300/40" : "text-muted-foreground/40"}`}>
-                Fin · {filtered.length} versets
+                Fin · {filtered.length} vers
               </p>
             )}
           </>

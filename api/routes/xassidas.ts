@@ -6,6 +6,7 @@ import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
 import { pool } from '../db/config.js';
+import { extractFromPdf } from '../lib/pdf-extractor.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const router = Router();
@@ -54,7 +55,11 @@ router.get('/', async (req: Request, res: Response) => {
 // ADMIN: Import/Update translations for verses (MUST BE BEFORE /:id)
 router.post('/admin/import-translations', async (req: Request, res: Response) => {
   try {
-    const { translations } = req.body;
+    // Support both formats:
+    // 1. { translations: [...], xassida_id: "..." }
+    // 2. Direct array [...] (with xassida_id as param)
+    let translations = req.body.translations || req.body;
+    const xassida_id = req.body.xassida_id;
 
     if (!Array.isArray(translations)) {
       return res.status(400).json({ error: 'translations must be an array' });
@@ -65,10 +70,29 @@ router.post('/admin/import-translations', async (req: Request, res: Response) =>
 
     for (const trans of translations) {
       try {
-        const { verse_id, translation_fr, translation_en, transcription } = trans;
+        const { verse_id, verse_number, translation_fr, translation_en, transcription } = trans;
+        const transXassidaId = trans.xassida_id || xassida_id;
 
-        if (!verse_id) {
-          errors.push('Missing verse_id');
+        let finalVerseId = verse_id;
+
+        // If verse_id not provided but verse_number + xassida_id provided, lookup verse_id
+        if (!finalVerseId && verse_number && transXassidaId) {
+          const verseResult = await pool.query(`
+            SELECT id FROM verses 
+            WHERE xassida_id = $1 AND verse_number = $2
+            LIMIT 1
+          `, [transXassidaId, verse_number]);
+
+          if (verseResult.rows.length > 0) {
+            finalVerseId = verseResult.rows[0].id;
+          } else {
+            errors.push(`Verse ${verse_number} not found in xassida ${transXassidaId}`);
+            continue;
+          }
+        }
+
+        if (!finalVerseId) {
+          errors.push('Missing verse_id or (verse_number + xassida_id)');
           continue;
         }
 
@@ -81,12 +105,12 @@ router.post('/admin/import-translations', async (req: Request, res: Response) =>
             updated_at = NOW()
           WHERE id = $4
           RETURNING id
-        `, [translation_fr || null, translation_en || null, transcription || null, verse_id]);
+        `, [translation_fr || null, translation_en || null, transcription || null, finalVerseId]);
 
         if (result.rows.length > 0) {
           updated++;
         } else {
-          errors.push(`Verse ${verse_id} not found`);
+          errors.push(`Verse ${finalVerseId} not found`);
         }
       } catch (err: any) {
         errors.push(`Error updating verse: ${err.message}`);
@@ -179,6 +203,22 @@ router.get('/admin/integrity-check', async (req: Request, res: Response) => {
     res.json({ summary, details: result.rows });
   } catch (error: any) {
     console.error('Error checking integrity:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET admin: List categories
+router.get('/admin/categories', async (_req: Request, res: Response) => {
+  try {
+    const result = await pool.query(
+      `SELECT DISTINCT categorie FROM xassidas WHERE categorie IS NOT NULL ORDER BY categorie ASC`
+    );
+    const categories = result.rows.map((r: any) => r.categorie);
+    const defaults = ['Eloge du Prophète', 'Louange à Dieu', 'Invocation', 'Sagesse', 'Autre'];
+    const merged = [...new Set([...defaults, ...categories])].sort();
+    res.json({ categories: merged });
+  } catch (error: any) {
+    console.error('Error fetching categories:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -300,18 +340,18 @@ router.get('/:id/verses', async (req: Request, res: Response) => {
 // CREATE xassida
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { title, author_id, description } = req.body;
-    
+    const { title, author_id, description, audio_url, arabic_name, categorie } = req.body;
+
     if (!title || !author_id) {
       return res.status(400).json({ error: 'title and author_id are required' });
     }
 
     const id = uuid();
     const result = await pool.query(`
-      INSERT INTO xassidas (id, title, author_id, description, created_at)
-      VALUES ($1, $2, $3, $4, NOW())
-      RETURNING id, title, description, created_at, author_id
-    `, [id, title, author_id, description || null]);
+      INSERT INTO xassidas (id, title, author_id, description, audio_url, arabic_name, categorie, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      RETURNING id, title, description, audio_url, arabic_name, categorie, created_at, author_id
+    `, [id, title, author_id, description || null, audio_url || null, arabic_name || null, categorie || 'Autre']);
 
     res.status(201).json(result.rows[0]);
   } catch (error: any) {
@@ -324,16 +364,19 @@ router.post('/', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { title, description, author_id } = req.body;
+    const { title, description, author_id, audio_url, arabic_name, categorie } = req.body;
 
     const result = await pool.query(`
       UPDATE xassidas
       SET title = COALESCE($1, title),
           description = COALESCE($2, description),
-          author_id = COALESCE($3, author_id)
-      WHERE id = $4
-      RETURNING id, title, description, created_at, author_id
-    `, [title || null, description || null, author_id || null, id]);
+          author_id = COALESCE($3, author_id),
+          audio_url = COALESCE($4, audio_url),
+          arabic_name = COALESCE($5, arabic_name),
+          categorie = COALESCE($6, categorie)
+      WHERE id = $7
+      RETURNING id, title, description, audio_url, arabic_name, categorie, youtube_id, created_at, author_id
+    `, [title || null, description || null, author_id || null, audio_url || null, arabic_name || null, categorie || null, id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Xassida not found' });
@@ -364,6 +407,52 @@ router.delete('/:id', async (req: Request, res: Response) => {
     res.json({ message: 'Xassida deleted', id });
   } catch (error: any) {
     console.error('Error deleting xassida:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// SET youtube ID from URL
+router.post('/:id/set-youtube-id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { youtube_url } = req.body;
+
+    if (!youtube_url) {
+      return res.status(400).json({ error: 'youtube_url is required' });
+    }
+
+    // Extract YouTube ID from various URL formats
+    let youtubeId: string | null = null;
+    try {
+      const url = new URL(youtube_url);
+      if (url.hostname === 'youtu.be') {
+        youtubeId = url.pathname.slice(1);
+      } else if (url.hostname.includes('youtube.com')) {
+        youtubeId = url.searchParams.get('v');
+      }
+    } catch {
+      // Try as raw ID
+      if (/^[a-zA-Z0-9_-]{11}$/.test(youtube_url)) {
+        youtubeId = youtube_url;
+      }
+    }
+
+    if (!youtubeId) {
+      return res.status(400).json({ error: 'Could not extract YouTube ID from URL' });
+    }
+
+    const result = await pool.query(
+      `UPDATE xassidas SET youtube_id = $1 WHERE id = $2 RETURNING id, youtube_id`,
+      [youtubeId, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Xassida not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error: any) {
+    console.error('Error setting YouTube ID:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -416,15 +505,91 @@ router.post('/:id/upload-pdf', upload.single('file'), async (req: Request, res: 
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // For now, just return success
-    // In a full implementation, you'd extract verses from PDF
+    if (req.file.mimetype !== 'application/pdf') {
+      return res.status(400).json({ error: 'Le fichier doit être un PDF' });
+    }
+
+    console.log(`[PDF] Extraction en cours pour xassida ${req.params.id} (${req.file.originalname}, ${(req.file.size / 1024).toFixed(0)} Ko)`);
+
+    const result = await extractFromPdf(req.file.buffer);
+
+    console.log(`[PDF] Extraction terminée: ${result.verses.length} vers détectés, auteur: ${result.metadata.detected_author || 'inconnu'}`);
+
     res.json({
-      message: 'PDF uploaded',
+      message: 'PDF analysé avec succès',
       xassidaId: req.params.id,
-      filename: req.file.originalname
+      filename: req.file.originalname,
+      verses: result.verses,
+      metadata: result.metadata,
     });
   } catch (error: any) {
-    console.error('Error uploading PDF:', error);
+    console.error('Error extracting PDF:', error);
+    res.status(500).json({ error: `Erreur d'extraction PDF: ${error.message}` });
+  }
+});
+
+// POST verses for a xassida (create or replace)
+router.post('/:id/verses', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { verses, replaceExisting } = req.body;
+
+    if (!Array.isArray(verses) || verses.length === 0) {
+      return res.status(400).json({ error: 'verses doit être un tableau non vide' });
+    }
+
+    // Verify xassida exists
+    const xassidaCheck = await pool.query('SELECT id FROM xassidas WHERE id = $1', [id]);
+    if (xassidaCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Xassida non trouvée' });
+    }
+
+    // Delete existing verses if replacing
+    if (replaceExisting) {
+      await pool.query('DELETE FROM verses WHERE xassida_id = $1', [id]);
+    }
+
+    let inserted = 0;
+    const errors: string[] = [];
+
+    for (const verse of verses) {
+      try {
+        const chapterNum = verse.chapter_number ?? 1;
+        const verseNum = verse.verse_number;
+        const verseKey = `${chapterNum}:${verseNum}`;
+
+        await pool.query(`
+          INSERT INTO verses (xassida_id, verse_number, chapter_number, verse_key, text_arabic, transcription, translation_fr, translation_en, content, created_at, updated_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+        `, [
+          id,
+          verseNum,
+          chapterNum,
+          verseKey,
+          verse.text_arabic || '',
+          verse.transcription || null,
+          verse.translation_fr || null,
+          verse.translation_en || null,
+          verse.text_arabic || '',
+        ]);
+        inserted++;
+      } catch (err: any) {
+        errors.push(`Vers ${verse.verse_number}: ${err.message}`);
+      }
+    }
+
+    // Update verse_count on xassida
+    const countResult = await pool.query('SELECT COUNT(*) as count FROM verses WHERE xassida_id = $1', [id]);
+    await pool.query('UPDATE xassidas SET verse_count = $1 WHERE id = $2', [countResult.rows[0].count, id]);
+
+    res.json({
+      message: `${inserted} vers sauvegardés`,
+      inserted,
+      total: verses.length,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+  } catch (error: any) {
+    console.error('Error saving verses:', error);
     res.status(500).json({ error: error.message });
   }
 });

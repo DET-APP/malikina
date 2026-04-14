@@ -150,15 +150,15 @@ async function insertVerses(
 ): Promise<number> {
   let count = 0;
   for (const verse of verses) {
-    // Check if exists
-    const existing = await query(
-      'SELECT id FROM verses WHERE xassida_id = $1 AND verse_number = $2',
-      [xassidaId, verse.number]
-    );
-    if (existing.rows.length > 0) continue;
-
     // Build verse key: chapter:verse_number
     const verseKey = `${chapterNumber}:${verse.number}`;
+
+    // Check if exists (use verse_key which includes chapter number)
+    const existing = await query(
+      'SELECT id FROM verses WHERE xassida_id = $1 AND verse_key = $2',
+      [xassidaId, verseKey]
+    );
+    if (existing.rows.length > 0) continue;
 
     await query(
       `INSERT INTO verses 

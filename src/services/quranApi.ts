@@ -44,7 +44,7 @@ export const getAllChapters = async (language: string = 'fr'): Promise<Chapter[]
     }
 };
 
-// Service pour récupérer les versets d'un Juz
+// Service pour récupérer les vers d'un Juz
 export const getVersesByJuz = async (
     juzNumber: number,
     translations: number | string = 83 // 83 = français (Montada)

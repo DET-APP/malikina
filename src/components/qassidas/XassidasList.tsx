@@ -36,6 +36,7 @@ const XassidasList = ({ qassidas, viewMode, onQassidasSelect }: XassidasListProp
     const author = authorsData.find(a => a.fullName === authorName);
     return {
       name: authorName,
+      shortName: author?.shortName || authorName.split(' ').slice(-1)[0],
       arabic: author?.arabic || '',
       initials: authorName.split(' ').slice(0, 2).map(w => w[0]).join('')
     };
@@ -81,11 +82,11 @@ const XassidasList = ({ qassidas, viewMode, onQassidasSelect }: XassidasListProp
                   <p className="font-semibold text-foreground text-base mb-1 line-clamp-2 break-words">
                     {qassida.title}
                   </p>
-                  <div className="flex items-center justify-between mt-3 gap-2">
-                    <span className="text-xs bg-muted px-2 py-1 rounded-full text-muted-foreground truncate max-w-[80px]">
-                      {authorDisplay.initials}
+                  <div className="flex items-center gap-2 mt-3">
+                    <span className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full truncate max-w-[120px] font-medium">
+                      {authorDisplay.shortName}
                     </span>
-                    <span className="text-xs text-muted-foreground truncate">
+                    <span className="text-xs text-muted-foreground truncate ml-auto">
                       {qassida.confraternity || 'Tidjane'}
                     </span>
                   </div>
@@ -122,8 +123,8 @@ const XassidasList = ({ qassidas, viewMode, onQassidasSelect }: XassidasListProp
                   )}
                   <p className="font-semibold text-foreground truncate">{qassida.title}</p>
                   <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                    <span className="truncate max-w-[100px]">{authorDisplay.initials}</span>
-                    <span>•</span>
+                    <span className="truncate max-w-[140px]">{authorDisplay.shortName}</span>
+                    <span>·</span>
                     <span className="truncate">{qassida.confraternity || 'Tidjane'}</span>
                   </div>
                 </div>

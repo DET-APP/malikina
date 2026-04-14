@@ -1,6 +1,7 @@
 // src/components/quran/QuranHeader.tsx
 import { motion } from "framer-motion";
 import { Search, Volume2, VolumeX } from "lucide-react";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface QuranHeaderProps {
     chaptersCount: number;
@@ -34,6 +35,7 @@ const QuranHeader = ({
                         <h1 className="text-3xl font-bold text-white mt-1">Al-Quran</h1>
                     </div>
                     <div className="flex gap-2">
+                        <LanguageSwitcher variant="light" />
                         {/* Bouton phonétique */}
                         <button
                             onClick={onTogglePhonetic}

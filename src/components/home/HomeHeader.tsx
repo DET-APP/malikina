@@ -4,6 +4,8 @@ import { Bell } from "lucide-react";
 import logo from "@/assets/logo.png";
 import NotificationDropdown from "@/components/home/NotificationDropdown";
 import { Notification } from "@/hooks/useNotifications";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface HomeHeaderProps {
     unreadCount: number;
@@ -30,6 +32,7 @@ const HomeHeader = ({
     getNotificationIcon,
     getNotificationColor,
 }: HomeHeaderProps) => {
+    const { t } = useLanguage();
     return (
         <motion.header
             className="relative bg-gradient-to-br from-primary via-primary to-green-dark pt-12 pb-20 px-6"
@@ -46,45 +49,48 @@ const HomeHeader = ({
 
             <div className="relative z-10 flex items-center justify-between">
                 <div>
-                    <p className="text-primary-foreground/70 text-sm">Bienvenue</p>
+                    <p className="text-primary-foreground/70 text-sm">{t("welcome")}</p>
                     <h1 className="text-2xl font-bold text-primary-foreground mt-1">
-                        Assalamou Alaikoum
+                        {t("greeting")}
                     </h1>
                 </div>
 
-                {/* Bouton notifications avec badge */}
-                <div className="relative">
-                    <motion.button
-                        onClick={onToggleNotifications}
-                        className="relative w-10 h-10 bg-card/20 rounded-full flex items-center justify-center"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        <Bell className="w-5 h-5 text-primary-foreground" />
-                        {unreadCount > 0 && (
-                            <motion.span
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                className="absolute -top-1 -right-1 w-5 h-5 bg-secondary rounded-full text-xs flex items-center justify-center text-secondary-foreground font-bold"
-                            >
-                                {unreadCount > 9 ? '9+' : unreadCount}
-                            </motion.span>
-                        )}
-                    </motion.button>
+                {/* Language switcher + notifications */}
+                <div className="flex items-center gap-2">
+                    <LanguageSwitcher variant="light" />
+                    <div className="relative">
+                        <motion.button
+                            onClick={onToggleNotifications}
+                            className="relative w-10 h-10 bg-card/20 rounded-full flex items-center justify-center"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            <Bell className="w-5 h-5 text-primary-foreground" />
+                            {unreadCount > 0 && (
+                                <motion.span
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    className="absolute -top-1 -right-1 w-5 h-5 bg-secondary rounded-full text-xs flex items-center justify-center text-secondary-foreground font-bold"
+                                >
+                                    {unreadCount > 9 ? '9+' : unreadCount}
+                                </motion.span>
+                            )}
+                        </motion.button>
 
-                    {/* Dropdown notifications */}
-                    {showNotifications && (
-                        <NotificationDropdown
-                            notifications={notifications}
-                            onClose={() => onToggleNotifications()}
-                            onNotificationClick={onNotificationClick}
-                            onMarkAllAsRead={onMarkAllAsRead}
-                            onDeleteNotification={onDeleteNotification}
-                            onViewAll={onViewAll}
-                            getNotificationIcon={getNotificationIcon}
-                            getNotificationColor={getNotificationColor}
-                        />
-                    )}
+                        {/* Dropdown notifications */}
+                        {showNotifications && (
+                            <NotificationDropdown
+                                notifications={notifications}
+                                onClose={() => onToggleNotifications()}
+                                onNotificationClick={onNotificationClick}
+                                onMarkAllAsRead={onMarkAllAsRead}
+                                onDeleteNotification={onDeleteNotification}
+                                onViewAll={onViewAll}
+                                getNotificationIcon={getNotificationIcon}
+                                getNotificationColor={getNotificationColor}
+                            />
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -102,7 +108,7 @@ const HomeHeader = ({
                     <div className="flex-1 text-center">
                         <h2 className="font-bold text-foreground text-lg">Al Moutahabbina Fillahi</h2>
                         <p className="text-xl font-arabic text-secondary mt-1">الْمُتَحَابِّينَ فِي اللَّهِ</p>
-                        <p className="text-xs text-muted-foreground mt-1">Dahira des Étudiants Tidianes - UAD</p>
+                        <p className="text-xs text-muted-foreground mt-1">{t("dahira")}</p>
                     </div>
                 </div>
             </motion.div>

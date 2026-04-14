@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Clock, Tag, ChevronRight, MessageCircle, Heart, Share2 } from "lucide-react";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const categories = ["Tous", "Annonces", "Événements", "Enseignement", "Communauté"];
 
@@ -65,9 +66,13 @@ const NewsScreen = () => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
+          className="flex items-start justify-between"
         >
-          <h1 className="text-2xl font-bold text-primary-foreground">Actualités</h1>
-          <p className="text-3xl font-arabic text-secondary mt-1">الأخبار</p>
+          <div>
+            <h1 className="text-2xl font-bold text-primary-foreground">Actualités</h1>
+            <p className="text-3xl font-arabic text-secondary mt-1">الأخبار</p>
+          </div>
+          <LanguageSwitcher variant="light" />
         </motion.div>
 
         {/* Categories */}
