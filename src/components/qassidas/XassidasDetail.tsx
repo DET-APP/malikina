@@ -182,8 +182,11 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
     return () => observer.disconnect();
   }, [filtered.length]);
 
-  // Reset pagination when filter/search/xassida changes
-  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [selectedQassida.id, selectedChapter, verseSearch]);
+  // Reset pagination when filter/search/xassida changes (skip during chapter navigation)
+  useEffect(() => {
+    if (pendingScrollKey.current) return;
+    setVisibleCount(PAGE_SIZE);
+  }, [selectedQassida.id, selectedChapter, verseSearch]);
 
   // Audio
   useEffect(() => {
@@ -234,18 +237,46 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
 
   // Verse refs for scrolling to search results
   const verseRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
+  const pendingScrollKey = useRef<string | null>(null);
 
-  // Scroll to verse and highlight it
+  // Scroll to verse and highlight it (same-chapter, verse already rendered)
   const scrollToVerse = useCallback((verse: XassidaVerse) => {
     const key = verse.id || `${verse.chapter_number}-${verse.verse_number}`;
     const ref = verseRefsMap.current.get(key);
     if (ref) {
       ref.scrollIntoView({ behavior: "smooth", block: "center" });
-      // Highlight effect
       ref.classList.add("ring-2", "ring-primary", "rounded-2xl");
       setTimeout(() => ref.classList.remove("ring-2", "ring-primary", "rounded-2xl"), 2000);
     }
   }, []);
+
+  // Navigate to a verse's chapter then scroll to it (cross-chapter navigation)
+  const navigateToChapterAndVerse = useCallback((verse: XassidaVerse) => {
+    const key = verse.id || `${verse.chapter_number}-${verse.verse_number}`;
+    const ch = verse.chapter_number ?? 1;
+    const chapterSize = byChapter[ch]?.length ?? apiVerses.length;
+    pendingScrollKey.current = key;
+    // Show all verses of the target chapter so the target is guaranteed visible
+    setVisibleCount(Math.max(chapterSize + PAGE_SIZE, PAGE_SIZE));
+    setChapter(ch);
+    setVerseSearch("");
+    setShowSearch(false);
+  }, [byChapter, apiVerses.length]);
+
+  // After chapter navigation re-render, scroll to pending verse
+  useEffect(() => {
+    if (!pendingScrollKey.current) return;
+    const key = pendingScrollKey.current;
+    requestAnimationFrame(() => {
+      const ref = verseRefsMap.current.get(key);
+      if (ref) {
+        ref.scrollIntoView({ behavior: "smooth", block: "center" });
+        ref.classList.add("ring-2", "ring-primary", "rounded-2xl");
+        setTimeout(() => ref.classList.remove("ring-2", "ring-primary", "rounded-2xl"), 2000);
+        pendingScrollKey.current = null;
+      }
+    });
+  }, [selectedChapter, visibleCount]);
 
   // Search in other xassidas when local search returns no results
   useEffect(() => {
@@ -399,7 +430,7 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                       {filtered.slice(0, 8).map((verse, idx) => (
                         <button
                           key={`${verse.chapter_number}-${verse.verse_number}-${idx}`}
-                          onClick={() => scrollToVerse(verse)}
+                          onClick={() => navigateToChapterAndVerse(verse)}
                           className={`w-full text-left px-4 py-3 border-b transition-colors hover:bg-primary/10 active:bg-primary/20`}
                         >
                           <div className="flex items-start gap-3">
@@ -408,7 +439,7 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                             </span>
                             <div className="min-w-0 flex-1">
                               <p className={`text-xs font-semibold mb-1 ${d ? "text-amber-300/60" : "text-muted-foreground/60"}`}>
-                                Dans ce xassida
+                                Chapitre {verse.chapter_number ?? 1} · Vers {verse.verse_number}
                               </p>
                               <p className={`text-sm leading-snug ${arabicTxt}`} dir="rtl" style={{ fontSize: `${Math.min(16, fontSize)}px` }}>
                                 {verse.text_arabic.substring(0, 60)}{verse.text_arabic.length > 60 ? "…" : ""}

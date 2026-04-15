@@ -81,6 +81,7 @@ export function XassidasAdmin() {
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isUnlocked, setIsUnlocked] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -201,7 +202,7 @@ export function XassidasAdmin() {
     });
   };
 
-  const editXassidaForm = useForm({ defaultValues: { title: '', description: '', youtube_url: '', audio_url: '', arabic_name: '', categorie: 'Autre', transcription_fr: '' } });
+  const editXassidaForm = useForm({ defaultValues: { title: '', description: '', youtube_url: '', audio_url: '', arabic_name: '', categorie: 'Autre', transcription_fr: '', author_id: '' } });
   const editAuthorForm = useForm({ defaultValues: { name: '', description: '', photo_url: '', tradition: '' } });
 
   const updateAuthorMutation = useMutation({
@@ -293,14 +294,20 @@ export function XassidasAdmin() {
   });
 
   const filteredXassidas = useMemo(() => {
-    if (!searchTerm.trim()) return xassidas;
-    const term = searchTerm.toLowerCase();
-    return xassidas.filter((x: Xassida) => 
-      (x.title || '').toLowerCase().includes(term) || 
-      (x.author_name || '').toLowerCase().includes(term) ||
-      (x.arabic_name || '').toLowerCase().includes(term)
-    );
-  }, [xassidas, searchTerm]);
+    let result = xassidas;
+    if (filterCategory) {
+      result = result.filter((x: Xassida) => (x.categorie || 'Autre') === filterCategory);
+    }
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter((x: Xassida) =>
+        (x.title || '').toLowerCase().includes(term) ||
+        (x.author_name || '').toLowerCase().includes(term) ||
+        (x.arabic_name || '').toLowerCase().includes(term)
+      );
+    }
+    return result;
+  }, [xassidas, searchTerm, filterCategory]);
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -538,17 +545,18 @@ export function XassidasAdmin() {
   });
 
   const updateXassidaMutation = useMutation({
-    mutationFn: async (data: { id: string; title: string; description?: string; youtube_url?: string; audio_url?: string; arabic_name?: string; categorie?: string }) => {
+    mutationFn: async (data: { id: string; title: string; description?: string; youtube_url?: string; audio_url?: string; arabic_name?: string; categorie?: string; author_id?: string }) => {
       // First, update the xassida basic info
       const response = await fetch(`${API_URL}/xassidas/${data.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          title: data.title, 
+        body: JSON.stringify({
+          title: data.title,
           description: data.description || '',
           audio_url: data.audio_url || '',
           arabic_name: data.arabic_name || '',
-          categorie: data.categorie || 'Autre'
+          categorie: data.categorie || 'Autre',
+          ...(data.author_id && { author_id: data.author_id })
         })
       });
 
@@ -774,7 +782,8 @@ export function XassidasAdmin() {
       youtube_url: xassida.youtube_id ? `https://www.youtube.com/watch?v=${xassida.youtube_id}` : '',
       audio_url: xassida.audio_url || '',
       arabic_name: xassida.arabic_name || '',
-      categorie: xassida.categorie || 'Autre'
+      categorie: xassida.categorie || 'Autre',
+      author_id: xassida.author_id || ''
     });
     setShowEditXassidaDialog(true);
   };
@@ -1327,17 +1336,19 @@ export function XassidasAdmin() {
 
             {/* Tab 2: Xassidas */}
             <TabsContent value="xassidas" className="space-y-4 mt-0">
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-card p-4 rounded-xl border shadow-sm">
-                <div className="relative w-full sm:max-w-md">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Rechercher par titre, auteur..." 
-                    className="pl-10 bg-muted/20 border-none focus-visible:ring-1"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <div className="flex gap-2 w-full sm:w-auto">
+              <div className="flex flex-col gap-3 bg-card p-4 rounded-xl border shadow-sm">
+                {/* Search + New button */}
+                <div className="flex gap-3 items-center">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Rechercher par titre, auteur..."
+                      className="pl-10 bg-muted/20 border-none focus-visible:ring-1"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
                   <Dialog open={showXassidaDialog} onOpenChange={setShowXassidaDialog}>
                     <DialogTrigger asChild>
                       <Button className="flex-1 sm:flex-none">
@@ -1422,6 +1433,42 @@ export function XassidasAdmin() {
                     </DialogContent>
                   </Dialog>
                 </div>
+              </div>
+
+              {/* Category filter pills */}
+              {categories.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-0.5 flex-wrap">
+                  <button
+                    onClick={() => setFilterCategory('')}
+                    className={cn(
+                      "px-3 py-1 rounded-full text-xs font-medium border transition-colors flex-shrink-0",
+                      filterCategory === ''
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted/30 text-muted-foreground border-border hover:bg-muted"
+                    )}
+                  >
+                    Toutes ({xassidas.length})
+                  </button>
+                  {categories.map((cat: Category) => {
+                    const count = xassidas.filter((x: Xassida) => (x.categorie || 'Autre') === cat.name).length;
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => setFilterCategory(filterCategory === cat.name ? '' : cat.name)}
+                        className={cn(
+                          "px-3 py-1 rounded-full text-xs font-medium border transition-colors flex-shrink-0",
+                          filterCategory === cat.name
+                            ? "text-white border-transparent"
+                            : "bg-muted/30 text-muted-foreground border-border hover:bg-muted"
+                        )}
+                        style={filterCategory === cat.name ? { backgroundColor: cat.color || '#666' } : {}}
+                      >
+                        {cat.name} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               </div>
 
               <Card className="shadow-soft overflow-hidden">
@@ -1684,6 +1731,20 @@ export function XassidasAdmin() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Titre *</label>
               <Input {...editXassidaForm.register('title', { required: true })} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Auteur</label>
+              <Select
+                value={editXassidaForm.watch('author_id') || ''}
+                onValueChange={(val) => editXassidaForm.setValue('author_id', val)}
+              >
+                <SelectTrigger><SelectValue placeholder="Choisir un auteur" /></SelectTrigger>
+                <SelectContent>
+                  {authors.map((a: Author) => (
+                    <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
