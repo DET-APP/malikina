@@ -1501,25 +1501,25 @@ export function XassidasAdmin() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <Button 
-                                size="sm" 
-                                variant="ghost" 
-                                className="h-8 w-8 p-0 text-primary hover:text-primary hover:bg-primary/10" 
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0 text-primary hover:text-primary hover:bg-primary/10"
                                 onClick={() => loadExistingVerses(x.id)}
                                 title="Éditer les vers"
                               >
                                 <BookOpen className="w-4 h-4" />
                               </Button>
-                              <Button 
-                                size="sm" 
-                                variant="ghost" 
-                                className="h-8 w-8 p-0" 
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
                                 onClick={() => openEditDialog(x)}
                                 title="Modifier métadonnées"
                               >
                                 <Pencil className="w-4 h-4" />
                               </Button>
-                              
+
                               <Dialog open={showPdfUploadDialog === x.id} onOpenChange={(open) => setShowPdfUploadDialog(open ? x.id : null)}>
                                 <DialogTrigger asChild>
                                   <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Importer PDF">
@@ -1543,12 +1543,13 @@ export function XassidasAdmin() {
                                 </DialogContent>
                               </Dialog>
 
-                              <Button 
-                                size="sm" 
-                                variant="ghost" 
+                              <div className="w-px h-5 bg-border mx-0.5" />
+                              <Button
+                                size="sm"
+                                variant="ghost"
                                 className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                                 onClick={() => handleDeleteXassida(x)}
-                                title="Supprimer"
+                                title="Supprimer la xassida"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
