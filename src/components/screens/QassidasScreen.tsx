@@ -72,10 +72,10 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
   const uniqueCategories = Array.from(
     new Set(
       allQassidas
-        .filter((q) => (q as any).categorie)
-        .map((q) => (q as any).categorie)
+        .filter((q) => q.categorie)
+        .map((q) => q.categorie!)
     )
-  ).sort() as string[];
+  ).sort();
 
   const filteredQassidas = allQassidas.filter((q) => {
     const matchesSearch =
@@ -86,7 +86,7 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
       ? authorsData.find((a) => a.id === selectedAuthorId)?.fullName === q.author
       : true;
     const matchesCategory = selectedCategory
-      ? (q as any).categorie === selectedCategory
+      ? q.categorie === selectedCategory
       : true;
     const matchesFavorite = showFavorites ? isFavorite(q.id) : true;
     return matchesSearch && matchesAuthor && matchesCategory && matchesFavorite;
@@ -341,7 +341,7 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
             </button>
 
             {uniqueCategories.map((category) => {
-              const count = allQassidas.filter((q) => (q as any).categorie === category).length;
+              const count = allQassidas.filter((q) => q.categorie === category).length;
               const isActive = selectedCategory === category;
               return (
                 <motion.button

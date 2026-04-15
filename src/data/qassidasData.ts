@@ -5,6 +5,7 @@ export interface Qassida {
   arabic: string;
   author: string;
   confraternity?: string;
+  categorie?: string;
   verseCount?: number;
   isFavorite: boolean;
   fullText?: string;

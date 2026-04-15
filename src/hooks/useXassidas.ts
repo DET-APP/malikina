@@ -89,6 +89,7 @@ const convertAPIXassidaToLocal = (apiXassida: APIXassida, authorName: string): Q
   arabic: apiXassida.arabic_name || '',
   author: authorName,
   confraternity: '',
+  categorie: apiXassida.categorie,
   verseCount: apiXassida.verse_count,
   isFavorite: false,
 });
