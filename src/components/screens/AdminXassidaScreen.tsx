@@ -6,8 +6,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { useForm } from 'react-hook-form';
-import { Plus, Edit2, Trash2, Upload, Save, ChevronLeft, ChevronRight, Loader2, Lock, Users, BookOpen, FileText, Music, Link, Youtube, FolderOpen, Pencil, Globe, BarChart3, Settings, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Plus, Edit2, Trash2, Upload, Save, ChevronLeft, ChevronRight, Loader2, Lock, Users, BookOpen, FileText, Music, Link, Youtube, FolderOpen, Pencil, Globe, BarChart3, Settings, X, Search, LayoutDashboard, Filter, Eye } from 'lucide-react';
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
@@ -76,6 +80,8 @@ export function XassidasAdmin() {
   const [createNewAuthorMode, setCreateNewAuthorMode] = useState(false); // Toggle for new author mode
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [isUnlocked, setIsUnlocked] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true';
@@ -285,6 +291,16 @@ export function XassidasAdmin() {
     queryKey: ['xassidas'],
     queryFn: () => fetch(`${API_URL}/xassidas`).then(r => r.json())
   });
+
+  const filteredXassidas = useMemo(() => {
+    if (!searchTerm.trim()) return xassidas;
+    const term = searchTerm.toLowerCase();
+    return xassidas.filter((x: Xassida) => 
+      (x.title || '').toLowerCase().includes(term) || 
+      (x.author_name || '').toLowerCase().includes(term) ||
+      (x.arabic_name || '').toLowerCase().includes(term)
+    );
+  }, [xassidas, searchTerm]);
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -928,1146 +944,883 @@ export function XassidasAdmin() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Header */}
-      <div className="bg-gradient-to-br from-primary to-green-dark pt-12 pb-8 px-6 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />
-        <div className="flex items-start justify-between relative">
-          <div>
-            <h1 className="text-2xl font-bold text-white">Gestion des Xassidas</h1>
-            <p className="text-sm text-white/70 mt-1">Administration du contenu</p>
-          </div>
-          <Button variant="ghost" size="sm" onClick={handleLockAdmin} className="text-white/80 hover:text-white hover:bg-white/10">
-            <Lock className="w-4 h-4 mr-1.5" />
-            Verrouiller
-          </Button>
-        </div>
-      </div>
-
-      <div className="px-5 space-y-6 -mt-4">
-        {/* Dashboard */}
-        <div className="grid grid-cols-3 gap-3">
-          <Card className="shadow-card">
-            <CardContent className="pt-4 pb-3 px-4">
-              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center mb-2">
-                <Users className="w-4 h-4 text-primary" />
-              </div>
-              <p className="text-2xl font-bold text-foreground">{authors.length}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Auteurs</p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-card">
-            <CardContent className="pt-4 pb-3 px-4">
-              <div className="w-9 h-9 rounded-xl bg-secondary/10 flex items-center justify-center mb-2">
-                <BookOpen className="w-4 h-4 text-secondary" />
-              </div>
-              <p className="text-2xl font-bold text-foreground">{xassidas.length}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Xassidas</p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-card">
-            <CardContent className="pt-4 pb-3 px-4">
-              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center mb-2">
-                <BarChart3 className="w-4 h-4 text-primary" />
-              </div>
-              <p className="text-2xl font-bold text-foreground">{totalVerses}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Versets</p>
-            </CardContent>
-          </Card>
-        </div>
-
-      {/* Authors Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
+      {/* Header - Hidden when editing verses for focus */}
+      {!selectedXassida && (
+        <div className="bg-gradient-to-br from-primary to-green-dark pt-12 pb-8 px-6 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />
+          <div className="flex items-start justify-between relative">
             <div>
-              <CardTitle>Auteurs</CardTitle>
-              <CardDescription>Gérer les auteurs des xassidas</CardDescription>
+              <h1 className="text-2xl font-bold text-white">Administration</h1>
+              <p className="text-sm text-white/70 mt-1">Gérez votre contenu islamique</p>
             </div>
-            <Dialog open={showAuthorDialog} onOpenChange={setShowAuthorDialog}>
-              <DialogTrigger asChild>
-                <Button><Plus className="w-4 h-4 mr-2" /> Nouvel auteur</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Créer un auteur</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={authorForm.handleSubmit((data) => createAuthorMutation.mutate(data))} className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Nom *</label>
-                    <Input {...authorForm.register('name', { required: true })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Description / Bio</label>
-                    <Textarea {...authorForm.register('description')} rows={3} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Photo</label>
-                    <Input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,image/gif"
-                      onChange={(e) => setAuthorPhotoFile(e.target.files?.[0] || null)}
-                    />
-                    {authorPhotoFile && (
-                      <p className="text-xs text-muted-foreground">Fichier: {authorPhotoFile.name}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Tradition</label>
-                    <Input {...authorForm.register('tradition')} placeholder="Tidjiane, Qadiriyyah, etc." />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={createAuthorMutation.isPending}>
-                    {createAuthorMutation.isPending ? 'Création...' : 'Créer'}
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
+            <Button variant="ghost" size="sm" onClick={handleLockAdmin} className="text-white/80 hover:text-white hover:bg-white/10">
+              <Lock className="w-4 h-4 mr-1.5" />
+              Verrouiller
+            </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          {/* Edit author dialog */}
-          <Dialog open={showEditAuthorDialog} onOpenChange={setShowEditAuthorDialog}>
-            <DialogContent>
-              <DialogHeader><DialogTitle>Modifier l'auteur</DialogTitle></DialogHeader>
-              <form onSubmit={editAuthorForm.handleSubmit((v) => {
-                if (!editingAuthor) return;
-                updateAuthorMutation.mutate({ id: editingAuthor.id, name: v.name, description: v.description, tradition: v.tradition });
-              })} className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Nom *</label>
-                  <Input {...editAuthorForm.register('name', { required: true })} disabled={updateAuthorMutation.isPending} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Description / Bio</label>
-                  <Textarea {...editAuthorForm.register('description')} rows={3} disabled={updateAuthorMutation.isPending} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Photo</label>
-                  {editingAuthor?.photo_url && !editAuthorPhotoFile && (
-                    <div className="flex items-center gap-2 mb-2">
-                      <img src={editingAuthor.photo_url} alt="" className="w-12 h-12 rounded-full object-cover" />
-                      <span className="text-xs text-muted-foreground">Photo actuelle</span>
-                    </div>
-                  )}
-                  <Input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    onChange={(e) => setEditAuthorPhotoFile(e.target.files?.[0] || null)}
-                    disabled={updateAuthorMutation.isPending}
-                  />
-                  {editAuthorPhotoFile && (
-                    <p className="text-xs text-muted-foreground">Nouveau fichier: {editAuthorPhotoFile.name}</p>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Tradition</label>
-                  <Input {...editAuthorForm.register('tradition')} placeholder="Tidjane, Mouride…" disabled={updateAuthorMutation.isPending} />
-                </div>
-                <Button type="submit" className="w-full" disabled={updateAuthorMutation.isPending}>
-                  {updateAuthorMutation.isPending ? 'Mise à jour…' : 'Sauvegarder'}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+        </div>
+      )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {authors.map((author: Author) => (
-              <Card key={author.id} className="border">
-                <CardContent className="pt-4">
-                  <div className="flex items-start gap-3">
-                    {(author as any).photo_url ? (
-                      <img src={(author as any).photo_url} alt={author.name} className="w-14 h-14 object-cover rounded-full flex-shrink-0" />
-                    ) : (
-                      <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <span className="text-lg font-bold text-primary">{author.name[0]}</span>
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold">{author.name}</h3>
-                      {(author as any).tradition && <p className="text-xs text-primary/70">{(author as any).tradition}</p>}
-                      {(author as any).description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{(author as any).description}</p>}
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <Button size="sm" variant="outline" onClick={() => openEditAuthorDialog(author)}>
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleDeleteAuthor(author)}
-                        disabled={deleteAuthorMutation.isPending}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
+      <div className={cn("px-5 space-y-6", !selectedXassida ? "-mt-4" : "mt-6")}>
+        {selectedXassida && editorVerses.length > 0 ? (
+          /* ── Dedicated Verse Editor Panel ──────────────────────────────────── */
+          <Card className="shadow-card border-primary/30" id="verse-editor">
+            <CardHeader className="pb-3 border-b mb-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 w-8 p-0" 
+                      onClick={() => {
+                        setSelectedXassida(null);
+                        setEditorVerses([]);
+                        setCurrentVersePage(1);
+                        setExtractedMetadata(null);
+                      }}
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </Button>
+                    <CardTitle className="text-lg">
+                      Éditeur de vers — {selectedXassida.title}
+                    </CardTitle>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Categories Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Catégories</CardTitle>
-              <CardDescription>Gérer les catégories des xassidas</CardDescription>
-            </div>
-            <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
-              <DialogTrigger asChild>
-                <Button><Plus className="w-4 h-4 mr-2" /> Nouvelle catégorie</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Créer une catégorie</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={createCategoryForm.handleSubmit((data) => createCategoryMutation.mutate(data))} className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Nom *</label>
-                    <Input {...createCategoryForm.register('name', { required: true })} placeholder="Ex: Éloge du Prophète" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Description</label>
-                    <Textarea {...createCategoryForm.register('description')} rows={2} placeholder="Description optionnelle" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Couleur</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        {...createCategoryForm.register('color')}
-                        className="w-12 h-10 rounded border cursor-pointer"
-                      />
-                      <Input {...createCategoryForm.register('color')} placeholder="#666666" className="flex-1" />
-                    </div>
-                  </div>
-                  <Button type="submit" className="w-full" disabled={createCategoryMutation.isPending}>
-                    {createCategoryMutation.isPending ? 'Création...' : 'Créer'}
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* Edit category dialog */}
-          <Dialog open={showEditCategoryDialog} onOpenChange={setShowEditCategoryDialog}>
-            <DialogContent>
-              <DialogHeader><DialogTitle>Modifier la catégorie</DialogTitle></DialogHeader>
-              <form onSubmit={editCategoryForm.handleSubmit((data) => {
-                if (!editingCategory) return;
-                updateCategoryMutation.mutate({ id: editingCategory.id, ...data });
-              })} className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Nom *</label>
-                  <Input {...editCategoryForm.register('name', { required: true })} disabled={updateCategoryMutation.isPending} />
+                  <CardDescription>
+                    {editorVerses.length} vers au total · Page {currentVersePage} sur {totalVersePages}
+                  </CardDescription>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Description</label>
-                  <Textarea {...editCategoryForm.register('description')} rows={2} disabled={updateCategoryMutation.isPending} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Couleur</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      {...editCategoryForm.register('color')}
-                      className="w-12 h-10 rounded border cursor-pointer"
-                      disabled={updateCategoryMutation.isPending}
-                    />
-                    <Input {...editCategoryForm.register('color')} disabled={updateCategoryMutation.isPending} />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button type="submit" className="flex-1" disabled={updateCategoryMutation.isPending}>
-                    {updateCategoryMutation.isPending ? 'Modification...' : 'Modifier'}
-                  </Button>
+                <div className="flex gap-2 flex-shrink-0">
                   <Button
-                    type="button"
-                    variant="destructive"
-                    disabled={updateCategoryMutation.isPending || deleteCategoryMutation.isPending}
-                    onClick={() => handleDeleteCategory(editingCategory!)}
+                    size="sm"
+                    onClick={() => saveVersesMutation.mutate({ verses: editorVerses })}
+                    disabled={saveVersesMutation.isPending}
+                    className="shadow-sm"
                   >
-                    {deleteCategoryMutation.isPending ? 'Suppression...' : 'Supprimer'}
+                    {saveVersesMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-1" />
+                    )}
+                    Enregistrer
                   </Button>
                 </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+              </div>
 
-          {/* Categories list */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {categories && categories.length > 0 ? (
-              categories.map((cat: Category) => (
-                <Card key={cat.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                  <CardContent className="pt-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-4 h-4 rounded flex-shrink-0"
-                            style={{ backgroundColor: cat.color || '#666666' }}
-                          />
-                          <h4 className="font-semibold truncate">{cat.name}</h4>
-                        </div>
-                        {cat.description && (
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{cat.description}</p>
-                        )}
+              {/* Chunk save progress */}
+              {chunkSaveProgress && (
+                <div className="mt-3 space-y-1">
+                  <div className="w-full h-2 bg-muted rounded overflow-hidden">
+                    <div
+                      className="h-full bg-primary transition-all"
+                      style={{ width: `${(chunkSaveProgress.current / chunkSaveProgress.total) * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Sauvegarde en cours : lot {chunkSaveProgress.current}/{chunkSaveProgress.total}
+                  </p>
+                </div>
+              )}
+            </CardHeader>
+
+            <CardContent className="space-y-6">
+              {/* Extracted metadata banner */}
+              {extractedMetadata && (
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-2">
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-primary" />
+                    Résultat de l'extraction PDF
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                    <div>Pages : <span className="font-medium text-foreground">{extractedMetadata.total_pages}</span></div>
+                    <div>Lignes : <span className="font-medium text-foreground">{extractedMetadata.total_lines}</span></div>
+                  </div>
+                  {extractedMetadata.detected_author && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Auteur détecté : </span>
+                      <span className="font-arabic font-medium text-primary">{extractedMetadata.detected_author}</span>
+                    </div>
+                  )}
+                  {extractedMetadata.detected_title && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Titre détecté : </span>
+                      <span className="font-arabic font-medium text-foreground">{extractedMetadata.detected_title}</span>
+                    </div>
+                  )}
+                  {extractedMetadata.introduction && (
+                    <div className="mt-2">
+                      <p className="text-xs text-muted-foreground mb-1">Introduction détectée :</p>
+                      <div className="bg-card border border-border/50 rounded-lg p-3 text-sm font-arabic text-right leading-relaxed max-h-32 overflow-y-auto">
+                        {extractedMetadata.introduction}
                       </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Editor Controls */}
+              <div className="flex items-center justify-between gap-3 flex-wrap bg-muted/30 p-3 rounded-lg border">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 bg-background rounded-md border px-2 py-1 shadow-sm">
+                    <button
+                      onClick={() => setEditorFontSize((f) => Math.max(MIN_VERSE_FONT_SIZE, f - 2))}
+                      className="w-8 h-8 rounded hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors"
+                    ><ChevronLeft className="w-4 h-4" /></button>
+                    <span className="text-xs font-bold w-10 text-center tabular-nums">{editorFontSize}px</span>
+                    <button
+                      onClick={() => setEditorFontSize((f) => Math.min(MAX_VERSE_FONT_SIZE, f + 2))}
+                      className="w-8 h-8 rounded hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors"
+                    ><ChevronRight className="w-4 h-4" /></button>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="bg-background shadow-sm"
+                    onClick={() => {
+                      setEditorVerses((prev) => [
+                        ...prev,
+                        { verse_number: prev.length + 1, text_arabic: '', transcription: '', translation_fr: '' }
+                      ]);
+                      const newTotal = Math.ceil((editorVerses.length + 1) / VERSES_PER_PAGE);
+                      setCurrentVersePage(newTotal);
+                    }}
+                  >
+                    <Plus className="w-4 h-4 mr-1.5" />
+                    Nouveau vers
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                   <p className="text-sm font-medium text-muted-foreground">{editorVerses.length} vers au total</p>
+                </div>
+              </div>
+
+              {/* Verse list (paginated) */}
+              <div className="space-y-4">
+                {paginatedVerses.map((verse, pageIdx) => {
+                  const globalIdx = verseStartIndex + pageIdx;
+                  return (
+                    <div
+                      key={globalIdx}
+                      className="border border-border/60 rounded-xl p-5 bg-card shadow-sm space-y-4 relative group hover:border-primary/30 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold border border-primary/20">
+                            {verse.verse_number}
+                          </span>
+                          <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-semibold opacity-70">
+                            Chapitre {verse.chapter_number ?? 1}
+                          </Badge>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            if (window.confirm('Supprimer ce vers ?')) {
+                              setEditorVerses((prev) => {
+                                const next = prev.filter((_, i) => i !== globalIdx);
+                                return next.map((v, i) => ({ ...v, verse_number: i + 1 }));
+                              });
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Texte Arabe</label>
+                          <Textarea
+                            value={verse.text_arabic}
+                            onChange={(e) => handleVerseFieldChange(globalIdx, 'text_arabic', e.target.value)}
+                            className="font-arabic text-right leading-loose min-h-[100px] resize-y text-2xl p-4 bg-muted/10 focus:bg-background transition-colors"
+                            style={{ fontSize: `${editorFontSize}px` }}
+                            dir="rtl"
+                          />
+                        </div>
+                        <div className="space-y-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Transcription</label>
+                            <Input
+                              value={verse.transcription || ''}
+                              onChange={(e) => handleVerseFieldChange(globalIdx, 'transcription', e.target.value)}
+                              placeholder="Phonétique..."
+                              className="bg-muted/10 focus:bg-background transition-colors"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Traduction Française</label>
+                            <Textarea
+                              value={verse.translation_fr || ''}
+                              onChange={(e) => handleVerseFieldChange(globalIdx, 'translation_fr', e.target.value)}
+                              placeholder="Traduction..."
+                              rows={2}
+                              className="bg-muted/10 focus:bg-background transition-colors"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Pagination */}
+              {totalVersePages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-8 pt-6 border-t">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentVersePage((p) => Math.max(1, p - 1))}
+                    disabled={currentVersePage === 1}
+                    className="h-9 w-9"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <div className="flex items-center gap-1.5">
+                    {visiblePageNumbers.map((p) => (
                       <Button
+                        key={p}
+                        variant={currentVersePage === p ? 'default' : 'outline'}
                         size="sm"
-                        variant="outline"
-                        className="text-xs flex-shrink-0 h-8 w-8 p-0"
-                        onClick={() => openEditCategoryDialog(cat)}
-                        disabled={updateCategoryMutation.isPending || deleteCategoryMutation.isPending}
+                        onClick={() => setCurrentVersePage(p)}
+                        className={cn("h-9 w-9 p-0 font-medium", currentVersePage === p && "shadow-sm")}
                       >
-                        <Pencil className="w-3.5 h-3.5" />
+                        {p}
                       </Button>
+                    ))}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentVersePage((p) => Math.min(totalVersePages, p + 1))}
+                    disabled={currentVersePage === totalVersePages}
+                    className="h-9 w-9"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          /* ── Main Tabbed Interface ──────────────────────────────────── */
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="flex items-center justify-between mb-6 overflow-x-auto pb-1">
+              <TabsList className="bg-muted/50 p-1">
+                <TabsTrigger value="dashboard" className="data-[state=active]:shadow-sm">
+                  <LayoutDashboard className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">Stats</span>
+                </TabsTrigger>
+                <TabsTrigger value="xassidas" className="data-[state=active]:shadow-sm">
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Xassidas
+                </TabsTrigger>
+                <TabsTrigger value="authors" className="data-[state=active]:shadow-sm">
+                  <Users className="w-4 h-4 mr-2" />
+                  Auteurs
+                </TabsTrigger>
+                <TabsTrigger value="categories" className="data-[state=active]:shadow-sm">
+                  <FolderOpen className="w-4 h-4 mr-2" />
+                  Catégories
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            {/* Tab 1: Dashboard */}
+            <TabsContent value="dashboard" className="space-y-6 mt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Card className="shadow-card border-l-4 border-l-primary">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Auteurs</p>
+                        <p className="text-3xl font-bold mt-1">{authors.length}</p>
+                      </div>
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Users className="w-6 h-6 text-primary" />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground col-span-full">Aucune catégorie</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Xassidas Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Xassidas</CardTitle>
-              <CardDescription>Créer et gérer les xassidas</CardDescription>
-            </div>
-            <Dialog open={showXassidaDialog} onOpenChange={setShowXassidaDialog}>
-              <DialogTrigger asChild>
-                <Button><Plus className="w-4 h-4 mr-2" /> Nouvelle xassida</Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Créer une xassida</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={xassidaForm.handleSubmit((data) => {
-                  console.log('📝 Formulaire soumis:', { createNewAuthorMode, ...data });
-                  createXassidaMutation.mutate(data);
-                })} className="space-y-4">
-                  {/* Title field */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Titre de la xassida *</label>
-                    <Input 
-                      {...xassidaForm.register('title', { required: 'Titre requis' })} 
-                      placeholder="Ex: Abāda, Khilāsa-Zahab..." 
-                      disabled={createXassidaMutation.isPending}
-                    />
-                    {xassidaForm.formState.errors.title && (
-                      <p className="text-sm text-destructive">{xassidaForm.formState.errors.title.message}</p>
-                    )}
-                  </div>
-                  
-                  {/* Author mode toggle */}
-                  <div className="border-t pt-4">
-                    <p className="text-sm font-medium mb-2">Auteur</p>
-                    <div className="flex gap-2 mb-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCreateNewAuthorMode(false);
-                          xassidaForm.setValue('author_id', '');
-                        }}
-                        className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-all ${
-                          !createNewAuthorMode
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted text-muted-foreground'
-                        }`}
-                      >
-                        Existant
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCreateNewAuthorMode(true);
-                          xassidaForm.setValue('author_name', '');
-                        }}
-                        className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-all ${
-                          createNewAuthorMode
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted text-muted-foreground'
-                        }`}
-                      >
-                        Nouveau
-                      </button>
-                    </div>
-
-                    {/* Existing author select */}
-                    {!createNewAuthorMode && (
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Sélectionner un auteur *</label>
-                        <Select
-                          value={xassidaForm.watch('author_id') || ''}
-                          onValueChange={(val) => xassidaForm.setValue('author_id', val)}
-                          disabled={createXassidaMutation.isPending}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Choisir un auteur" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {authors.length > 0 ? (
-                              authors.map((a: Author) => (
-                                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="_none" disabled>Aucun auteur disponible</SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        {xassidaForm.formState.errors.author_id && (
-                          <p className="text-sm text-destructive">{xassidaForm.formState.errors.author_id.message}</p>
-                        )}
+                <Card className="shadow-card border-l-4 border-l-secondary">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Xassidas</p>
+                        <p className="text-3xl font-bold mt-1">{xassidas.length}</p>
                       </div>
-                    )}
+                      <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center">
+                        <BookOpen className="w-6 h-6 text-secondary" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="shadow-card border-l-4 border-l-primary/60">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Versets</p>
+                        <p className="text-3xl font-bold mt-1">{totalVerses}</p>
+                      </div>
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <BarChart3 className="w-6 h-6 text-primary" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="shadow-soft">
+                  <CardHeader>
+                    <CardTitle className="text-base">Actions rapides</CardTitle>
+                    <CardDescription>Outils d'administration global</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-3">
+                    <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setActiveTab('xassidas')}>
+                      <Plus className="w-5 h-5" />
+                      <span>Ajouter Xassida</span>
+                    </Button>
+                    <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setShowAuthorDialog(true)}>
+                      <Users className="w-5 h-5" />
+                      <span>Nouvel Auteur</span>
+                    </Button>
+                    <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setShowCategoryDialog(true)}>
+                      <FolderOpen className="w-5 h-5" />
+                      <span>Catégorie</span>
+                    </Button>
+                    <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setShowImportTranslateDialog(true)}>
+                      <Globe className="w-5 h-5" />
+                      <span>Traductions</span>
+                    </Button>
+                  </CardContent>
+                </Card>
 
-                    {/* New author form */}
-                    {createNewAuthorMode && (
-                      <>
+                <Card className="shadow-soft">
+                   <CardHeader>
+                      <CardTitle className="text-base">État du contenu</CardTitle>
+                      <CardDescription>Vue d'ensemble de la base</CardDescription>
+                   </CardHeader>
+                   <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between py-2 border-b">
+                         <span className="text-sm">Auteurs avec photos</span>
+                         <span className="text-sm font-bold">{authors.filter((a: any) => !!a.photo_url).length} / {authors.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-2 border-b">
+                         <span className="text-sm">Xassidas avec audio</span>
+                         <span className="text-sm font-bold">{xassidas.filter((x: any) => !!x.audio_url || !!x.youtube_id).length} / {xassidas.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-2">
+                         <span className="text-sm">Catégories actives</span>
+                         <span className="text-sm font-bold">{categories.length}</span>
+                      </div>
+                   </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* Tab 2: Xassidas */}
+            <TabsContent value="xassidas" className="space-y-4 mt-0">
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-card p-4 rounded-xl border shadow-sm">
+                <div className="relative w-full sm:max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Rechercher par titre, auteur..." 
+                    className="pl-10 bg-muted/20 border-none focus-visible:ring-1"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Dialog open={showXassidaDialog} onOpenChange={setShowXassidaDialog}>
+                    <DialogTrigger asChild>
+                      <Button className="flex-1 sm:flex-none">
+                        <Plus className="w-4 h-4 mr-2" /> 
+                        Nouvelle Xassida
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Créer une xassida</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={xassidaForm.handleSubmit((data) => createXassidaMutation.mutate(data))} className="space-y-4 pt-4">
                         <div className="space-y-2">
-                          <label className="text-sm font-medium">Nom de l'auteur *</label>
-                          <Input 
-                            {...xassidaForm.register('author_name', { required: 'Nom requis' })} 
-                            placeholder="Ex: Maodo, Cheikh Ahmadou Bamba..." 
-                            disabled={createXassidaMutation.isPending}
-                          />
-                          {xassidaForm.formState.errors.author_name && (
-                            <p className="text-sm text-destructive">{xassidaForm.formState.errors.author_name.message}</p>
-                          )}
+                          <label className="text-sm font-medium">Titre de la xassida *</label>
+                          <Input {...xassidaForm.register('title', { required: 'Titre requis' })} placeholder="Ex: Abāda..." />
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Description de l'auteur</label>
-                          <Textarea 
-                            {...xassidaForm.register('author_description')} 
-                            placeholder="Biographie, tradition, période..." 
-                            disabled={createXassidaMutation.isPending}
-                            rows={3}
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  
-                  {/* Xassida Description */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Description de la xassida</label>
-                    <Textarea 
-                      {...xassidaForm.register('description')} 
-                      placeholder="Contexte, thème, notes..." 
-                      disabled={createXassidaMutation.isPending}
-                      rows={2}
-                    />
-                  </div>
-
-                  {/* Arabic Name */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Nom Arabe (optionnel)</label>
-                    <Input 
-                      {...xassidaForm.register('arabic_name')} 
-                      placeholder="أَبَادَا، خِلاَصَة الذَّهَب..."
-                      disabled={createXassidaMutation.isPending}
-                      className="font-arabic text-right"
-                    />
-                    <p className="text-xs text-muted-foreground">Nom de la xassida en arabe</p>
-                  </div>
-
-                  {/* Category */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Catégorie</label>
-                    <Select
-                      value={xassidaForm.watch('categorie') || 'Autre'}
-                      onValueChange={(val) => xassidaForm.setValue('categorie', val)}
-                      disabled={createXassidaMutation.isPending}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Catégorie" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.length > 0 ? (
-                          categories.map((cat: Category) => (
-                            <SelectItem key={cat.id || cat.name || cat} value={typeof cat === 'string' ? cat : cat.name}>{typeof cat === 'string' ? cat : cat.name}</SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="Autre">Autre</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">Catégorie de la xassida</p>
-                  </div>
-
-                  {/* YouTube URL */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium flex items-center gap-1.5"><Youtube className="w-3.5 h-3.5 text-muted-foreground" /> URL YouTube (optionnel)</label>
-                    <Input 
-                      {...xassidaForm.register('youtube_url')} 
-                      placeholder="https://www.youtube.com/watch?v=... ou https://youtu.be/..."
-                      type="url"
-                      disabled={createXassidaMutation.isPending}
-                    />
-                    <p className="text-xs text-muted-foreground">La vidéo YouTube sera accessible comme audio</p>
-                  </div>
-
-                  {/* Audio URL */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium flex items-center gap-1.5"><Music className="w-3.5 h-3.5 text-muted-foreground" /> URL Audio Directe (optionnel)</label>
-                    <Input 
-                      {...xassidaForm.register('audio_url')} 
-                      placeholder="https://example.com/audio.mp3"
-                      type="url"
-                      disabled={createXassidaMutation.isPending}
-                    />
-                    <p className="text-xs text-muted-foreground">Lien direct vers un fichier audio MP3</p>
-                  </div>
-
-                  {/* Optional PDF upload at creation time */}
-                  <div className="space-y-2 border-t pt-4">
-                    <label className="text-sm font-medium">PDF de la xassida (optionnel)</label>
-                    <Input
-                      type="file"
-                      accept="application/pdf,.pdf"
-                      disabled={createXassidaMutation.isPending}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
-                        setNewXassidaPdf(file);
-                        setNewXassidaPdfError('');
-                        setNewXassidaPdfProgress(0);
-                      }}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Si vous ajoutez un PDF, ses vers seront extraits et sauvegardés automatiquement après création.
-                    </p>
-
-                    {newXassidaPdf && (
-                      <p className="text-xs text-foreground">Fichier sélectionné: {newXassidaPdf.name}</p>
-                    )}
-
-                    {createXassidaMutation.isPending && newXassidaPdf && (
-                      <div className="space-y-1">
-                        <div className="w-full h-2 bg-muted rounded overflow-hidden">
-                          <div
-                            className="h-full bg-primary transition-all"
-                            style={{ width: `${newXassidaPdfProgress}%` }}
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground">Import PDF: {newXassidaPdfProgress}%</p>
-                      </div>
-                    )}
-
-                    {createXassidaMutation.isPending && chunkSaveProgress?.label === 'creation' && (
-                      <p className="text-xs text-muted-foreground">
-                        Sauvegarde des vers: lot {chunkSaveProgress.current}/{chunkSaveProgress.total}
-                      </p>
-                    )}
-
-                    {newXassidaPdfError && (
-                      <p className="text-xs text-destructive">{newXassidaPdfError}</p>
-                    )}
-                  </div>
-
-                  {/* Error message */}
-                  {createXassidaMutation.isError && (
-                    <div className="bg-destructive/10 border border-destructive/20 text-destructive px-3 py-2 rounded-lg text-sm">
-                      {createXassidaMutation.error instanceof Error ? createXassidaMutation.error.message : 'Une erreur est survenue'}
-                    </div>
-                  )}
-
-                  {/* Submit button */}
-                  <Button 
-                    type="submit" 
-                    className="w-full"
-                    disabled={createXassidaMutation.isPending}
-                  >
-                    {createXassidaMutation.isPending ? 'Création en cours...' : 'Créer la xassida'}
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Dialog open={showEditXassidaDialog} onOpenChange={setShowEditXassidaDialog}>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Modifier la xassida</DialogTitle>
-              </DialogHeader>
-              <form
-                className="space-y-4"
-                onSubmit={editXassidaForm.handleSubmit((values) => {
-                  if (!editingXassida) return;
-                  updateXassidaMutation.mutate({
-                    id: editingXassida.id,
-                    title: values.title,
-                    description: values.description,
-                    youtube_url: values.youtube_url,
-                    audio_url: values.audio_url,
-                    arabic_name: values.arabic_name,
-                    categorie: values.categorie
-                  });
-                })}
-              >
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Titre</label>
-                  <Input
-                    {...editXassidaForm.register('title', { required: 'Titre requis' })}
-                    disabled={updateXassidaMutation.isPending}
-                  />
-                  {editXassidaForm.formState.errors.title && (
-                    <p className="text-xs text-destructive">{editXassidaForm.formState.errors.title.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Nom Arabe (optionnel)</label>
-                  <Input
-                    {...editXassidaForm.register('arabic_name')}
-                    placeholder="أَبَادَا، خِلاَصَة الذَّهَب..."
-                    disabled={updateXassidaMutation.isPending}
-                    className="font-arabic text-right"
-                  />
-                  <p className="text-xs text-muted-foreground">Nom de la xassida en arabe</p>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Transcription Française (optionnel)</label>
-                  <Input
-                    {...editXassidaForm.register('transcription_fr')}
-                    placeholder="Abada, Khilassa Ad-Dhahab..."
-                    disabled={updateXassidaMutation.isPending}
-                  />
-                  <p className="text-xs text-muted-foreground">Transcription phonétique en français</p>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Catégorie</label>
-                  <Select
-                    value={editXassidaForm.watch('categorie') || 'Autre'}
-                    onValueChange={(val) => editXassidaForm.setValue('categorie', val)}
-                    disabled={updateXassidaMutation.isPending}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Catégorie" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.length > 0 ? (
-                        categories.map((cat: Category) => (
-                          <SelectItem key={cat.id || cat.name || cat} value={typeof cat === 'string' ? cat : cat.name}>{typeof cat === 'string' ? cat : cat.name}</SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="Autre">Autre</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">Catégorie de la xassida</p>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Description</label>
-                  <Textarea
-                    {...editXassidaForm.register('description')}
-                    rows={3}
-                    disabled={updateXassidaMutation.isPending}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-1.5"><Youtube className="w-3.5 h-3.5 text-muted-foreground" /> URL YouTube</label>
-                  <Input
-                    {...editXassidaForm.register('youtube_url')}
-                    placeholder="https://www.youtube.com/watch?v=... ou https://youtu.be/..."
-                    type="url"
-                    disabled={updateXassidaMutation.isPending}
-                  />
-                  <p className="text-xs text-muted-foreground">La vidéo YouTube sera streamée comme audio</p>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-1.5"><Music className="w-3.5 h-3.5 text-muted-foreground" /> URL Audio Directe</label>
-                  <Input
-                    {...editXassidaForm.register('audio_url')}
-                    placeholder="https://example.com/audio.mp3"
-                    type="url"
-                    disabled={updateXassidaMutation.isPending}
-                  />
-                  <p className="text-xs text-muted-foreground">Lien direct vers un fichier audio MP3</p>
-                </div>
-                <Button type="submit" className="w-full" disabled={updateXassidaMutation.isPending}>
-                  {updateXassidaMutation.isPending ? 'Mise à jour...' : 'Sauvegarder les modifications'}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-
-          <div className="space-y-3">
-            {xassidas.map((x: Xassida) => (
-              <Card key={x.id} className="border shadow-soft hover:shadow-card transition-shadow">
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex gap-3">
-                    {/* Left: Info */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-base text-foreground truncate">{x.title}</h3>
-                      {x.arabic_name && <p className="text-sm font-arabic text-right text-primary mt-0.5 truncate">{x.arabic_name}</p>}
-                      <p className="text-sm text-muted-foreground mt-0.5">{x.author_name}</p>
-                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                        <BarChart3 className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">{x.verse_count} vers</span>
-                        {x.categorie && x.categorie !== 'Autre' && (
-                          <span className="text-xs bg-secondary/10 text-secondary px-2 py-0.5 rounded-full ml-1">{x.categorie}</span>
-                        )}
-                        {Number(x.verse_count) > 0 && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-xs h-6 px-2 ml-auto text-primary"
-                            onClick={() => loadExistingVerses(x.id)}
-                            disabled={!!loadingVersesByXassida[x.id]}
-                          >
-                            {loadingVersesByXassida[x.id] ? (
-                              <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                            ) : (
-                              <Edit2 className="w-3 h-3 mr-1" />
-                            )}
-                            Éditer vers
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Right: Quick Actions */}
-                    <div className="flex flex-col gap-1.5 justify-start flex-shrink-0">
-                      {/* Btn 1: Upload PDF */}
-                      <Dialog open={showPdfUploadDialog === x.id} onOpenChange={(open) => {
-                        setShowPdfUploadDialog(open ? x.id : null);
-                        if (!open) setUploadErrorByXassida({});
-                      }}>
-                        <DialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-xs h-8 px-2.5"
-                            onClick={() => {
-                              setSelectedXassida(x);
-                            }}
-                          >
-                            <FileText className="w-3.5 h-3.5 mr-1" />
-                            PDF
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-md">
-                          <DialogHeader>
-                            <DialogTitle>Charger le PDF - {x.title}</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              <label className="block text-sm font-medium mb-2">Sélectionner PDF</label>
-                              <input
-                                type="file"
-                                accept=".pdf"
-                                onChange={(e) => handlePdfUpload(e, x.id)}
-                                className="border rounded px-3 py-2 w-full"
-                                disabled={!!uploadingByXassida[x.id]}
-                              />
-                              <p className="text-xs text-muted-foreground mt-2">Les vers seront créés automatiquement</p>
-                            </div>
-
-                            {uploadingByXassida[x.id] && (
-                              <div className="mt-2 space-y-1">
-                                <div className="w-full h-2 bg-muted rounded overflow-hidden">
-                                  <div
-                                    className="h-full bg-primary transition-all"
-                                    style={{ width: `${uploadProgressByXassida[x.id] || 0}%` }}
-                                  />
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                  Upload: {uploadProgressByXassida[x.id] || 0}%
-                                </p>
-                              </div>
-                            )}
-                            {uploadErrorByXassida[x.id] && (
-                              <div className="bg-destructive/10 border border-destructive/20 text-destructive px-3 py-2 rounded-lg text-sm">
-                                {uploadErrorByXassida[x.id]}
-                              </div>
-                            )}
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-
-                      {/* Btn 2: Upload Translation */}
-                      <Dialog open={showTranslationUploadDialog === x.id} onOpenChange={(open) => {
-                        setShowTranslationUploadDialog(open ? x.id : null);
-                        if (!open) {
-                          setXassidaImportErrors({});
-                          setXassidaImportSuccess({});
-                        }
-                      }}>
-                        <DialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-xs h-8 px-2.5"
-                          >
-                            <Globe className="w-3.5 h-3.5 mr-1" />
-                            Trad.
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-md">
-                          <DialogHeader>
-                            <DialogTitle>Charger traductions - {x.title}</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <label className="block text-sm font-medium">Fichier JSON</label>
-                            <input
-                              type="file"
-                              accept=".json"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  const reader = new FileReader();
-                                  reader.onload = (event) => {
-                                    const content = event.target?.result as string;
-                                    setXassidaImportTranslations((prev) => ({
-                                      ...prev,
-                                      [x.id]: content
-                                    }));
-                                    setXassidaImportErrors((prev) => ({
-                                      ...prev,
-                                      [x.id]: ''
-                                    }));
-                                  };
-                                  reader.readAsText(file);
-                                }
-                              }}
-                              className="border rounded px-3 py-2 w-full"
-                              disabled={importXassidaTranslationsMutation.isPending}
-                            />
-                            <p className="text-xs text-muted-foreground">Format: JSON array avec {'{verse_number, translation_fr}'}</p>
-
-                            {xassidaImportTranslations[x.id] && (
-                              <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm">
-                                {(() => {
-                                  try {
-                                    const data = JSON.parse(xassidaImportTranslations[x.id]);
-                                    return <div className="text-primary font-medium">{data.length} traduction(s) détectée(s)</div>;
-                                  } catch {
-                                    return <div className="text-destructive font-medium">JSON invalide</div>;
-                                  }
-                                })()}
-                              </div>
-                            )}
-
-                            {xassidaImportErrors[x.id] && (
-                              <div className="bg-destructive/10 border border-destructive/20 text-destructive px-3 py-2 rounded-lg text-sm">
-                                {xassidaImportErrors[x.id]}
-                              </div>
-                            )}
-
-                            {xassidaImportSuccess[x.id] && (
-                              <div className="bg-primary/10 border border-primary/20 text-primary px-3 py-2 rounded-lg text-sm font-medium">
-                                {xassidaImportSuccess[x.id]}
-                              </div>
-                            )}
-
-                            <Button
-                              type="button"
-                              className="w-full"
-                              onClick={() => {
-                                try {
-                                  const data = JSON.parse(xassidaImportTranslations[x.id]);
-                                  if (!Array.isArray(data)) {
-                                    throw new Error('Le JSON doit être un tableau');
-                                  }
-                                  importXassidaTranslationsMutation.mutate({
-                                    xassidaId: x.id,
-                                    translations: data
-                                  });
-                                } catch (error: any) {
-                                  setXassidaImportErrors((prev) => ({
-                                    ...prev,
-                                    [x.id]: `Erreur JSON: ${error.message}`
-                                  }));
-                                }
-                              }}
-                              disabled={!xassidaImportTranslations[x.id]?.trim() || importXassidaTranslationsMutation.isPending}
+                        
+                        <div className="border rounded-lg p-3 space-y-3 bg-muted/10">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm font-medium">Auteur</label>
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-xs h-7 text-primary"
+                              onClick={() => setCreateNewAuthorMode(!createNewAuthorMode)}
                             >
-                              {importXassidaTranslationsMutation.isPending ? 'Importation...' : 'Importer'}
+                              {createNewAuthorMode ? "Utiliser existant" : "Nouvel auteur"}
                             </Button>
                           </div>
-                        </DialogContent>
-                      </Dialog>
+                          
+                          {createNewAuthorMode ? (
+                            <div className="space-y-3 pt-1">
+                              <Input {...xassidaForm.register('author_name', { required: createNewAuthorMode })} placeholder="Nom du nouvel auteur" />
+                              <Textarea {...xassidaForm.register('author_description')} placeholder="Bio courte..." rows={2} />
+                            </div>
+                          ) : (
+                            <Select
+                              value={xassidaForm.watch('author_id') || ''}
+                              onValueChange={(val) => xassidaForm.setValue('author_id', val)}
+                            >
+                              <SelectTrigger className="bg-background"><SelectValue placeholder="Choisir un auteur" /></SelectTrigger>
+                              <SelectContent>
+                                {authors.map((a: Author) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
 
-                      {/* Btn 3: Edit */}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs h-8 px-2.5"
-                        onClick={() => openEditDialog(x)}
-                        disabled={updateXassidaMutation.isPending || deleteXassidaMutation.isPending}
-                      >
-                        <Pencil className="w-3.5 h-3.5 mr-1" />
-                        Éditer
-                      </Button>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Catégorie</label>
+                            <Select value={xassidaForm.watch('categorie') || 'Autre'} onValueChange={(val) => xassidaForm.setValue('categorie', val)}>
+                              <SelectTrigger><SelectValue placeholder="Catégorie" /></SelectTrigger>
+                              <SelectContent>
+                                {categories.map((cat: Category) => <SelectItem key={cat.id || cat.name} value={cat.name}>{cat.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Nom Arabe</label>
+                            <Input {...xassidaForm.register('arabic_name')} placeholder="أَبَادَا" className="font-arabic text-right" />
+                          </div>
+                        </div>
 
-                      {/* Btn 4: Delete */}
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="text-xs h-8 px-2.5"
-                        onClick={() => handleDeleteXassida(x)}
-                        disabled={deleteXassidaMutation.isPending || updateXassidaMutation.isPending}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Audio / YouTube</label>
+                          <Input {...xassidaForm.register('youtube_url')} placeholder="URL YouTube..." className="mb-2" />
+                          <Input {...xassidaForm.register('audio_url')} placeholder="URL Audio MP3..." />
+                        </div>
+
+                        <div className="border-t pt-4 space-y-2">
+                          <label className="text-sm font-medium">Import PDF (Optionnel)</label>
+                          <Input type="file" accept=".pdf" onChange={(e) => setNewXassidaPdf(e.target.files?.[0] || null)} />
+                          {newXassidaPdf && <p className="text-xs font-medium text-primary">✓ {newXassidaPdf.name}</p>}
+                        </div>
+
+                        <Button type="submit" className="w-full h-11" disabled={createXassidaMutation.isPending}>
+                          {createXassidaMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Traitement...</> : 'Créer la xassida'}
+                        </Button>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
+
+              <Card className="shadow-soft overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-muted/30">
+                      <TableRow>
+                        <TableHead className="w-[300px]">Xassida</TableHead>
+                        <TableHead>Auteur</TableHead>
+                        <TableHead className="hidden md:table-cell">Vers</TableHead>
+                        <TableHead className="hidden sm:table-cell">Catégorie</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredXassidas.map((x: Xassida) => (
+                        <TableRow key={x.id} className="group hover:bg-muted/10">
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-bold text-foreground">{x.title}</span>
+                              {x.arabic_name && <span className="text-xs font-arabic text-primary mt-0.5">{x.arabic_name}</span>}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs">{x.author_name}</TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <Badge variant="secondary" className="font-mono text-[10px]">{x.verse_count || 0}</Badge>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            {x.categorie && <Badge variant="outline" className="text-[10px] bg-muted/20">{x.categorie}</Badge>}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="h-8 w-8 p-0 text-primary hover:text-primary hover:bg-primary/10" 
+                                onClick={() => loadExistingVerses(x.id)}
+                                title="Éditer les vers"
+                              >
+                                <BookOpen className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="h-8 w-8 p-0" 
+                                onClick={() => openEditDialog(x)}
+                                title="Modifier métadonnées"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              
+                              <Dialog open={showPdfUploadDialog === x.id} onOpenChange={(open) => setShowPdfUploadDialog(open ? x.id : null)}>
+                                <DialogTrigger asChild>
+                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Importer PDF">
+                                    <FileText className="w-4 h-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader><DialogTitle>Importer PDF - {x.title}</DialogTitle></DialogHeader>
+                                  <div className="space-y-4 pt-2">
+                                    <Input type="file" accept=".pdf" onChange={(e) => handlePdfUpload(e, x.id)} disabled={uploadingByXassida[x.id]} />
+                                    {uploadingByXassida[x.id] && (
+                                      <div className="space-y-1">
+                                        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                                          <div className="h-full bg-primary transition-all" style={{ width: `${uploadProgressByXassida[x.id] || 0}%` }} />
+                                        </div>
+                                        <p className="text-[10px] text-center text-muted-foreground">{uploadProgressByXassida[x.id]}%</p>
+                                      </div>
+                                    )}
+                                    {uploadErrorByXassida[x.id] && <p className="text-xs text-destructive">{uploadErrorByXassida[x.id]}</p>}
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => handleDeleteXassida(x)}
+                                title="Supprimer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {filteredXassidas.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                            Aucune xassida trouvée
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </Card>
-            ))}
-          </div>
+            </TabsContent>
 
-        </CardContent>
-      </Card>
+            {/* Tab 3: Authors */}
+            <TabsContent value="authors" className="space-y-4 mt-0">
+               <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-lg font-bold">Liste des Auteurs</h2>
+                  <Button size="sm" onClick={() => setShowAuthorDialog(true)}><Plus className="w-4 h-4 mr-2" /> Nouvel auteur</Button>
+               </div>
+               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {authors.map((author: Author) => (
+                    <Card key={author.id} className="group hover:shadow-md transition-shadow">
+                      <CardContent className="pt-6">
+                        <div className="flex items-start gap-4">
+                          <div className="relative">
+                            {author.photo_url ? (
+                              <img src={author.photo_url} alt={author.name} className="w-16 h-16 object-cover rounded-xl shadow-sm" />
+                            ) : (
+                              <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                                <span className="text-xl font-bold text-primary">{author.name[0]}</span>
+                              </div>
+                            )}
+                            <Button 
+                              size="sm" 
+                              variant="secondary" 
+                              className="absolute -bottom-2 -right-2 h-7 w-7 p-0 rounded-full shadow-md"
+                              onClick={() => openEditAuthorDialog(author)}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold truncate">{author.name}</h3>
+                            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{(author as any).description || 'Aucune description'}</p>
+                            <div className="flex items-center gap-2 mt-2">
+                               <Badge variant="outline" className="text-[10px] bg-primary/5">{(author as any).tradition || 'Tidjane'}</Badge>
+                            </div>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleDeleteAuthor(author)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+               </div>
+            </TabsContent>
 
-      {/* ── Verse Editor Panel ──────────────────────────────────── */}
-      {selectedXassida && editorVerses.length > 0 && (
-        <Card className="shadow-card border-primary/30" id="verse-editor">
-          <CardHeader className="pb-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <CardTitle className="text-lg">
-                  Éditeur de vers — {selectedXassida.title}
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  {editorVerses.length} vers · Page {currentVersePage}/{totalVersePages}
-                </CardDescription>
-              </div>
-              <div className="flex gap-2 flex-shrink-0">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedXassida(null);
-                    setEditorVerses([]);
-                    setCurrentVersePage(1);
-                    setExtractedMetadata(null);
-                  }}
-                >
-                  <X className="w-4 h-4 mr-1" /> Fermer
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => saveVersesMutation.mutate({ verses: editorVerses })}
-                  disabled={saveVersesMutation.isPending}
-                >
-                  {saveVersesMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-1" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-1" />
-                  )}
-                  Sauvegarder
-                </Button>
-              </div>
-            </div>
-
-            {/* Chunk save progress */}
-            {chunkSaveProgress && (
-              <div className="mt-3 space-y-1">
-                <div className="w-full h-2 bg-muted rounded overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all"
-                    style={{ width: `${(chunkSaveProgress.current / chunkSaveProgress.total) * 100}%` }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Sauvegarde: lot {chunkSaveProgress.current}/{chunkSaveProgress.total}
-                </p>
-              </div>
-            )}
-          </CardHeader>
-
-          <CardContent className="space-y-4">
-            {/* Extracted metadata banner */}
-            {extractedMetadata && (
-              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-2">
-                <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-primary" />
-                  Résultat de l'extraction PDF
-                </p>
-                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                  <div>Pages : <span className="font-medium text-foreground">{extractedMetadata.total_pages}</span></div>
-                  <div>Lignes : <span className="font-medium text-foreground">{extractedMetadata.total_lines}</span></div>
-                </div>
-                {extractedMetadata.detected_author && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Auteur détecté : </span>
-                    <span className="font-arabic font-medium text-primary">{extractedMetadata.detected_author}</span>
-                  </div>
-                )}
-                {extractedMetadata.detected_title && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Titre détecté : </span>
-                    <span className="font-arabic font-medium text-foreground">{extractedMetadata.detected_title}</span>
-                  </div>
-                )}
-                {extractedMetadata.introduction && (
-                  <div className="mt-2">
-                    <p className="text-xs text-muted-foreground mb-1">Introduction détectée :</p>
-                    <div className="bg-card border border-border/50 rounded-lg p-3 text-sm font-arabic text-right leading-relaxed max-h-32 overflow-y-auto">
-                      {extractedMetadata.introduction}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Font size + Add verse controls */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-1 bg-muted/60 rounded-lg px-2 py-1">
-                <button
-                  onClick={() => setEditorFontSize((f) => Math.max(MIN_VERSE_FONT_SIZE, f - 2))}
-                  className="w-7 h-7 rounded text-sm font-bold flex items-center justify-center text-muted-foreground hover:bg-muted"
-                >A−</button>
-                <span className="text-xs w-6 text-center tabular-nums text-muted-foreground">{editorFontSize}</span>
-                <button
-                  onClick={() => setEditorFontSize((f) => Math.min(MAX_VERSE_FONT_SIZE, f + 2))}
-                  className="w-7 h-7 rounded text-sm font-bold flex items-center justify-center text-muted-foreground hover:bg-muted"
-                >A+</button>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setEditorVerses((prev) => [
-                    ...prev,
-                    { verse_number: prev.length + 1, text_arabic: '', transcription: '', translation_fr: '' }
-                  ]);
-                  // Go to last page
-                  const newTotal = Math.ceil((editorVerses.length + 1) / VERSES_PER_PAGE);
-                  setCurrentVersePage(newTotal);
-                }}
-              >
-                <Plus className="w-3.5 h-3.5 mr-1" />
-                Ajouter un vers
-              </Button>
-              <span className="text-xs text-muted-foreground ml-auto">
-                {editorVerses.length} vers au total
-              </span>
-            </div>
-
-            {/* Verse list (paginated) */}
-            <div className="space-y-3">
-              {paginatedVerses.map((verse, pageIdx) => {
-                const globalIdx = verseStartIndex + pageIdx;
-                return (
-                  <div
-                    key={globalIdx}
-                    className="border border-border/50 rounded-xl p-4 bg-card space-y-3 relative group"
-                  >
-                    {/* Verse number badge + delete */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold">
-                          {verse.verse_number}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          Chap. {verse.chapter_number ?? 1}
-                        </span>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => {
-                          setEditorVerses((prev) => {
-                            const next = prev.filter((_, i) => i !== globalIdx);
-                            // Re-number
-                            return next.map((v, i) => ({ ...v, verse_number: i + 1 }));
-                          });
-                        }}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-
-                    {/* Arabic text */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground">Texte arabe</label>
-                      <Textarea
-                        value={verse.text_arabic}
-                        onChange={(e) => handleVerseFieldChange(globalIdx, 'text_arabic', e.target.value)}
-                        className="font-arabic text-right leading-loose min-h-[60px] resize-y"
-                        style={{ fontSize: `${editorFontSize}px` }}
-                        dir="rtl"
-                        rows={2}
-                      />
-                    </div>
-
-                    {/* Transcription */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground">Transcription (optionnel)</label>
-                      <Input
-                        value={verse.transcription || ''}
-                        onChange={(e) => handleVerseFieldChange(globalIdx, 'transcription', e.target.value)}
-                        placeholder="Transcription phonétique..."
-                        className="text-sm"
-                      />
-                    </div>
-
-                    {/* Translation FR */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground">Traduction FR (optionnel)</label>
-                      <Input
-                        value={verse.translation_fr || ''}
-                        onChange={(e) => handleVerseFieldChange(globalIdx, 'translation_fr', e.target.value)}
-                        placeholder="Traduction française..."
-                        className="text-sm"
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Pagination */}
-            {totalVersePages > 1 && (
-              <div className="flex items-center justify-center gap-1 pt-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={currentVersePage <= 1}
-                  onClick={() => setCurrentVersePage((p) => Math.max(1, p - 1))}
-                  className="h-8 w-8 p-0"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                {visiblePageNumbers.map((num) => (
-                  <Button
-                    key={num}
-                    size="sm"
-                    variant={num === currentVersePage ? 'default' : 'ghost'}
-                    onClick={() => setCurrentVersePage(num)}
-                    className="h-8 w-8 p-0 text-xs"
-                  >
-                    {num}
-                  </Button>
-                ))}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={currentVersePage >= totalVersePages}
-                  onClick={() => setCurrentVersePage((p) => Math.min(totalVersePages, p + 1))}
-                  className="h-8 w-8 p-0"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+            {/* Tab 4: Categories */}
+            <TabsContent value="categories" className="space-y-4 mt-0">
+               <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-lg font-bold">Catégories</h2>
+                  <Button size="sm" onClick={() => setShowCategoryDialog(true)}><Plus className="w-4 h-4 mr-2" /> Nouvelle catégorie</Button>
+               </div>
+               <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {categories.map((cat: Category) => (
+                    <Card key={cat.id} className="relative overflow-hidden group cursor-pointer hover:border-primary/50" onClick={() => openEditCategoryDialog(cat)}>
+                      <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: cat.color || '#666666' }} />
+                      <CardContent className="pt-4 px-4 pb-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-bold text-sm">{cat.name}</h4>
+                            <p className="text-[10px] text-muted-foreground mt-1 line-clamp-1">{cat.description || 'Xassidas de cette catégorie'}</p>
+                          </div>
+                          <Pencil className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+               </div>
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
+      
+      {/* External Dialogs */}
+
+      {/* Create Author */}
+      <Dialog open={showAuthorDialog} onOpenChange={setShowAuthorDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Créer un auteur</DialogTitle></DialogHeader>
+          <form onSubmit={authorForm.handleSubmit((data) => createAuthorMutation.mutate(data))} className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nom *</label>
+              <Input {...authorForm.register('name', { required: true })} placeholder="Sheikh..." />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description / Bio</label>
+              <Textarea {...authorForm.register('description')} rows={3} placeholder="Biographie courte..." />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tradition</label>
+              <Input {...authorForm.register('tradition')} placeholder="Tidjiane, Qadiriyyah..." />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Photo</label>
+              <Input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => setAuthorPhotoFile(e.target.files?.[0] || null)} />
+              {authorPhotoFile && <p className="text-xs text-muted-foreground">Fichier : {authorPhotoFile.name}</p>}
+            </div>
+            <Button type="submit" className="w-full" disabled={createAuthorMutation.isPending}>
+              {createAuthorMutation.isPending ? 'Création...' : 'Créer'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Author */}
+      <Dialog open={showEditAuthorDialog} onOpenChange={setShowEditAuthorDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Modifier l'auteur</DialogTitle></DialogHeader>
+          <form onSubmit={editAuthorForm.handleSubmit((v) => {
+            if (!editingAuthor) return;
+            updateAuthorMutation.mutate({ id: editingAuthor.id, name: v.name, description: v.description, tradition: v.tradition });
+          })} className="space-y-3 pt-2">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Nom *</label>
+              <Input {...editAuthorForm.register('name', { required: true })} disabled={updateAuthorMutation.isPending} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Description / Bio</label>
+              <Textarea {...editAuthorForm.register('description')} rows={3} disabled={updateAuthorMutation.isPending} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Tradition</label>
+              <Input {...editAuthorForm.register('tradition')} placeholder="Tidjane, Mouride…" disabled={updateAuthorMutation.isPending} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Photo</label>
+              {editingAuthor?.photo_url && !editAuthorPhotoFile && (
+                <div className="flex items-center gap-2 mb-2">
+                  <img src={editingAuthor.photo_url} alt="" className="w-12 h-12 rounded-full object-cover" />
+                  <span className="text-xs text-muted-foreground">Photo actuelle</span>
+                </div>
+              )}
+              <Input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={(e) => setEditAuthorPhotoFile(e.target.files?.[0] || null)}
+                disabled={updateAuthorMutation.isPending}
+              />
+              {editAuthorPhotoFile && <p className="text-xs text-muted-foreground">Nouveau fichier : {editAuthorPhotoFile.name}</p>}
+            </div>
+            <Button type="submit" className="w-full" disabled={updateAuthorMutation.isPending}>
+              {updateAuthorMutation.isPending ? 'Mise à jour…' : 'Sauvegarder'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Xassida */}
+      <Dialog open={showEditXassidaDialog} onOpenChange={setShowEditXassidaDialog}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Modifier la xassida</DialogTitle></DialogHeader>
+          <form onSubmit={editXassidaForm.handleSubmit((data) => {
+            if (!editingXassida) return;
+            updateXassidaMutation.mutate({ id: editingXassida.id, ...data });
+          })} className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Titre *</label>
+              <Input {...editXassidaForm.register('title', { required: true })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Catégorie</label>
+                <Select
+                  value={editXassidaForm.watch('categorie') || 'Autre'}
+                  onValueChange={(val) => editXassidaForm.setValue('categorie', val)}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat: Category) => (
+                      <SelectItem key={cat.id || cat.name} value={cat.name}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nom Arabe</label>
+                <Input {...editXassidaForm.register('arabic_name')} className="font-arabic text-right" dir="rtl" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <Textarea {...editXassidaForm.register('description')} rows={3} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">URL YouTube</label>
+              <Input {...editXassidaForm.register('youtube_url')} placeholder="https://youtube.com/watch?v=..." />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">URL Audio MP3</label>
+              <Input {...editXassidaForm.register('audio_url')} placeholder="https://..." />
+            </div>
+            <Button type="submit" className="w-full" disabled={updateXassidaMutation.isPending}>
+              {updateXassidaMutation.isPending ? 'Mise à jour…' : 'Sauvegarder'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Category */}
+      <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Nouvelle catégorie</DialogTitle></DialogHeader>
+          <form onSubmit={createCategoryForm.handleSubmit((data) => createCategoryMutation.mutate(data))} className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nom *</label>
+              <Input {...createCategoryForm.register('name', { required: true })} placeholder="Poems de louange..." />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <Textarea {...createCategoryForm.register('description')} rows={2} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Couleur</label>
+              <div className="flex items-center gap-3">
+                <Input type="color" {...createCategoryForm.register('color')} className="w-12 h-10 p-1 cursor-pointer" />
+                <span className="text-sm text-muted-foreground">{createCategoryForm.watch('color') || '#666666'}</span>
+              </div>
+            </div>
+            <Button type="submit" className="w-full" disabled={createCategoryMutation.isPending}>
+              {createCategoryMutation.isPending ? 'Création...' : 'Créer'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Category */}
+      <Dialog open={showEditCategoryDialog} onOpenChange={setShowEditCategoryDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Modifier la catégorie</DialogTitle></DialogHeader>
+          <form onSubmit={editCategoryForm.handleSubmit((data) => {
+            if (!editingCategory) return;
+            updateCategoryMutation.mutate({ id: editingCategory.id, ...data });
+          })} className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nom *</label>
+              <Input {...editCategoryForm.register('name', { required: true })} disabled={updateCategoryMutation.isPending} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <Textarea {...editCategoryForm.register('description')} rows={2} disabled={updateCategoryMutation.isPending} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Couleur</label>
+              <div className="flex items-center gap-3">
+                <Input type="color" {...editCategoryForm.register('color')} className="w-12 h-10 p-1 cursor-pointer" disabled={updateCategoryMutation.isPending} />
+                <span className="text-sm text-muted-foreground">{editCategoryForm.watch('color') || '#666666'}</span>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" className="flex-1" disabled={updateCategoryMutation.isPending}>
+                {updateCategoryMutation.isPending ? 'Mise à jour…' : 'Sauvegarder'}
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                disabled={updateCategoryMutation.isPending}
+                onClick={() => editingCategory && handleDeleteCategory(editingCategory)}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Global Translations */}
+      <Dialog open={showImportTranslateDialog} onOpenChange={setShowImportTranslateDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Import Global de Traductions</DialogTitle></DialogHeader>
+          <div className="space-y-4 pt-2">
+            <Textarea
+              placeholder='[{"verse_number": 1, "xassida_id": "...", "translation_fr": "..."}]'
+              className="min-h-[200px] font-mono text-xs"
+              value={translationJsonInput}
+              onChange={(e) => setTranslationJsonInput(e.target.value)}
+            />
+            <div className="flex justify-between items-center">
+               <p className="text-xs text-muted-foreground">Format JSON attendu</p>
+               <Button
+                onClick={() => {
+                  try {
+                    const data = JSON.parse(translationJsonInput);
+                    importTranslationsMutation.mutate(data);
+                  } catch (e) {
+                    setImportTranslateError("JSON invalide");
+                  }
+                }}
+                disabled={!translationJsonInput.trim() || importTranslationsMutation.isPending}
+               >
+                 {importTranslationsMutation.isPending ? "Importation..." : "Lancer l'import"}
+               </Button>
+            </div>
+            {importTranslateError && <p className="text-sm text-destructive">{importTranslateError}</p>}
+            {importTranslateSuccess && <p className="text-sm text-primary font-bold">{importTranslateSuccess}</p>}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
