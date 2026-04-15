@@ -946,9 +946,9 @@ export function XassidasAdmin() {
     <div className="min-h-screen bg-background pb-24">
       {/* Header - Hidden when editing verses for focus */}
       {!selectedXassida && (
-        <div className="bg-gradient-to-br from-primary to-green-dark pt-12 pb-8 px-6 relative overflow-hidden">
+        <div className="bg-gradient-to-br from-primary to-green-dark pt-12 px-6 relative overflow-hidden">
           <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />
-          <div className="flex items-start justify-between relative">
+          <div className="flex items-start justify-between relative mb-5">
             <div>
               <h1 className="text-2xl font-bold text-white">Administration</h1>
               <p className="text-sm text-white/70 mt-1">Gérez votre contenu islamique</p>
@@ -958,10 +958,33 @@ export function XassidasAdmin() {
               Verrouiller
             </Button>
           </div>
+          {/* Tab navigation intégrée dans le header */}
+          <div className="flex gap-1 relative">
+            {[
+              { value: 'dashboard', icon: <LayoutDashboard className="w-4 h-4" />, label: 'Stats' },
+              { value: 'xassidas',  icon: <BookOpen className="w-4 h-4" />,        label: 'Xassidas' },
+              { value: 'authors',   icon: <Users className="w-4 h-4" />,           label: 'Auteurs' },
+              { value: 'categories',icon: <FolderOpen className="w-4 h-4" />,      label: 'Catégories' },
+            ].map(tab => (
+              <button
+                key={tab.value}
+                onClick={() => setActiveTab(tab.value)}
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors",
+                  activeTab === tab.value
+                    ? "bg-background text-foreground"
+                    : "text-white/70 hover:text-white hover:bg-white/10"
+                )}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      <div className={cn("px-5 space-y-6", !selectedXassida ? "-mt-4" : "mt-6")}>
+      <div className={cn("px-5 space-y-6", !selectedXassida ? "mt-6" : "mt-6")}>
         {selectedXassida && editorVerses.length > 0 ? (
           /* ── Dedicated Verse Editor Panel ──────────────────────────────────── */
           <Card className="shadow-card border-primary/30" id="verse-editor">
@@ -1208,26 +1231,6 @@ export function XassidasAdmin() {
         ) : (
           /* ── Main Tabbed Interface ──────────────────────────────────── */
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="flex items-center justify-between mb-6 overflow-x-auto pb-1">
-              <TabsList className="bg-muted/50 p-1">
-                <TabsTrigger value="dashboard" className="data-[state=active]:shadow-sm">
-                  <LayoutDashboard className="w-4 h-4 mr-2" />
-                  <span className="hidden sm:inline">Stats</span>
-                </TabsTrigger>
-                <TabsTrigger value="xassidas" className="data-[state=active]:shadow-sm">
-                  <BookOpen className="w-4 h-4 mr-2" />
-                  Xassidas
-                </TabsTrigger>
-                <TabsTrigger value="authors" className="data-[state=active]:shadow-sm">
-                  <Users className="w-4 h-4 mr-2" />
-                  Auteurs
-                </TabsTrigger>
-                <TabsTrigger value="categories" className="data-[state=active]:shadow-sm">
-                  <FolderOpen className="w-4 h-4 mr-2" />
-                  Catégories
-                </TabsTrigger>
-              </TabsList>
-            </div>
 
             {/* Tab 1: Dashboard */}
             <TabsContent value="dashboard" className="space-y-6 mt-0">
