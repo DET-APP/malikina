@@ -593,6 +593,7 @@ export function XassidasAdmin() {
       console.log('✅ Succès! Xassida ajoutée:', data);
       queryClient.invalidateQueries({ queryKey: ['authors'] });
       queryClient.invalidateQueries({ queryKey: ['xassidas'] });
+      queryClient.invalidateQueries({ queryKey: ['xassida-detail'] });
       xassidaForm.reset({
         title: '',
         author_id: '',
@@ -683,6 +684,7 @@ export function XassidasAdmin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['xassidas'] });
+      queryClient.invalidateQueries({ queryKey: ['xassida-detail'] });
       setShowEditXassidaDialog(false);
       setEditingXassida(null);
       editXassidaForm.reset({ title: '', description: '', youtube_url: '', audio_url: '', arabic_name: '', categorie: 'Autre' });

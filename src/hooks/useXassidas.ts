@@ -166,6 +166,6 @@ export const useXassidasDetail = (xassidasId: string | null) => {
       return response.json();
     },
     enabled: !!xassidasId,
-    staleTime: 10 * 60 * 1000,
+    staleTime: 0,
   });
 };
