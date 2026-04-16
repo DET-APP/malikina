@@ -13,7 +13,7 @@ import { Heart } from "lucide-react";
 import type { Qassida } from "@/data/qassidasData";
 import { authorsData } from "@/data/qassidasData";
 import { enrichedQassidasData } from "@/data/enrichedQassidasData";
-import { searchMatch } from "@/lib/utils";
+import { searchMatch, extractYouTubeId } from "@/lib/utils";
 
 const XASSIDA_API_URL =
   import.meta.env.VITE_API_URL ||
@@ -341,7 +341,12 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
       if (!selectedQassida.apiId) return [];
       const res = await fetch(`${XASSIDA_API_URL}/xassidas/${selectedQassida.apiId}/audios`);
       if (!res.ok) return [];
-      return res.json();
+      const audios = await res.json() as XassidaAudio[];
+      // Enrich audios: extract YouTube ID from audio_url if youtube_id is null
+      return audios.map(audio => ({
+        ...audio,
+        youtube_id: audio.youtube_id || extractYouTubeId(audio.audio_url) || null
+      }));
     },
     enabled: !!selectedQassida.apiId,
     staleTime: 60_000,
