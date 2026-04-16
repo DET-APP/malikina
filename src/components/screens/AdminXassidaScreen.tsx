@@ -56,6 +56,17 @@ interface Category {
   order_index?: number;
 }
 
+interface XassidaAudio {
+  id: string;
+  xassida_id: string;
+  chapter_number: number | null;
+  reciter_name: string;
+  youtube_id: string | null;
+  audio_url: string | null;
+  label: string | null;
+  order_index: number;
+}
+
 const VERSES_CHUNK_SIZE = 100;
 const VERSES_PER_PAGE = 20;
 const MIN_VERSE_FONT_SIZE = 24;
@@ -183,6 +194,53 @@ export function XassidasAdmin() {
 
   const [showEditXassidaDialog, setShowEditXassidaDialog] = useState(false);
   const [editingXassida, setEditingXassida] = useState<Xassida | null>(null);
+
+  // Audio management for the edit dialog
+  const [audioForm, setAudioForm] = useState({ reciter_name: '', chapter_number: '', youtube_url: '', audio_url: '' });
+
+  const { data: editingAudios = [], refetch: refetchAudios } = useQuery<XassidaAudio[]>({
+    queryKey: ['xassida-audios-admin', editingXassida?.id],
+    queryFn: async () => {
+      if (!editingXassida?.id) return [];
+      const res = await fetch(`${API_URL}/xassidas/${editingXassida.id}/audios`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!editingXassida?.id,
+  });
+
+  const addAudioMutation = useMutation({
+    mutationFn: async (data: typeof audioForm) => {
+      const res = await fetch(`${API_URL}/xassidas/${editingXassida!.id}/audios`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reciter_name: data.reciter_name.trim(),
+          chapter_number: data.chapter_number !== '' ? Number(data.chapter_number) : null,
+          youtube_url: data.youtube_url.trim() || undefined,
+          audio_url: data.audio_url.trim() || undefined,
+        }),
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Erreur ajout audio'); }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['xassida-audios-admin', editingXassida?.id] });
+      setAudioForm({ reciter_name: '', chapter_number: '', youtube_url: '', audio_url: '' });
+    },
+    onError: (e: any) => alert(e.message),
+  });
+
+  const deleteAudioMutation = useMutation({
+    mutationFn: async (audioId: string) => {
+      const res = await fetch(`${API_URL}/xassidas/${editingXassida!.id}/audios/${audioId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Erreur suppression audio');
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['xassida-audios-admin', editingXassida?.id] }),
+    onError: (e: any) => alert(e.message),
+  });
+
   const [showEditAuthorDialog, setShowEditAuthorDialog] = useState(false);
   const [editingAuthor, setEditingAuthor] = useState<Author | null>(null);
   const [authorPhotoFile, setAuthorPhotoFile] = useState<File | null>(null);
@@ -1800,14 +1858,82 @@ export function XassidasAdmin() {
               <label className="text-sm font-medium">Description</label>
               <Textarea {...editXassidaForm.register('description')} rows={3} />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">URL YouTube</label>
-              <Input {...editXassidaForm.register('youtube_url')} placeholder="https://youtube.com/watch?v=..." />
+            {/* ── Audio management ─────────────────────────── */}
+            <div className="space-y-2 border rounded-lg p-3 bg-muted/20">
+              <label className="text-sm font-semibold flex items-center gap-1.5">
+                <Music className="w-4 h-4" /> Audios ({editingAudios.length})
+              </label>
+
+              {/* Existing audios list */}
+              {editingAudios.length === 0 && (
+                <p className="text-xs text-muted-foreground italic">Aucun audio ajouté</p>
+              )}
+              {editingAudios.map((audio) => (
+                <div key={audio.id} className="flex items-center gap-2 bg-card rounded-lg px-3 py-2 border text-sm">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{audio.reciter_name}{audio.label ? ` · ${audio.label}` : ''}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {audio.chapter_number !== null ? `Ch. ${audio.chapter_number}` : 'Toute la xassida'}
+                      {' · '}
+                      {audio.youtube_id ? '▶ YouTube' : '🎵 MP3'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => deleteAudioMutation.mutate(audio.id)}
+                    disabled={deleteAudioMutation.isPending}
+                    className="text-destructive hover:text-destructive/70 flex-shrink-0 p-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+
+              {/* Add new audio form */}
+              <div className="border-t pt-3 space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ajouter un audio</p>
+                <Input
+                  placeholder="Nom du récitateur *"
+                  value={audioForm.reciter_name}
+                  onChange={(e) => setAudioForm((f) => ({ ...f, reciter_name: e.target.value }))}
+                />
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Chapitre (opt.)"
+                    className="w-32 flex-shrink-0"
+                    value={audioForm.chapter_number}
+                    onChange={(e) => setAudioForm((f) => ({ ...f, chapter_number: e.target.value }))}
+                  />
+                  <Input
+                    placeholder="URL YouTube"
+                    className="flex-1"
+                    value={audioForm.youtube_url}
+                    onChange={(e) => setAudioForm((f) => ({ ...f, youtube_url: e.target.value }))}
+                  />
+                </div>
+                <Input
+                  placeholder="URL Audio MP3 (ou YouTube ci-dessus)"
+                  value={audioForm.audio_url}
+                  onChange={(e) => setAudioForm((f) => ({ ...f, audio_url: e.target.value }))}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="w-full"
+                  disabled={
+                    !audioForm.reciter_name.trim() ||
+                    (!audioForm.youtube_url.trim() && !audioForm.audio_url.trim()) ||
+                    addAudioMutation.isPending
+                  }
+                  onClick={() => addAudioMutation.mutate(audioForm)}
+                >
+                  {addAudioMutation.isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />Ajout...</> : '+ Ajouter'}
+                </Button>
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">URL Audio MP3</label>
-              <Input {...editXassidaForm.register('audio_url')} placeholder="https://..." />
-            </div>
+
             <Button type="submit" className="w-full" disabled={updateXassidaMutation.isPending}>
               {updateXassidaMutation.isPending ? 'Mise à jour…' : 'Sauvegarder'}
             </Button>

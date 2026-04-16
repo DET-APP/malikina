@@ -89,6 +89,16 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
     return matchesSearch && matchesAuthor;
   });
 
+  // Filtered by category + search only (used for author counts)
+  const qassidasByCategory = allQassidas.filter((q) => {
+    const matchesSearch =
+      searchMatch(q.title, searchQuery) ||
+      searchMatch(q.arabic, searchQuery) ||
+      searchMatch(q.author, searchQuery);
+    const matchesCategory = selectedCategory ? q.categorie === selectedCategory : true;
+    return matchesSearch && matchesCategory;
+  });
+
   const filteredQassidas = qassidasByAuthor.filter((q) => {
     const matchesCategory = selectedCategory ? q.categorie === selectedCategory : true;
     const matchesFavorite = showFavorites ? isFavorite(q.id) : true;
@@ -324,13 +334,13 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
             >
               {t("all")}
               <span className={`text-xs px-2 py-0.5 rounded-full ${selectedAuthorId === null ? "bg-white/20" : "bg-muted-foreground/20"}`}>
-                {allQassidas.length}
+                {qassidasByCategory.length}
               </span>
             </button>
 
             {authorsData.map((author) => {
-              const count = allQassidas.filter((q) => q.author === author.fullName).length;
-              if (count === 0) return null;
+              const count = qassidasByCategory.filter((q) => q.author === author.fullName).length;
+              if (count === 0 && !selectedCategory) return null;
               const isActive = selectedAuthorId === author.id;
               return (
                 <motion.button

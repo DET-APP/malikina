@@ -5,7 +5,8 @@ import {
   Loader2, Languages, AlignLeft, Volume2, Search,
   Copy, Check, X
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useXassidasDetail, useXassidas } from "@/hooks/useXassidas";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Heart } from "lucide-react";
@@ -13,6 +14,21 @@ import type { Qassida } from "@/data/qassidasData";
 import { authorsData } from "@/data/qassidasData";
 import { enrichedQassidasData } from "@/data/enrichedQassidasData";
 import { searchMatch } from "@/lib/utils";
+
+const XASSIDA_API_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://165-245-211-201.sslip.io/api');
+
+interface XassidaAudio {
+  id: string;
+  xassida_id: string;
+  chapter_number: number | null;
+  reciter_name: string;
+  youtube_id: string | null;
+  audio_url: string | null;
+  label: string | null;
+  order_index: number;
+}
 
 interface XassidasDetailProps {
   selectedQassida: Qassida;
@@ -35,6 +51,136 @@ interface XassidaVerse {
 const PAGE_SIZE = 20;
 
 // ── Audio player ─────────────────────────────────────────────────────────────
+
+// ── YouTube IFrame API loader (singleton) ────────────────────────────────────
+
+declare global {
+  interface Window { YT: any; onYouTubeIframeAPIReady: (() => void) | null; }
+}
+
+let _ytLoaded = false;
+let _ytReady  = false;
+const _ytCallbacks: Array<() => void> = [];
+
+function loadYT() {
+  if (_ytLoaded) return;
+  _ytLoaded = true;
+  window.onYouTubeIframeAPIReady = () => {
+    _ytReady = true;
+    _ytCallbacks.forEach((cb) => cb());
+    _ytCallbacks.length = 0;
+  };
+  const s = document.createElement('script');
+  s.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(s);
+}
+
+function onYTReady(cb: () => void) {
+  if (_ytReady) { cb(); return; }
+  loadYT();
+  _ytCallbacks.push(cb);
+}
+
+// ── YouTube audio player (hidden iframe + custom controls) ───────────────────
+
+interface YouTubeAudioPlayerProps { videoId: string; dark: boolean }
+
+const YouTubeAudioPlayer = ({ videoId, dark }: YouTubeAudioPlayerProps) => {
+  const divId   = useRef(`yt-${Math.random().toString(36).slice(2)}`).current;
+  const player  = useRef<any>(null);
+  const ticker  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [playing,  setPlaying]  = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState(false);
+
+  useEffect(() => {
+    onYTReady(() => {
+      const el = document.getElementById(divId);
+      if (!el) return;
+      player.current = new window.YT.Player(divId, {
+        videoId,
+        playerVars: { autoplay: 0, controls: 0, disablekb: 1, rel: 0, modestbranding: 1, playsinline: 1 },
+        events: {
+          onReady: () => {
+            setLoading(false);
+            setDuration(player.current?.getDuration() ?? 0);
+          },
+          onStateChange: (e: any) => {
+            if (e.data === 1 /* PLAYING */) {
+              setPlaying(true);
+              setDuration(player.current?.getDuration() ?? 0);
+              ticker.current = setInterval(() => {
+                const cur = player.current?.getCurrentTime() ?? 0;
+                const dur = player.current?.getDuration() ?? 0;
+                if (dur > 0) setProgress((cur / dur) * 100);
+              }, 500);
+            } else {
+              setPlaying(false);
+              if (ticker.current) { clearInterval(ticker.current); ticker.current = null; }
+              if (e.data === 0 /* ENDED */) setProgress(0);
+            }
+          },
+          onError: () => { setError(true); setLoading(false); },
+        },
+      });
+    });
+    return () => {
+      if (ticker.current) clearInterval(ticker.current);
+      player.current?.destroy?.();
+      player.current = null;
+    };
+  }, [videoId, divId]);
+
+  const toggle = () => {
+    if (!player.current) return;
+    playing ? player.current.pauseVideo() : player.current.playVideo();
+  };
+
+  const seek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!player.current) return;
+    const pct = Number(e.target.value);
+    player.current.seekTo((pct / 100) * (player.current.getDuration() ?? 0), true);
+    setProgress(pct);
+  };
+
+  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  const bg  = dark ? "bg-slate-800/70 border-slate-700" : "bg-card border-border/30";
+  const sub = dark ? "text-amber-300/70" : "text-muted-foreground";
+
+  return (
+    <div className={`rounded-2xl border p-4 mb-4 ${bg}`}>
+      {/* Hidden YT iframe — placed off-screen, never visible */}
+      <div style={{ position: 'fixed', top: '-9999px', left: '-9999px', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none' }}>
+        <div id={divId} />
+      </div>
+
+      {error ? (
+        <p className={`text-xs text-center ${sub}`}>❌ Audio indisponible</p>
+      ) : (
+        <div className="flex items-center gap-3">
+          <button onClick={toggle} disabled={loading} className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${dark ? "bg-amber-700/40 text-amber-200 hover:bg-amber-700/60" : "bg-primary/15 text-primary hover:bg-primary/25"}`}>
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1 mb-1">
+              <Volume2 className={`w-3 h-3 ${sub}`} />
+              <span className={`text-xs ${sub}`}>Récitation</span>
+            </div>
+            <input type="range" min={0} max={100} value={progress} onChange={seek} className="w-full h-1 accent-primary cursor-pointer" />
+            <div className={`flex justify-between text-xs mt-0.5 ${sub}`}>
+              <span>{fmt((progress / 100) * duration)}</span>
+              <span>{fmt(duration)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Native audio player (MP3/local) ──────────────────────────────────────────
 
 interface AudioPlayerProps { url: string; dark: boolean }
 
@@ -122,7 +268,7 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
   const [showTranscription, setShowTr]    = useState(false);
   const [showTranslation, setShowTl]      = useState(false);
   const [visibleCount, setVisibleCount]   = useState(PAGE_SIZE);
-  const [audioUrl, setAudioUrl]           = useState<string | null | undefined>(undefined);
+  const [selectedAudioId, setSelectedAudioId] = useState<string | null>(null);
   const [copiedId, setCopiedId]           = useState<string | null>(null);
   const [selectedChapter, setChapter]     = useState<number | null>(null);
   const [verseSearch, setVerseSearch]     = useState("");
@@ -130,7 +276,7 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
   const [globalSearchResults, setGlobalSearchResults] = useState<Qassida[]>([]);
 
   const { toggleFavorite, isFavorite } = useFavorites();
-  const { fetchAudioUrl, xassidas: allXassidas } = useXassidas();
+  const { xassidas: allXassidas } = useXassidas();
   const favorite = isFavorite(selectedQassida.id);
 
   const author      = authorsData.find((a) => a.fullName === selectedQassida.author);
@@ -188,35 +334,44 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
     setVisibleCount(PAGE_SIZE);
   }, [selectedQassida.id, selectedChapter, verseSearch]);
 
-  // Audio
+  // Fetch all audios for this xassida (new multi-reciter system)
+  const { data: xassidaAudios = [] } = useQuery<XassidaAudio[]>({
+    queryKey: ['xassida-audios', selectedQassida.apiId],
+    queryFn: async () => {
+      if (!selectedQassida.apiId) return [];
+      const res = await fetch(`${XASSIDA_API_URL}/xassidas/${selectedQassida.apiId}/audios`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!selectedQassida.apiId,
+    staleTime: 60_000,
+  });
+
+  // Reset selected reciter when xassida or chapter changes
   useEffect(() => {
-    setAudioUrl(undefined);
-    
-    // Get the API base URL
-    const API_BASE = import.meta.env.VITE_API_URL ||
-      (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://165-245-211-201.sslip.io/api');
-    
-    // First check if API returned audio_url from database
-    if (apiDetail?.audio_url) { 
-      setAudioUrl(apiDetail.audio_url); 
-      return; 
-    }
-    
-    // Check if has YouTube ID or local audio — use streaming endpoint
-    if (apiDetail?.youtube_id || apiDetail?.audio_url) {
-      setAudioUrl(`${API_BASE}/xassidas/${selectedQassida.apiId}/audio`);
-      return;
-    }
-    
-    // Then check if selectedQassida has audioUrl
-    if (selectedQassida.audioUrl) { 
-      setAudioUrl(selectedQassida.audioUrl); 
-      return; 
-    }
-    
-    // Finally try to fetch from Supabase
-    fetchAudioUrl(selectedQassida.id).then(setAudioUrl);
-  }, [selectedQassida.id, selectedQassida.apiId, apiDetail?.audio_url, apiDetail?.youtube_id]);
+    setSelectedAudioId(null);
+  }, [selectedQassida.id, selectedChapter]);
+
+  // Audios relevant to the current chapter:
+  //   1. chapter-specific audios for selectedChapter
+  //   2. fallback: global audios (chapter_number === null)
+  const relevantAudios = useMemo(() => {
+    const chapterSpecific = xassidaAudios.filter(a => a.chapter_number === selectedChapter);
+    if (chapterSpecific.length > 0) return chapterSpecific;
+    return xassidaAudios.filter(a => a.chapter_number === null);
+  }, [xassidaAudios, selectedChapter]);
+
+  // Currently playing audio (selected by user or auto first)
+  const activeAudio = relevantAudios.find(a => a.id === selectedAudioId) ?? relevantAudios[0] ?? null;
+
+  // Legacy fallback: old youtube_id / audio_url on the xassida itself
+  const legacyAudio = useMemo(() => {
+    if (xassidaAudios.length > 0) return null;
+    if (apiDetail?.youtube_id) return { youtube_id: apiDetail.youtube_id, audio_url: null };
+    if (apiDetail?.audio_url)  return { youtube_id: null, audio_url: apiDetail.audio_url };
+    if (selectedQassida.audioUrl) return { youtube_id: null, audio_url: selectedQassida.audioUrl };
+    return null;
+  }, [xassidaAudios, apiDetail, selectedQassida.audioUrl]);
 
   // Copy verse — fallback for mobile / non-HTTPS
   const copyVerse = useCallback((verse: XassidaVerse) => {
@@ -372,7 +527,52 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
       {/* ── Content ───────────────────────────────────────────── */}
       <div className="pt-20 px-4 pb-28">
 
-        {audioUrl && <AudioPlayer url={audioUrl} dark={d} />}
+        {/* ── Audio section ─────────────────────────────────── */}
+        {(relevantAudios.length > 0 || legacyAudio) && (
+          <div className="mb-4">
+            {/* Reciter selector — only shown when multiple options */}
+            {relevantAudios.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-2 mb-2 scrollbar-hide">
+                {relevantAudios.map((a) => (
+                  <button
+                    key={a.id}
+                    onClick={() => setSelectedAudioId(a.id)}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                      activeAudio?.id === a.id
+                        ? d ? 'bg-amber-600 text-white' : 'bg-primary text-primary-foreground'
+                        : d ? 'bg-slate-700 text-amber-200/70' : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {a.reciter_name}{a.label ? ` · ${a.label}` : ''}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Chapter-specific audio badge */}
+            {activeAudio && activeAudio.chapter_number !== null && (
+              <p className={`text-xs mb-1.5 font-medium ${d ? 'text-amber-300/60' : 'text-muted-foreground'}`}>
+                Ch. {activeAudio.chapter_number} · {activeAudio.reciter_name}
+              </p>
+            )}
+            {activeAudio && activeAudio.chapter_number === null && relevantAudios.length === 1 && (
+              <p className={`text-xs mb-1.5 ${d ? 'text-amber-300/60' : 'text-muted-foreground'}`}>
+                {activeAudio.reciter_name}
+              </p>
+            )}
+
+            {/* Player */}
+            {activeAudio?.youtube_id ? (
+              <YouTubeAudioPlayer key={activeAudio.id} videoId={activeAudio.youtube_id} dark={d} />
+            ) : activeAudio?.audio_url ? (
+              <AudioPlayer key={activeAudio.id} url={activeAudio.audio_url} dark={d} />
+            ) : legacyAudio?.youtube_id ? (
+              <YouTubeAudioPlayer key="legacy-yt" videoId={legacyAudio.youtube_id} dark={d} />
+            ) : legacyAudio?.audio_url ? (
+              <AudioPlayer key="legacy-mp3" url={legacyAudio.audio_url} dark={d} />
+            ) : null}
+          </div>
+        )}
 
         {/* Reading controls */}
         <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border mb-3 flex-wrap ${ctrl}`}>
