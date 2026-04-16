@@ -256,6 +256,53 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
         </div>
       )}
 
+      {/* ── Category filter ────────────────────────────────────── */}
+      {!showFavorites && !isLoading && !error && uniqueCategories.length > 0 && (
+        <div className="px-4 pt-5 pb-3 border-b border-border/20">
+          <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">
+            {t("byCategory")}
+          </p>
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {/* Toutes */}
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                selectedCategory === null
+                  ? "bg-secondary text-secondary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              {t("allFem")}
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ml-1.5 inline-block ${selectedCategory === null ? "bg-white/20" : "bg-muted-foreground/20"}`}>
+                {filteredQassidas.length}
+              </span>
+            </button>
+
+            {uniqueCategories.map((category) => {
+              const count = allQassidas.filter((q) => q.categorie === category).length;
+              const isActive = selectedCategory === category;
+              return (
+                <motion.button
+                  key={category}
+                  onClick={() => setSelectedCategory(isActive ? null : category)}
+                  whileTap={{ scale: 0.95 }}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    isActive
+                      ? "bg-secondary text-secondary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  {category}
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full ml-1.5 inline-block ${isActive ? "bg-white/20" : "bg-muted-foreground/20"}`}>
+                    {count}
+                  </span>
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── Author filter ─────────────────────────────────────── */}
       {!showFavorites && !isLoading && !error && authorsData.length > 0 && (
         <div className="px-4 pt-5 pb-3 border-b border-border/20">
@@ -309,53 +356,6 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
                   </div>
                   <span className="truncate max-w-[100px] text-sm">{author.shortName}</span>
                   <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${isActive ? "bg-white/20" : "bg-muted-foreground/20"}`}>
-                    {count}
-                  </span>
-                </motion.button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── Category filter ────────────────────────────────────── */}
-      {!showFavorites && !isLoading && !error && uniqueCategories.length > 0 && (
-        <div className="px-4 pt-5 pb-3 border-b border-border/20">
-          <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">
-            {t("byCategory")}
-          </p>
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {/* Toutes */}
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                selectedCategory === null
-                  ? "bg-secondary text-secondary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-            >
-              {t("allFem")}
-              <span className={`text-xs px-1.5 py-0.5 rounded-full ml-1.5 inline-block ${selectedCategory === null ? "bg-white/20" : "bg-muted-foreground/20"}`}>
-                {filteredQassidas.length}
-              </span>
-            </button>
-
-            {uniqueCategories.map((category) => {
-              const count = allQassidas.filter((q) => q.categorie === category).length;
-              const isActive = selectedCategory === category;
-              return (
-                <motion.button
-                  key={category}
-                  onClick={() => setSelectedCategory(isActive ? null : category)}
-                  whileTap={{ scale: 0.95 }}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                    isActive
-                      ? "bg-secondary text-secondary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
-                >
-                  {category}
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full ml-1.5 inline-block ${isActive ? "bg-white/20" : "bg-muted-foreground/20"}`}>
                     {count}
                   </span>
                 </motion.button>
