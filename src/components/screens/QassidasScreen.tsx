@@ -77,7 +77,8 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
     )
   ).sort();
 
-  const filteredQassidas = allQassidas.filter((q) => {
+  // Filtered by author + search only (used for category counts)
+  const qassidasByAuthor = allQassidas.filter((q) => {
     const matchesSearch =
       searchMatch(q.title, searchQuery) ||
       searchMatch(q.arabic, searchQuery) ||
@@ -85,11 +86,13 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
     const matchesAuthor = selectedAuthorId
       ? authorsData.find((a) => a.id === selectedAuthorId)?.fullName === q.author
       : true;
-    const matchesCategory = selectedCategory
-      ? q.categorie === selectedCategory
-      : true;
+    return matchesSearch && matchesAuthor;
+  });
+
+  const filteredQassidas = qassidasByAuthor.filter((q) => {
+    const matchesCategory = selectedCategory ? q.categorie === selectedCategory : true;
     const matchesFavorite = showFavorites ? isFavorite(q.id) : true;
-    return matchesSearch && matchesAuthor && matchesCategory && matchesFavorite;
+    return matchesCategory && matchesFavorite;
   });
 
   // Search results for dropdown (max 6)
@@ -274,12 +277,12 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
             >
               {t("allFem")}
               <span className={`text-xs px-1.5 py-0.5 rounded-full ml-1.5 inline-block ${selectedCategory === null ? "bg-white/20" : "bg-muted-foreground/20"}`}>
-                {filteredQassidas.length}
+                {qassidasByAuthor.length}
               </span>
             </button>
 
             {uniqueCategories.map((category) => {
-              const count = allQassidas.filter((q) => q.categorie === category).length;
+              const count = qassidasByAuthor.filter((q) => q.categorie === category).length;
               const isActive = selectedCategory === category;
               return (
                 <motion.button
