@@ -352,6 +352,23 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
     staleTime: 60_000,
   });
 
+  // Pre-cache YouTube URLs when audios are loaded
+  useEffect(() => {
+    if (xassidaAudios.length > 0 && 'serviceWorker' in navigator) {
+      const youtubeUrls = xassidaAudios
+        .filter(a => a.youtube_id)
+        .map(a => `https://www.youtube.com/watch?v=${a.youtube_id}`);
+      
+      if (youtubeUrls.length > 0) {
+        navigator.serviceWorker.controller?.postMessage({
+          type: 'CACHE_URLS',
+          urls: youtubeUrls
+        });
+        console.log(`[Offline] Pre-caching ${youtubeUrls.length} YouTube URLs`);
+      }
+    }
+  }, [xassidaAudios]);
+
   // Reset selected reciter when xassida or chapter changes
   useEffect(() => {
     setSelectedAudioId(null);

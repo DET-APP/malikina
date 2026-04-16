@@ -1,153 +1,147 @@
-// Service Worker for Al Moutahabbina Fillahi PWA
-const CACHE_VERSION = 'v1';
-const CACHE_NAME = `malikina-${CACHE_VERSION}`;
-const RUNTIME_CACHE = `malikina-runtime-${CACHE_VERSION}`;
+// Service Worker for Al Moutahabbina Fillahi PWA - Offline First
+const CACHE_VERSION = 'v2';
+const CACHE_NAME = `malikina-assets-${CACHE_VERSION}`;
+const API_CACHE = `malikina-api-${CACHE_VERSION}`;
+const AUDIO_CACHE = `malikina-audio-${CACHE_VERSION}`;
 
-// Assets to cache on install
+// Static assets to cache on install
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/robots.txt',
-  '/favicon.ico'
+  '/robots.txt'
 ];
 
-// Install event - cache essential assets
+// ─── Install: Cache essential assets ───
 self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Installing...');
-  
+  console.log('[SW] Installing...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('[Service Worker] Caching essential assets');
+        console.log('[SW] Caching essential assets');
         return cache.addAll(ASSETS_TO_CACHE);
       })
-      .then(() => {
-        console.log('[Service Worker] Installation complete');
-        return self.skipWaiting();
-      })
-      .catch((error) => {
-        console.error('[Service Worker] Installation failed:', error);
-      })
+      .then(() => self.skipWaiting())
+      .catch((err) => console.error('[SW] Install failed:', err))
   );
 });
 
-// Activate event - clean up old caches
+// ─── Activate: Clean old caches ───
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activating...');
-  
+  console.log('[SW] Activating...');
   event.waitUntil(
     caches.keys()
-      .then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => {
-            if (cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE) {
-              console.log('[Service Worker] Deleting old cache:', cacheName);
-              return caches.delete(cacheName);
-            }
-          })
-        );
-      })
-      .then(() => {
-        console.log('[Service Worker] Activation complete');
-        return self.clients.claim();
-      })
+      .then((names) => Promise.all(
+        names.map((name) => {
+          if (![CACHE_NAME, API_CACHE, AUDIO_CACHE].includes(name)) {
+            console.log('[SW] Cleaning old cache:', name);
+            return caches.delete(name);
+          }
+        })
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
-// Fetch event - network first, then cache
+// ─── Fetch: Smart caching strategies ───
 self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
-
-  // Skip cross-origin requests
-  if (url.origin !== location.origin) {
+  const url = new URL(event.request.url);
+  
+  // Skip non-GET, cross-origin
+  if (event.request.method !== 'GET' || url.origin !== location.origin) {
     return;
   }
 
-  // Network first for API calls
+  // ── API data: Stale-while-revalidate ──
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Clone the response before caching
-          const responseToCache = response.clone();
-          caches.open(RUNTIME_CACHE)
-            .then((cache) => {
-              cache.put(request, responseToCache);
-            });
-          return response;
-        })
-        .catch(() => {
-          // Return cached response if network fails
-          return caches.match(request)
-            .then((cached) => {
-              if (cached) return cached;
-              // Return offline page or empty response
-              return new Response('Offline - content unavailable', {
-                status: 503,
-                statusText: 'Service Unavailable'
-              });
-            });
+      caches.match(event.request)
+        .then((cached) => {
+          // Return cached immediately while fetching fresh data
+          const fetchPromise = fetch(event.request)
+            .then((response) => {
+              if (response && response.status === 200) {
+                const clone = response.clone();
+                caches.open(API_CACHE)
+                  .then((cache) => cache.put(event.request, clone));
+              }
+              return response;
+            })
+            .catch(() => cached || new Response('Offline', { status: 503 }));
+          
+          return cached || fetchPromise;
         })
     );
     return;
   }
 
-  // Cache first for static assets
+  // ── Audio/Video: Cache-first with network fallback ──
+  if (/\.(mp3|wav|m4a|ogg|webm|mp4)$/i.test(url.pathname) || 
+      url.hostname.includes('youtube.com') || 
+      url.hostname.includes('youtu.be')) {
+    event.respondWith(
+      caches.match(event.request)
+        .then((cached) => {
+          if (cached) return cached;
+          
+          return fetch(event.request)
+            .then((response) => {
+              if (response && response.status === 200) {
+                const clone = response.clone();
+                caches.open(AUDIO_CACHE)
+                  .then((cache) => cache.put(event.request, clone));
+              }
+              return response;
+            })
+            .catch(() => new Response('Audio not available offline', { status: 503 }));
+        })
+    );
+    return;
+  }
+
+  // ── Static assets: Cache-first ──
   event.respondWith(
-    caches.match(request)
+    caches.match(event.request)
       .then((cached) => {
         if (cached) return cached;
         
-        return fetch(request)
+        return fetch(event.request)
           .then((response) => {
-            // Only cache successful responses
-            if (!response || response.status !== 200 || response.type === 'error') {
-              return response;
+            if (response && response.status === 200) {
+              const clone = response.clone();
+              caches.open(CACHE_NAME)
+                .then((cache) => cache.put(event.request, clone));
             }
-
-            // Clone the response before caching
-            const responseToCache = response.clone();
-            caches.open(RUNTIME_CACHE)
-              .then((cache) => {
-                cache.put(request, responseToCache);
-              });
-
             return response;
           })
-          .catch(() => {
-            // Return cached response if network fails
-            return caches.match(request);
-          });
+          .catch(() => caches.match('/index.html'));
       })
   );
 });
 
-// Background sync for notifications (optional)
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-prayers') {
-    event.waitUntil(
-      // Sync prayer times data or notifications
-      fetch('/api/prayer-times')
-        .then((response) => response.json())
-        .then((data) => {
-          console.log('[Service Worker] Prayer times synced:', data);
-        })
-        .catch((error) => {
-          console.error('[Service Worker] Sync failed:', error);
-        })
-    );
+// ─── Message handler: Force cache update ───
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  
+  if (event.data && event.data.type === 'CACHE_URLS') {
+    const urls = event.data.urls || [];
+    caches.open(API_CACHE)
+      .then((cache) => {
+        urls.forEach((url) => {
+          fetch(url)
+            .then((response) => {
+              if (response && response.status === 200) {
+                cache.put(url, response.clone());
+              }
+            })
+            .catch(() => console.warn('[SW] Failed to cache:', url));
+        });
+      });
   }
 });
 
-// Push notifications (optional)
-self.addEventListener('push', (event) => {
-  if (!event.data) return;
-
-  const data = event.data.json();
-  const options = {
-    body: data.body,
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     tag: data.tag || 'notification',
