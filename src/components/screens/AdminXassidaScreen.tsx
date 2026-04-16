@@ -197,6 +197,8 @@ export function XassidasAdmin() {
 
   // Audio management for the edit dialog
   const [audioForm, setAudioForm] = useState({ reciter_name: '', chapter_number: '', youtube_url: '', audio_url: '' });
+  const [editingAudioId, setEditingAudioId] = useState<string | null>(null);
+  const [editAudioForm, setEditAudioForm] = useState({ reciter_name: '', chapter_number: '', youtube_url: '', audio_url: '' });
 
   const { data: editingAudios = [], refetch: refetchAudios } = useQuery<XassidaAudio[]>({
     queryKey: ['xassida-audios-admin', editingXassida?.id],
@@ -238,6 +240,28 @@ export function XassidasAdmin() {
       return res.json();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['xassida-audios-admin', editingXassida?.id] }),
+    onError: (e: any) => alert(e.message),
+  });
+
+  const updateAudioMutation = useMutation({
+    mutationFn: async ({ audioId, data }: { audioId: string; data: typeof editAudioForm }) => {
+      const res = await fetch(`${API_URL}/xassidas/${editingXassida!.id}/audios/${audioId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reciter_name: data.reciter_name.trim(),
+          chapter_number: data.chapter_number !== '' ? Number(data.chapter_number) : null,
+          youtube_url: data.youtube_url.trim() || undefined,
+          audio_url: data.audio_url.trim() || undefined,
+        }),
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Erreur mise à jour'); }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['xassida-audios-admin', editingXassida?.id] });
+      setEditingAudioId(null);
+    },
     onError: (e: any) => alert(e.message),
   });
 
@@ -1869,23 +1893,93 @@ export function XassidasAdmin() {
                 <p className="text-xs text-muted-foreground italic">Aucun audio ajouté</p>
               )}
               {editingAudios.map((audio) => (
-                <div key={audio.id} className="flex items-center gap-2 bg-card rounded-lg px-3 py-2 border text-sm">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{audio.reciter_name}{audio.label ? ` · ${audio.label}` : ''}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {audio.chapter_number !== null ? `Ch. ${audio.chapter_number}` : 'Toute la xassida'}
-                      {' · '}
-                      {audio.youtube_id ? '▶ YouTube' : '🎵 MP3'}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => deleteAudioMutation.mutate(audio.id)}
-                    disabled={deleteAudioMutation.isPending}
-                    className="text-destructive hover:text-destructive/70 flex-shrink-0 p-1"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                <div key={audio.id} className="bg-card rounded-lg border text-sm overflow-hidden">
+                  {editingAudioId === audio.id ? (
+                    /* ── Inline edit form ── */
+                    <div className="p-3 space-y-2">
+                      <Input
+                        placeholder="Nom du récitateur *"
+                        value={editAudioForm.reciter_name}
+                        onChange={(e) => setEditAudioForm((f) => ({ ...f, reciter_name: e.target.value }))}
+                      />
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Chapitre (opt.)"
+                          className="w-32 flex-shrink-0"
+                          value={editAudioForm.chapter_number}
+                          onChange={(e) => setEditAudioForm((f) => ({ ...f, chapter_number: e.target.value }))}
+                        />
+                        <Input
+                          placeholder="URL YouTube"
+                          className="flex-1"
+                          value={editAudioForm.youtube_url}
+                          onChange={(e) => setEditAudioForm((f) => ({ ...f, youtube_url: e.target.value }))}
+                        />
+                      </div>
+                      <Input
+                        placeholder="URL Audio MP3"
+                        value={editAudioForm.audio_url}
+                        onChange={(e) => setEditAudioForm((f) => ({ ...f, audio_url: e.target.value }))}
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="flex-1"
+                          disabled={!editAudioForm.reciter_name.trim() || updateAudioMutation.isPending}
+                          onClick={() => updateAudioMutation.mutate({ audioId: audio.id, data: editAudioForm })}
+                        >
+                          {updateAudioMutation.isPending
+                            ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />Sauvegarde...</>
+                            : <><Save className="w-3.5 h-3.5 mr-1.5" />Sauvegarder</>}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setEditingAudioId(null)}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* ── Read-only row ── */
+                    <div className="flex items-center gap-2 px-3 py-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{audio.reciter_name}{audio.label ? ` · ${audio.label}` : ''}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {audio.chapter_number !== null ? `Ch. ${audio.chapter_number}` : 'Toute la xassida'}
+                          {' · '}
+                          {audio.youtube_id ? '▶ YouTube' : '🎵 MP3'}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingAudioId(audio.id);
+                          setEditAudioForm({
+                            reciter_name: audio.reciter_name,
+                            chapter_number: audio.chapter_number !== null ? String(audio.chapter_number) : '',
+                            youtube_url: audio.youtube_id ? `https://www.youtube.com/watch?v=${audio.youtube_id}` : '',
+                            audio_url: audio.audio_url || '',
+                          });
+                        }}
+                        className="text-muted-foreground hover:text-foreground flex-shrink-0 p-1"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteAudioMutation.mutate(audio.id)}
+                        disabled={deleteAudioMutation.isPending}
+                        className="text-destructive hover:text-destructive/70 flex-shrink-0 p-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
 
