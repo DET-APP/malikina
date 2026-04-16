@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -87,6 +87,21 @@ export function XassidasAdmin() {
     if (typeof window === 'undefined') return false;
     return window.sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true';
   });
+  const arabicTextareaRefs = useRef<Map<number, HTMLTextAreaElement>>(new Map());
+
+  const insertVerseMarker = (globalIdx: number) => {
+    const ta = arabicTextareaRefs.current.get(globalIdx);
+    if (!ta) return;
+    const start = ta.selectionStart ?? ta.value.length;
+    const end = ta.selectionEnd ?? ta.value.length;
+    const newVal = ta.value.slice(0, start) + ' | ' + ta.value.slice(end);
+    handleVerseFieldChange(globalIdx, 'text_arabic', newVal);
+    requestAnimationFrame(() => {
+      ta.selectionStart = ta.selectionEnd = start + 3;
+      ta.focus();
+    });
+  };
+
   const [uploadingByXassida, setUploadingByXassida] = useState<Record<string, boolean>>({});
   const [loadingVersesByXassida, setLoadingVersesByXassida] = useState<Record<string, boolean>>({});
   const [uploadProgressByXassida, setUploadProgressByXassida] = useState<Record<string, number>>({});
@@ -1163,8 +1178,22 @@ export function XassidasAdmin() {
 
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Texte Arabe</label>
+                          <div className="flex items-center justify-between ml-1">
+                            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Texte Arabe</label>
+                            <button
+                              type="button"
+                              onClick={() => insertVerseMarker(globalIdx)}
+                              title="Insérer un séparateur de verset à la position du curseur"
+                              className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border border-primary/40 text-primary bg-primary/5 hover:bg-primary/15 transition-colors select-none"
+                            >
+                              <span className="text-base leading-none">❙</span> Marquer
+                            </button>
+                          </div>
                           <Textarea
+                            ref={(el) => {
+                              if (el) arabicTextareaRefs.current.set(globalIdx, el);
+                              else arabicTextareaRefs.current.delete(globalIdx);
+                            }}
                             value={verse.text_arabic}
                             onChange={(e) => handleVerseFieldChange(globalIdx, 'text_arabic', e.target.value)}
                             className="font-arabic text-right leading-loose min-h-[100px] resize-y text-2xl p-4 bg-muted/10 focus:bg-background transition-colors"

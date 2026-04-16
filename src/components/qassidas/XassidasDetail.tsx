@@ -593,7 +593,22 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
 
                       {/* Arabic */}
                       <p className={`text-right font-arabic leading-loose ${arabicTxt}`} style={{ fontSize: `${fontSize}px` }} dir="rtl">
-                        {verse.text_arabic}
+                        {verse.text_arabic.includes('|')
+                          ? verse.text_arabic.split('|').map((part, i, arr) => (
+                              <span key={i}>
+                                {part.trim()}
+                                {i < arr.length - 1 && (
+                                  <span
+                                    className="inline-block mx-3 text-primary font-bold select-none align-middle"
+                                    style={{ fontSize: `${Math.round(fontSize * 0.7)}px` }}
+                                    aria-hidden
+                                  >
+                                    ◆
+                                  </span>
+                                )}
+                              </span>
+                            ))
+                          : verse.text_arabic}
                       </p>
 
                       {/* Transliteration */}
