@@ -28,6 +28,8 @@ interface XassidaAudio {
   audio_url: string | null;
   label: string | null;
   order_index: number;
+  start_time?: number; // In seconds
+  end_time?: number | null; // In seconds, null = use full duration
 }
 
 interface XassidasDetailProps {
@@ -83,9 +85,14 @@ function onYTReady(cb: () => void) {
 
 // ── YouTube audio player (hidden iframe + custom controls) ───────────────────
 
-interface YouTubeAudioPlayerProps { videoId: string; dark: boolean }
+interface YouTubeAudioPlayerProps { 
+  videoId: string; 
+  dark: boolean;
+  startTime?: number; // In seconds
+  endTime?: number | null; // In seconds, null = use full duration
+}
 
-const YouTubeAudioPlayer = ({ videoId, dark }: YouTubeAudioPlayerProps) => {
+const YouTubeAudioPlayer = ({ videoId, dark, startTime = 0, endTime = null }: YouTubeAudioPlayerProps) => {
   const divId   = useRef(`yt-${Math.random().toString(36).slice(2)}`).current;
   const player  = useRef<any>(null);
   const ticker  = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -94,6 +101,9 @@ const YouTubeAudioPlayer = ({ videoId, dark }: YouTubeAudioPlayerProps) => {
   const [duration, setDuration] = useState(0);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState(false);
+
+  // Calculate effective duration (trimmed or full)
+  const effectiveDuration = endTime !== null && endTime > startTime ? (endTime - startTime) : duration - startTime;
 
   useEffect(() => {
     onYTReady(() => {
@@ -106,6 +116,10 @@ const YouTubeAudioPlayer = ({ videoId, dark }: YouTubeAudioPlayerProps) => {
           onReady: () => {
             setLoading(false);
             setDuration(player.current?.getDuration() ?? 0);
+            // Seek to start_time on load
+            if (startTime > 0) {
+              player.current?.seekTo(startTime, true);
+            }
           },
           onStateChange: (e: any) => {
             if (e.data === 1 /* PLAYING */) {
@@ -113,8 +127,22 @@ const YouTubeAudioPlayer = ({ videoId, dark }: YouTubeAudioPlayerProps) => {
               setDuration(player.current?.getDuration() ?? 0);
               ticker.current = setInterval(() => {
                 const cur = player.current?.getCurrentTime() ?? 0;
-                const dur = player.current?.getDuration() ?? 0;
-                if (dur > 0) setProgress((cur / dur) * 100);
+                
+                // Stop at end_time if specified
+                if (endTime !== null && cur >= endTime) {
+                  player.current?.pauseVideo();
+                  player.current?.seekTo(startTime, true);
+                  setProgress(0);
+                  setPlaying(false);
+                  clearInterval(ticker.current!);
+                  return;
+                }
+                
+                // Calculate progress relative to trimmed audio
+                const adjustedCur = Math.max(0, cur - startTime);
+                if (effectiveDuration > 0) {
+                  setProgress((adjustedCur / effectiveDuration) * 100);
+                }
               }, 500);
             } else {
               setPlaying(false);
@@ -131,17 +159,28 @@ const YouTubeAudioPlayer = ({ videoId, dark }: YouTubeAudioPlayerProps) => {
       player.current?.destroy?.();
       player.current = null;
     };
-  }, [videoId, divId]);
+  }, [videoId, divId, startTime, endTime]);
 
   const toggle = () => {
     if (!player.current) return;
-    playing ? player.current.pauseVideo() : player.current.playVideo();
+    if (playing) {
+      player.current.pauseVideo();
+    } else {
+      const currentTime = player.current?.getCurrentTime() ?? 0;
+      // If paused and before start_time, seek to start_time
+      if (currentTime < startTime) {
+        player.current?.seekTo(startTime, true);
+      }
+      player.current.playVideo();
+    }
   };
 
   const seek = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!player.current) return;
     const pct = Number(e.target.value);
-    player.current.seekTo((pct / 100) * (player.current.getDuration() ?? 0), true);
+    // Convert percentage to absolute time, accounting for start/end trim
+    const seekTime = startTime + (pct / 100) * effectiveDuration;
+    player.current.seekTo(seekTime, true);
     setProgress(pct);
   };
 
@@ -155,6 +194,13 @@ const YouTubeAudioPlayer = ({ videoId, dark }: YouTubeAudioPlayerProps) => {
       <div style={{ position: 'fixed', top: '-9999px', left: '-9999px', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none' }}>
         <div id={divId} />
       </div>
+
+      {/* Trim indicator */}
+      {(startTime > 0 || endTime !== null) && !error && (
+        <div className={`text-xs mb-2 px-2 py-1 rounded ${dark ? 'bg-amber-900/30 text-amber-300/70' : 'bg-primary/10 text-primary/70'}`}>
+          📌 {fmt(startTime)} - {endTime !== null ? fmt(endTime) : 'Fin'}
+        </div>
+      )}
 
       {error ? (
         <p className={`text-xs text-center ${sub}`}>❌ Audio indisponible</p>
@@ -170,8 +216,8 @@ const YouTubeAudioPlayer = ({ videoId, dark }: YouTubeAudioPlayerProps) => {
             </div>
             <input type="range" min={0} max={100} value={progress} onChange={seek} className="w-full h-1 accent-primary cursor-pointer" />
             <div className={`flex justify-between text-xs mt-0.5 ${sub}`}>
-              <span>{fmt((progress / 100) * duration)}</span>
-              <span>{fmt(duration)}</span>
+              <span>{fmt((progress / 100) * effectiveDuration)}</span>
+              <span>{fmt(effectiveDuration)}</span>
             </div>
           </div>
         </div>
@@ -182,9 +228,14 @@ const YouTubeAudioPlayer = ({ videoId, dark }: YouTubeAudioPlayerProps) => {
 
 // ── Native audio player (MP3/local) ──────────────────────────────────────────
 
-interface AudioPlayerProps { url: string; dark: boolean }
+interface AudioPlayerProps { 
+  url: string; 
+  dark: boolean;
+  startTime?: number; // In seconds
+  endTime?: number | null; // In seconds, null = use full duration
+}
 
-const AudioPlayer = ({ url, dark }: AudioPlayerProps) => {
+const AudioPlayer = ({ url, dark, startTime = 0, endTime = null }: AudioPlayerProps) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -192,17 +243,31 @@ const AudioPlayer = ({ url, dark }: AudioPlayerProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  // Calculate effective duration (trimmed or full)
+  const effectiveDuration = endTime !== null && endTime > startTime ? (endTime - startTime) : duration - startTime;
+
   const toggle = () => {
     const a = audioRef.current;
     if (!a) return;
-    if (playing) { a.pause(); setPlaying(false); }
-    else { a.play().catch((err) => { console.error('Audio play error:', err); setError(true); }); setPlaying(true); }
+    if (playing) { 
+      a.pause(); 
+      setPlaying(false); 
+    } else { 
+      // Seek to start_time if before it
+      if (a.currentTime < startTime) {
+        a.currentTime = startTime;
+      }
+      a.play().catch((err) => { console.error('Audio play error:', err); setError(true); }); 
+      setPlaying(true); 
+    }
   };
 
   const seek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const a = audioRef.current;
     if (!a) return;
-    a.currentTime = (Number(e.target.value) / 100) * duration;
+    // Convert percentage to absolute time, accounting for start/end trim
+    const seekTime = startTime + (Number(e.target.value) / 100) * effectiveDuration;
+    a.currentTime = seekTime;
     setProgress(Number(e.target.value));
   };
 
@@ -216,11 +281,42 @@ const AudioPlayer = ({ url, dark }: AudioPlayerProps) => {
         ref={audioRef}
         src={url}
         crossOrigin="anonymous"
-        onTimeUpdate={() => { const a = audioRef.current; if (a?.duration) setProgress((a.currentTime / a.duration) * 100); }}
-        onLoadedMetadata={() => { setDuration(audioRef.current?.duration ?? 0); setLoading(false); }}
+        onTimeUpdate={() => { 
+          const a = audioRef.current;
+          if (!a || !a.duration) return;
+          
+          // Stop at end_time if specified
+          if (endTime !== null && a.currentTime >= endTime) {
+            a.pause();
+            a.currentTime = startTime;
+            setProgress(0);
+            setPlaying(false);
+            return;
+          }
+          
+          // Calculate progress relative to trimmed audio
+          const adjustedCur = Math.max(0, a.currentTime - startTime);
+          setProgress((adjustedCur / effectiveDuration) * 100);
+        }}
+        onLoadedMetadata={() => { 
+          setDuration(audioRef.current?.duration ?? 0);
+          setLoading(false);
+          // Seek to start_time on load
+          if (audioRef.current && startTime > 0) {
+            audioRef.current.currentTime = startTime;
+          }
+        }}
         onEnded={() => setPlaying(false)}
         onError={(e) => { console.error('Audio error:', e); setError(true); setLoading(false); }}
       />
+      
+      {/* Trim indicator */}
+      {(startTime > 0 || endTime !== null) && !error && (
+        <div className={`text-xs mb-2 px-2 py-1 rounded ${dark ? 'bg-amber-900/30 text-amber-300/70' : 'bg-primary/10 text-primary/70'}`}>
+          📌 {fmt(startTime)} - {endTime !== null ? fmt(endTime) : 'Fin'}
+        </div>
+      )}
+      
       {error ? (
         <p className={`text-xs text-center ${sub}`}>❌ Audio indisponible — Lien ou format incompatible</p>
       ) : !url ? (
@@ -237,8 +333,8 @@ const AudioPlayer = ({ url, dark }: AudioPlayerProps) => {
             </div>
             <input type="range" min={0} max={100} value={progress} onChange={seek} className="w-full h-1 accent-primary cursor-pointer" />
             <div className={`flex justify-between text-xs mt-0.5 ${sub}`}>
-              <span>{fmt((progress / 100) * duration)}</span>
-              <span>{fmt(duration)}</span>
+              <span>{fmt((progress / 100) * effectiveDuration)}</span>
+              <span>{fmt(effectiveDuration)}</span>
             </div>
           </div>
         </div>
@@ -585,13 +681,37 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
 
             {/* Player */}
             {activeAudio?.youtube_id ? (
-              <YouTubeAudioPlayer key={activeAudio.id} videoId={activeAudio.youtube_id} dark={d} />
+              <YouTubeAudioPlayer 
+                key={activeAudio.id} 
+                videoId={activeAudio.youtube_id} 
+                dark={d}
+                startTime={activeAudio.start_time ?? 0}
+                endTime={activeAudio.end_time ?? null}
+              />
             ) : activeAudio?.audio_url ? (
-              <AudioPlayer key={activeAudio.id} url={activeAudio.audio_url} dark={d} />
+              <AudioPlayer 
+                key={activeAudio.id} 
+                url={activeAudio.audio_url} 
+                dark={d}
+                startTime={activeAudio.start_time ?? 0}
+                endTime={activeAudio.end_time ?? null}
+              />
             ) : legacyAudio?.youtube_id ? (
-              <YouTubeAudioPlayer key="legacy-yt" videoId={legacyAudio.youtube_id} dark={d} />
+              <YouTubeAudioPlayer 
+                key="legacy-yt" 
+                videoId={legacyAudio.youtube_id} 
+                dark={d}
+                startTime={legacyAudio.start_time ?? 0}
+                endTime={legacyAudio.end_time ?? null}
+              />
             ) : legacyAudio?.audio_url ? (
-              <AudioPlayer key="legacy-mp3" url={legacyAudio.audio_url} dark={d} />
+              <AudioPlayer 
+                key="legacy-mp3" 
+                url={legacyAudio.audio_url} 
+                dark={d}
+                startTime={legacyAudio.start_time ?? 0}
+                endTime={legacyAudio.end_time ?? null}
+              />
             ) : null}
           </div>
         )}

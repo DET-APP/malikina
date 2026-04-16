@@ -65,6 +65,8 @@ interface XassidaAudio {
   audio_url: string | null;
   label: string | null;
   order_index: number;
+  start_time?: number | null; // In seconds
+  end_time?: number | null; // In seconds
 }
 
 const VERSES_CHUNK_SIZE = 100;
@@ -196,9 +198,9 @@ export function XassidasAdmin() {
   const [editingXassida, setEditingXassida] = useState<Xassida | null>(null);
 
   // Audio management for the edit dialog
-  const [audioForm, setAudioForm] = useState({ reciter_name: '', chapter_number: '', youtube_url: '', audio_url: '' });
+  const [audioForm, setAudioForm] = useState({ reciter_name: '', chapter_number: '', youtube_url: '', audio_url: '', start_time_minutes: '', end_time_minutes: '' });
   const [editingAudioId, setEditingAudioId] = useState<string | null>(null);
-  const [editAudioForm, setEditAudioForm] = useState({ reciter_name: '', chapter_number: '', youtube_url: '', audio_url: '' });
+  const [editAudioForm, setEditAudioForm] = useState({ reciter_name: '', chapter_number: '', youtube_url: '', audio_url: '', start_time_minutes: '', end_time_minutes: '' });
 
   const { data: editingAudios = [], refetch: refetchAudios } = useQuery<XassidaAudio[]>({
     queryKey: ['xassida-audios-admin', editingXassida?.id],
@@ -213,6 +215,15 @@ export function XassidasAdmin() {
 
   const addAudioMutation = useMutation({
     mutationFn: async (data: typeof audioForm) => {
+      // Convert MM:SS format to total seconds
+      const parseTimeMinutes = (input: string) => {
+        if (!input.trim()) return undefined;
+        const parts = input.trim().split(':');
+        const minutes = parseInt(parts[0], 10) || 0;
+        const seconds = parseInt(parts[1], 10) || 0;
+        return minutes * 60 + seconds;
+      };
+
       const res = await fetch(`${API_URL}/xassidas/${editingXassida!.id}/audios`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -221,6 +232,8 @@ export function XassidasAdmin() {
           chapter_number: data.chapter_number !== '' ? Number(data.chapter_number) : null,
           youtube_url: data.youtube_url.trim() || undefined,
           audio_url: data.audio_url.trim() || undefined,
+          start_time: parseTimeMinutes(data.start_time_minutes),
+          end_time: parseTimeMinutes(data.end_time_minutes),
         }),
       });
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Erreur ajout audio'); }
@@ -228,7 +241,7 @@ export function XassidasAdmin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['xassida-audios-admin', editingXassida?.id] });
-      setAudioForm({ reciter_name: '', chapter_number: '', youtube_url: '', audio_url: '' });
+      setAudioForm({ reciter_name: '', chapter_number: '', youtube_url: '', audio_url: '', start_time_minutes: '', end_time_minutes: '' });
     },
     onError: (e: any) => alert(e.message),
   });
@@ -245,6 +258,15 @@ export function XassidasAdmin() {
 
   const updateAudioMutation = useMutation({
     mutationFn: async ({ audioId, data }: { audioId: string; data: typeof editAudioForm }) => {
+      // Convert MM:SS format to total seconds
+      const parseTimeMinutes = (input: string) => {
+        if (!input.trim()) return undefined;
+        const parts = input.trim().split(':');
+        const minutes = parseInt(parts[0], 10) || 0;
+        const seconds = parseInt(parts[1], 10) || 0;
+        return minutes * 60 + seconds;
+      };
+
       const res = await fetch(`${API_URL}/xassidas/${editingXassida!.id}/audios/${audioId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -253,6 +275,8 @@ export function XassidasAdmin() {
           chapter_number: data.chapter_number !== '' ? Number(data.chapter_number) : null,
           youtube_url: data.youtube_url.trim() || undefined,
           audio_url: data.audio_url.trim() || undefined,
+          start_time: parseTimeMinutes(data.start_time_minutes),
+          end_time: parseTimeMinutes(data.end_time_minutes),
         }),
       });
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Erreur mise à jour'); }
@@ -1925,6 +1949,24 @@ export function XassidasAdmin() {
                         onChange={(e) => setEditAudioForm((f) => ({ ...f, audio_url: e.target.value }))}
                       />
                       <div className="flex gap-2">
+                        <div className="flex-1">
+                          <label className="text-xs text-muted-foreground">Début (MM:SS, opt.)</label>
+                          <Input
+                            placeholder="0:00"
+                            value={editAudioForm.start_time_minutes}
+                            onChange={(e) => setEditAudioForm((f) => ({ ...f, start_time_minutes: e.target.value }))}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-xs text-muted-foreground">Fin (MM:SS, opt.)</label>
+                          <Input
+                            placeholder="MM:SS"
+                            value={editAudioForm.end_time_minutes}
+                            onChange={(e) => setEditAudioForm((f) => ({ ...f, end_time_minutes: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
                         <Button
                           type="button"
                           size="sm"
@@ -1960,12 +2002,22 @@ export function XassidasAdmin() {
                       <button
                         type="button"
                         onClick={() => {
+                          // Convert seconds back to MM:SS format for display
+                          const formatSeconds = (secs?: number | null) => {
+                            if (!secs) return '';
+                            const mins = Math.floor(secs / 60);
+                            const s = secs % 60;
+                            return `${mins}:${String(s).padStart(2, '0')}`;
+                          };
+
                           setEditingAudioId(audio.id);
                           setEditAudioForm({
                             reciter_name: audio.reciter_name,
                             chapter_number: audio.chapter_number !== null ? String(audio.chapter_number) : '',
                             youtube_url: audio.youtube_id ? `https://www.youtube.com/watch?v=${audio.youtube_id}` : '',
                             audio_url: audio.audio_url || '',
+                            start_time_minutes: formatSeconds(audio.start_time),
+                            end_time_minutes: formatSeconds(audio.end_time),
                           });
                         }}
                         className="text-muted-foreground hover:text-foreground flex-shrink-0 p-1"
@@ -2013,6 +2065,24 @@ export function XassidasAdmin() {
                   value={audioForm.audio_url}
                   onChange={(e) => setAudioForm((f) => ({ ...f, audio_url: e.target.value }))}
                 />
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <label className="text-xs text-muted-foreground">Début (MM:SS, opt.)</label>
+                    <Input
+                      placeholder="0:00"
+                      value={audioForm.start_time_minutes}
+                      onChange={(e) => setAudioForm((f) => ({ ...f, start_time_minutes: e.target.value }))}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-xs text-muted-foreground">Fin (MM:SS, opt.)</label>
+                    <Input
+                      placeholder="MM:SS"
+                      value={audioForm.end_time_minutes}
+                      onChange={(e) => setAudioForm((f) => ({ ...f, end_time_minutes: e.target.value }))}
+                    />
+                  </div>
+                </div>
                 <Button
                   type="button"
                   size="sm"
