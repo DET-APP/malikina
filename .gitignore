@@ -57,6 +57,15 @@ AGENTS.md
 # Vite PWA dev output
 dev-dist/
 
+# Capacitor — garder android/ et ios/ dans git, exclure seulement les builds
+android/.gradle/
+android/app/build/
+android/build/
+android/.idea/
+ios/App/Pods/
+ios/App/App.xcworkspace/xcuserdata/
+ios/.idea/
+
 # Build outputs
 /dist
 /build
