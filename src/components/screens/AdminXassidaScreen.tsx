@@ -11,13 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useForm } from 'react-hook-form';
 import { cn } from '@/lib/utils';
-import { Plus, Edit2, Trash2, Upload, Save, ChevronLeft, ChevronRight, Loader2, Lock, Users, BookOpen, FileText, Music, Link, Youtube, FolderOpen, Pencil, Globe, BarChart3, Settings, X, Search, LayoutDashboard, Filter, Eye } from 'lucide-react';
-
-const API_URL =
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://165-245-211-201.sslip.io/api');
-const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
-const ADMIN_SESSION_KEY = 'malikina-admin-unlocked';
+import { Plus, Edit2, Trash2, Upload, Save, ChevronLeft, ChevronRight, Loader2, Lock, Users, BookOpen, FileText, Music, Link, Youtube, FolderOpen, Pencil, Globe, BarChart3, Settings, X, Search, LayoutDashboard, Filter, Eye, EyeOff, ShieldCheck, LogOut } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL as API_URL } from '@/lib/apiUrl';
 
 interface Author {
   id: string;
@@ -84,22 +80,18 @@ const groupVersesByTwo = (verses: Verse[]): Verse[][] => {
 
 export function XassidasAdmin() {
   const queryClient = useQueryClient();
+  const { user, token, logout, can } = useAuth();
+  const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
   const [selectedXassida, setSelectedXassida] = useState<Xassida | null>(null);
   const [editorVerses, setEditorVerses] = useState<Verse[]>([]);
   const [currentVersePage, setCurrentVersePage] = useState(1);
   const [editorFontSize, setEditorFontSize] = useState(32);
   const [showAuthorDialog, setShowAuthorDialog] = useState(false);
   const [showXassidaDialog, setShowXassidaDialog] = useState(false);
-  const [createNewAuthorMode, setCreateNewAuthorMode] = useState(false); // Toggle for new author mode
-  const [passwordInput, setPasswordInput] = useState('');
-  const [authError, setAuthError] = useState('');
+  const [createNewAuthorMode, setCreateNewAuthorMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [isUnlocked, setIsUnlocked] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true';
-  });
   const arabicTextareaRefs = useRef<Map<number, HTMLTextAreaElement>>(new Map());
 
   const insertVerseMarker = (globalIdx: number) => {
@@ -215,7 +207,6 @@ export function XassidasAdmin() {
 
   const addAudioMutation = useMutation({
     mutationFn: async (data: typeof audioForm) => {
-      // Convert MM:SS format to total seconds
       const parseTimeMinutes = (input: string) => {
         if (!input.trim()) return undefined;
         const parts = input.trim().split(':');
@@ -226,7 +217,7 @@ export function XassidasAdmin() {
 
       const res = await fetch(`${API_URL}/xassidas/${editingXassida!.id}/audios`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
           reciter_name: data.reciter_name.trim(),
           chapter_number: data.chapter_number !== '' ? Number(data.chapter_number) : null,
@@ -249,7 +240,7 @@ export function XassidasAdmin() {
 
   const deleteAudioMutation = useMutation({
     mutationFn: async (audioId: string) => {
-      const res = await fetch(`${API_URL}/xassidas/${editingXassida!.id}/audios/${audioId}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/xassidas/${editingXassida!.id}/audios/${audioId}`, { method: 'DELETE', headers: authHeaders });
       if (!res.ok) throw new Error('Erreur suppression audio');
       return res.json();
     },
@@ -273,7 +264,7 @@ export function XassidasAdmin() {
 
       const res = await fetch(`${API_URL}/xassidas/${editingXassida!.id}/audios/${audioId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
           reciter_name: data.reciter_name.trim(),
           chapter_number: data.chapter_number !== '' ? Number(data.chapter_number) : null,
@@ -335,7 +326,7 @@ export function XassidasAdmin() {
     mutationFn: async (data: { id: string; name: string; description?: string; tradition?: string }) => {
       const response = await fetch(`${API_URL}/authors/${data.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ name: data.name, description: data.description, tradition: data.tradition })
       });
       if (!response.ok) throw new Error('Impossible de modifier l\'auteur');
@@ -346,6 +337,7 @@ export function XassidasAdmin() {
         formData.append('photo', editAuthorPhotoFile);
         const uploadRes = await fetch(`${API_URL}/authors/${data.id}/upload-photo`, {
           method: 'POST',
+          headers: authHeaders,
           body: formData
         });
         if (!uploadRes.ok) {
@@ -367,7 +359,7 @@ export function XassidasAdmin() {
 
   const deleteAuthorMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`${API_URL}/authors/${id}`, { method: 'DELETE' });
+      const response = await fetch(`${API_URL}/authors/${id}`, { method: 'DELETE', headers: authHeaders });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
         throw new Error(payload.error || 'Impossible de supprimer l\'auteur');
@@ -376,7 +368,7 @@ export function XassidasAdmin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['authors'] });
-      queryClient.invalidateQueries({ queryKey: ['xassidas'] });
+      queryClient.invalidateQueries({ queryKey: ['xassidas-admin'] });
     },
     onError: (error: any) => alert(`Erreur: ${error?.message}`)
   });
@@ -397,11 +389,6 @@ export function XassidasAdmin() {
   };
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.sessionStorage.setItem(ADMIN_SESSION_KEY, isUnlocked ? 'true' : 'false');
-  }, [isUnlocked]);
-
-  useEffect(() => {
     if (currentVersePage > totalVersePages) {
       setCurrentVersePage(totalVersePages);
     }
@@ -413,10 +400,10 @@ export function XassidasAdmin() {
     queryFn: () => fetch(`${API_URL}/authors`).then(r => r.json())
   });
 
-  // Fetch xassidas
+  // Fetch xassidas — admin voit tout (y compris masqués)
   const { data: xassidas = [] } = useQuery({
-    queryKey: ['xassidas'],
-    queryFn: () => fetch(`${API_URL}/xassidas`).then(r => r.json())
+    queryKey: ['xassidas-admin'],
+    queryFn: () => fetch(`${API_URL}/xassidas?admin=true`, { headers: authHeaders }).then(r => r.json())
   });
 
   const filteredXassidas = useMemo(() => {
@@ -621,7 +608,7 @@ export function XassidasAdmin() {
     onSuccess: (data) => {
       console.log('✅ Succès! Xassida ajoutée:', data);
       queryClient.invalidateQueries({ queryKey: ['authors'] });
-      queryClient.invalidateQueries({ queryKey: ['xassidas'] });
+      queryClient.invalidateQueries({ queryKey: ['xassidas-admin'] });
       queryClient.invalidateQueries({ queryKey: ['xassida-detail'] });
       xassidaForm.reset({
         title: '',
@@ -664,7 +651,7 @@ export function XassidasAdmin() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['xassidas'] });
+      queryClient.invalidateQueries({ queryKey: ['xassidas-admin'] });
       setEditorVerses([]);
       setCurrentVersePage(1);
       setSelectedXassida(null);
@@ -712,7 +699,7 @@ export function XassidasAdmin() {
       return xassidaData;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['xassidas'] });
+      queryClient.invalidateQueries({ queryKey: ['xassidas-admin'] });
       queryClient.invalidateQueries({ queryKey: ['xassida-detail'] });
       setShowEditXassidaDialog(false);
       setEditingXassida(null);
@@ -726,7 +713,8 @@ export function XassidasAdmin() {
   const deleteXassidaMutation = useMutation({
     mutationFn: async (id: string) => {
       const response = await fetch(`${API_URL}/xassidas/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: authHeaders,
       });
 
       if (!response.ok) {
@@ -737,7 +725,7 @@ export function XassidasAdmin() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['xassidas'] });
+      queryClient.invalidateQueries({ queryKey: ['xassidas-admin'] });
       if (selectedXassida) {
         setSelectedXassida(null);
         setEditorVerses([]);
@@ -747,6 +735,19 @@ export function XassidasAdmin() {
     onError: (error: any) => {
       alert(`Erreur suppression: ${error?.message || 'Impossible de supprimer la xassida'}`);
     }
+  });
+
+  const toggleVisibilityMutation = useMutation({
+    mutationFn: async ({ id, is_visible }: { id: string; is_visible: boolean }) => {
+      const res = await fetch(`${API_URL}/xassidas/${id}/visibility`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ is_visible }),
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Erreur'); }
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['xassidas-admin'] }),
   });
 
   const importTranslationsMutation = useMutation({
@@ -767,7 +768,7 @@ export function XassidasAdmin() {
     onSuccess: (data) => {
       setImportTranslateSuccess(`✅ ${data.successCount} traductions importées ${data.errorCount > 0 ? `(${data.errorCount} erreurs)` : ''}`);
       setTranslationJsonInput('');
-      queryClient.invalidateQueries({ queryKey: ['xassidas'] });
+      queryClient.invalidateQueries({ queryKey: ['xassidas-admin'] });
       setTimeout(() => {
         setImportTranslateSuccess('');
       }, 5000);
@@ -806,7 +807,7 @@ export function XassidasAdmin() {
         ...prev,
         [variables.xassidaId]: ''
       }));
-      queryClient.invalidateQueries({ queryKey: ['xassidas'] });
+      queryClient.invalidateQueries({ queryKey: ['xassidas-admin'] });
       setTimeout(() => {
         setXassidaImportSuccess((prev) => ({
           ...prev,
@@ -1012,72 +1013,13 @@ export function XassidasAdmin() {
 
   const totalVerses = xassidas.reduce((sum: number, x: Xassida) => sum + (Number(x.verse_count) || 0), 0);
 
-  const handleUnlockAdmin = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (passwordInput === ADMIN_PASSWORD) {
-      setIsUnlocked(true);
-      setAuthError('');
-      setPasswordInput('');
-      return;
-    }
-    setAuthError('Mot de passe incorrect');
+  const ROLE_LABELS: Record<string, string> = {
+    SuperAdmin: 'Super Admin',
+    Admin: 'Administrateur',
+    GerantAudio: 'Gérant Audio',
+    GerantXassida: 'Gérant Xassidas',
+    Moderateur: 'Modérateur',
   };
-
-  const handleLockAdmin = () => {
-    setIsUnlocked(false);
-    setAuthError('');
-    setPasswordInput('');
-  };
-
-  if (!isUnlocked) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <div className="bg-gradient-to-br from-primary to-green-dark pt-16 pb-20 px-6 text-center relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />
-          <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-4">
-            <Settings className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-white">Administration</h1>
-          <p className="text-sm text-white/70 mt-2">Gestion des Xassidas</p>
-        </div>
-
-        <div className="flex-1 flex items-start justify-center px-6 -mt-10">
-          <Card className="w-full max-w-md shadow-card">
-            <CardHeader className="text-center pb-2">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                <Lock className="w-5 h-5 text-primary" />
-              </div>
-              <CardTitle className="text-lg">Accès protégé</CardTitle>
-              <CardDescription>Entrez le mot de passe pour continuer</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleUnlockAdmin} className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Mot de passe</label>
-                  <Input
-                    type="password"
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    placeholder="••••••••"
-                    className="h-11"
-                  />
-                </div>
-                {authError && (
-                  <div className="bg-destructive/10 border border-destructive/20 text-destructive px-3 py-2 rounded-lg text-sm text-center">
-                    {authError}
-                  </div>
-                )}
-                <Button type="submit" className="w-full h-11">
-                  <Lock className="w-4 h-4 mr-2" />
-                  Déverrouiller
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -1088,21 +1030,25 @@ export function XassidasAdmin() {
           <div className="flex items-start justify-between relative mb-5">
             <div>
               <h1 className="text-2xl font-bold text-white">Administration</h1>
-              <p className="text-sm text-white/70 mt-1">Gérez votre contenu islamique</p>
+              <div className="flex items-center gap-2 mt-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-white/60" />
+                <span className="text-xs text-white/70">{user?.full_name} · {ROLE_LABELS[user?.role || ''] || user?.role}</span>
+              </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={handleLockAdmin} className="text-white/80 hover:text-white hover:bg-white/10">
-              <Lock className="w-4 h-4 mr-1.5" />
-              Verrouiller
+            <Button variant="ghost" size="sm" onClick={logout} className="text-white/80 hover:text-white hover:bg-white/10">
+              <LogOut className="w-4 h-4 mr-1.5" />
+              Déconnexion
             </Button>
           </div>
           {/* Tab navigation intégrée dans le header */}
           <div className="flex gap-1 relative">
             {[
-              { value: 'dashboard', icon: <LayoutDashboard className="w-4 h-4" />, label: 'Stats' },
-              { value: 'xassidas',  icon: <BookOpen className="w-4 h-4" />,        label: 'Xassidas' },
-              { value: 'authors',   icon: <Users className="w-4 h-4" />,           label: 'Auteurs' },
-              { value: 'categories',icon: <FolderOpen className="w-4 h-4" />,      label: 'Catégories' },
-            ].map(tab => (
+              { value: 'dashboard',  icon: <LayoutDashboard className="w-4 h-4" />, label: 'Stats',      show: true },
+              { value: 'xassidas',   icon: <BookOpen className="w-4 h-4" />,        label: 'Xassidas',   show: can('manage_xassidas') },
+              { value: 'authors',    icon: <Users className="w-4 h-4" />,           label: 'Auteurs',    show: can('manage_authors') },
+              { value: 'categories', icon: <FolderOpen className="w-4 h-4" />,      label: 'Catégories', show: can('manage_xassidas') },
+              { value: 'users',      icon: <ShieldCheck className="w-4 h-4" />,     label: 'Utilisateurs', show: can('manage_users') },
+            ].filter(tab => tab.show).map(tab => (
               <button
                 key={tab.value}
                 onClick={() => setActiveTab(tab.value)}
@@ -1685,16 +1631,34 @@ export function XassidasAdmin() {
                                 </DialogContent>
                               </Dialog>
 
-                              <div className="w-px h-5 bg-border mx-0.5" />
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => handleDeleteXassida(x)}
-                                title="Supprimer la xassida"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                              {can('toggle_visibility') && (
+                                <>
+                                  <div className="w-px h-5 bg-border mx-0.5" />
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className={cn("h-8 w-8 p-0", (x as any).is_visible !== false ? "text-green-600 hover:text-green-700" : "text-muted-foreground hover:text-foreground")}
+                                    onClick={() => toggleVisibilityMutation.mutate({ id: x.id, is_visible: (x as any).is_visible === false })}
+                                    title={(x as any).is_visible !== false ? "Masquer la xassida" : "Afficher la xassida"}
+                                  >
+                                    {(x as any).is_visible !== false ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                                  </Button>
+                                </>
+                              )}
+                              {can('delete_xassidas') && (
+                                <>
+                                  <div className="w-px h-5 bg-border mx-0.5" />
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => handleDeleteXassida(x)}
+                                    title="Supprimer la xassida"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1785,10 +1749,15 @@ export function XassidasAdmin() {
                   ))}
                </div>
             </TabsContent>
+
+            {/* Tab: Utilisateurs — SuperAdmin seulement */}
+            <TabsContent value="users" className="space-y-4 mt-0">
+              <UsersTab authHeaders={authHeaders} />
+            </TabsContent>
           </Tabs>
         )}
       </div>
-      
+
       {/* External Dialogs */}
 
       {/* Create Author */}
@@ -2209,6 +2178,137 @@ export function XassidasAdmin() {
             </div>
             {importTranslateError && <p className="text-sm text-destructive">{importTranslateError}</p>}
             {importTranslateSuccess && <p className="text-sm text-primary font-bold">{importTranslateSuccess}</p>}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ── Composant gestion utilisateurs (SuperAdmin) ──────────────────────────────
+
+const ROLES: string[] = ['SuperAdmin', 'Admin', 'GerantAudio', 'GerantXassida', 'Moderateur'];
+
+function UsersTab({ authHeaders }: { authHeaders: Record<string, string> }) {
+  const queryClient = useQueryClient();
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState({ email: '', password: '', full_name: '', role: 'GerantXassida' });
+
+  const { data: users = [], isLoading } = useQuery({
+    queryKey: ['admin-users'],
+    queryFn: () => fetch(`${API_URL}/auth/users`, { headers: authHeaders }).then(r => r.json()),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: typeof form) => {
+      const res = await fetch(`${API_URL}/auth/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      setShowCreate(false);
+      setForm({ email: '', password: '', full_name: '', role: 'GerantXassida' });
+    },
+    onError: (e: any) => alert(e.message),
+  });
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      const res = await fetch(`${API_URL}/auth/users/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ is_active }),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
+  });
+
+  const ROLE_COLORS: Record<string, string> = {
+    SuperAdmin: 'bg-red-100 text-red-700',
+    Admin: 'bg-orange-100 text-orange-700',
+    GerantAudio: 'bg-blue-100 text-blue-700',
+    GerantXassida: 'bg-green-100 text-green-700',
+    Moderateur: 'bg-gray-100 text-gray-700',
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-bold">Utilisateurs ({users.length})</h2>
+        <Button size="sm" onClick={() => setShowCreate(true)}>
+          <Plus className="w-4 h-4 mr-2" /> Nouvel utilisateur
+        </Button>
+      </div>
+
+      {isLoading && <div className="text-center py-8 text-muted-foreground">Chargement...</div>}
+
+      <div className="space-y-3">
+        {users.map((u: any) => (
+          <Card key={u.id} className={cn(!u.is_active && "opacity-50")}>
+            <CardContent className="flex items-center justify-between py-3 px-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-sm">{u.full_name}</span>
+                  <span className={cn("text-xs px-1.5 py-0.5 rounded-full font-medium", ROLE_COLORS[u.role] || 'bg-gray-100 text-gray-700')}>
+                    {u.role}
+                  </span>
+                  {!u.is_active && <span className="text-xs text-muted-foreground">(désactivé)</span>}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">{u.email}</p>
+              </div>
+              <Button
+                size="sm"
+                variant={u.is_active ? "outline" : "default"}
+                className="text-xs h-7"
+                onClick={() => toggleActiveMutation.mutate({ id: u.id, is_active: !u.is_active })}
+              >
+                {u.is_active ? 'Désactiver' : 'Activer'}
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Créer un utilisateur</DialogTitle></DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Nom complet *</label>
+              <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Sheikh..." />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Email *</label>
+              <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="user@malikina.app" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Mot de passe *</label>
+              <Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Min 8 caractères" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Rôle *</label>
+              <select
+                className="w-full h-10 border border-input rounded-md px-3 text-sm bg-background"
+                value={form.role}
+                onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+              >
+                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <Button
+              className="w-full"
+              disabled={!form.email || !form.password || !form.full_name || createMutation.isPending}
+              onClick={() => createMutation.mutate(form)}
+            >
+              {createMutation.isPending ? 'Création...' : 'Créer'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

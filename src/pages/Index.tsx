@@ -11,7 +11,9 @@ import FiqhScreen from "@/components/screens/FiqhScreen";
 import CalendarScreen from "@/components/screens/CalendarScreen";
 import CommunityScreen from "@/components/screens/CommunityScreen";
 import AdminXassidaScreen from "@/components/screens/AdminXassidaScreen";
+import AdminLoginScreen from "@/components/screens/AdminLoginScreen";
 import NewsScreen from "@/components/screens/NewsScreen";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Screen = "home" | "prayer" | "quran" | "calendar" | "qassidas" | "fiqh" | "community" | "admin-xassidas" | "news";
 
@@ -27,6 +29,7 @@ interface AppNavigationParams {
 }
 
 const Index = () => {
+  const { user, isLoading: authLoading } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
   const [activeScreen, setActiveScreen] = useState<Screen>("home");
   const [lastScreen, setLastScreen] = useState<Screen>("home");
@@ -98,6 +101,8 @@ const Index = () => {
       case "community":
         return <CommunityScreen />;
       case "admin-xassidas":
+        if (authLoading) return null;
+        if (!user) return <AdminLoginScreen onSuccess={() => setActiveScreen('admin-xassidas')} />;
         return <AdminXassidaScreen />;
       default:
         return <HomeScreen onNavigate={handleNavigateWithParams} />;

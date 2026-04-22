@@ -1,17 +1,19 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
-export type Language = "fr" | "ar" | "en";
+export type Language = "fr" | "ar" | "en" | "wo";
 
 interface LanguageFlag {
   code: Language;
   label: string;
   flag: string;
+  nativeName: string;
 }
 
 export const languages: LanguageFlag[] = [
-  { code: "fr", label: "Français", flag: "🇫🇷" },
-  { code: "ar", label: "العربية", flag: "🇸🇦" },
-  { code: "en", label: "English", flag: "🇬🇧" },
+  { code: "fr", label: "Français",  flag: "🇫🇷", nativeName: "Français" },
+  { code: "ar", label: "العربية",   flag: "🇸🇦", nativeName: "العربية" },
+  { code: "en", label: "English",   flag: "🇬🇧", nativeName: "English" },
+  { code: "wo", label: "Wolof",     flag: "🇸🇳", nativeName: "Wolof" },
 ];
 
 const translations = {
@@ -141,6 +143,48 @@ const translations = {
     searchResults: "Results",
     seeAll: "See all",
   },
+  wo: {
+    // Home
+    welcome: "Dalal ak jaama",
+    greeting: "As-salamu alaykum",
+    dahira: "Dahira yi ak Talibé Tijaane yi - UAD",
+
+    // Navigation
+    navHome: "Kër gi",
+    navXassidas: "Kasid yi",
+    navQuran: "Koran wi",
+    navPrayer: "Jukël yi",
+    navCommunity: "Ñi ñëw ci kaw",
+
+    // Xassidas screen
+    xassidasTitle: "Kasid yi",
+    xassidasCount: "kasid",
+    loading: "Dafa xëj…",
+    searchPlaceholder: "Seet kasid bi…",
+    gridView: "Laas",
+    listView: "Liist",
+    byAuthor: "Ci njariñ",
+    byCategory: "Ci wàll",
+    all: "Yépp",
+    allFem: "Yépp",
+    serverUnavailable: "Sërvër bi dafa nelaw",
+    serverError: "Amul njariñ ci kasid yi. Jëf ci kanam.",
+    noXassida: "Amul kasid",
+    dbPopulating: "Base bi dafay jël ci sërvër bi.",
+    noXassidaFound: "Amul kasid bu nekk",
+    noResults: "Amul dëkk",
+
+    // Favorites
+    favorites: "Ci xol",
+    noFavorites: "Amul ci xol",
+    noFavoritesDesc: "Yokk kasid yi ci xol ngir gis leen fëkk fii",
+    favoriteCount_one: "1 ci xol",
+    favoriteCount_other: "ci xol",
+
+    // Search
+    searchResults: "Dëkk yi",
+    seeAll: "Gis yépp",
+  },
 } as const;
 
 export type TranslationKey = keyof typeof translations.fr;
@@ -160,7 +204,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [language, setLanguageState] = useState<Language>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored && (stored === "fr" || stored === "ar" || stored === "en")) {
+      if (stored && (stored === "fr" || stored === "ar" || stored === "en" || stored === "wo")) {
         return stored as Language;
       }
     } catch {}
@@ -175,7 +219,8 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const t = (key: TranslationKey): string => {
-    return translations[language][key] || translations.fr[key] || key;
+    const langDict = translations[language] as Record<string, string>;
+    return langDict?.[key] || (translations.fr as Record<string, string>)[key] || key;
   };
 
   const isRTL = language === "ar";

@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { PWAInstallPrompt, PWAUpdatePrompt } from "@/components/PWAPrompt";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { FavoritesProvider } from "@/hooks/useFavorites";
 import { useOfflineInit, useOfflineSync } from "@/hooks/useOfflineSync";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
@@ -55,11 +56,13 @@ const AppContent = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
-      <FavoritesProvider>
-        <TooltipProvider>
-          <AppContent />
-        </TooltipProvider>
-      </FavoritesProvider>
+      <AuthProvider>
+        <FavoritesProvider>
+          <TooltipProvider>
+            <AppContent />
+          </TooltipProvider>
+        </FavoritesProvider>
+      </AuthProvider>
     </LanguageProvider>
   </QueryClientProvider>
 );
