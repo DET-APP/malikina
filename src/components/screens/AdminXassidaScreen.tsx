@@ -241,6 +241,7 @@ export function XassidasAdmin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['xassida-audios-admin', editingXassida?.id] });
+      queryClient.invalidateQueries({ queryKey: ['xassida-audios', editingXassida?.id] });
       setAudioForm({ reciter_name: '', chapter_number: '', youtube_url: '', audio_url: '', start_time_minutes: '', end_time_minutes: '' });
     },
     onError: (e: any) => alert(e.message),
@@ -252,7 +253,10 @@ export function XassidasAdmin() {
       if (!res.ok) throw new Error('Erreur suppression audio');
       return res.json();
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['xassida-audios-admin', editingXassida?.id] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['xassida-audios-admin', editingXassida?.id] });
+      queryClient.invalidateQueries({ queryKey: ['xassida-audios', editingXassida?.id] });
+    },
     onError: (e: any) => alert(e.message),
   });
 
@@ -284,6 +288,7 @@ export function XassidasAdmin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['xassida-audios-admin', editingXassida?.id] });
+      queryClient.invalidateQueries({ queryKey: ['xassida-audios', editingXassida?.id] });
       setEditingAudioId(null);
     },
     onError: (e: any) => alert(e.message),

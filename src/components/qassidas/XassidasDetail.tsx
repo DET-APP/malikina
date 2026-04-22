@@ -445,7 +445,7 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
       }));
     },
     enabled: !!selectedQassida.apiId,
-    staleTime: 60_000,
+    staleTime: 10_000,
   });
 
   // Pre-cache YouTube URLs when audios are loaded
