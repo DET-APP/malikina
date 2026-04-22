@@ -29,6 +29,7 @@ interface Verse {
   transcription?: string;
   translation_fr?: string;
   translation_en?: string;
+  translation_wo?: string;
 }
 
 interface Xassida {
@@ -1276,6 +1277,16 @@ export function XassidasAdmin() {
                               value={verse.translation_fr || ''}
                               onChange={(e) => handleVerseFieldChange(globalIdx, 'translation_fr', e.target.value)}
                               placeholder="Traduction..."
+                              rows={2}
+                              className="bg-muted/10 focus:bg-background transition-colors"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Traduction Wolof 🇸🇳</label>
+                            <Textarea
+                              value={verse.translation_wo || ''}
+                              onChange={(e) => handleVerseFieldChange(globalIdx, 'translation_wo', e.target.value)}
+                              placeholder="Terjemeen ci wolof..."
                               rows={2}
                               className="bg-muted/10 focus:bg-background transition-colors"
                             />

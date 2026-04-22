@@ -14,6 +14,7 @@ import type { Qassida } from "@/data/qassidasData";
 import { authorsData } from "@/data/qassidasData";
 import { enrichedQassidasData } from "@/data/enrichedQassidasData";
 import { searchMatch, extractYouTubeId } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const XASSIDA_API_URL =
   import.meta.env.VITE_API_URL ||
@@ -48,6 +49,7 @@ interface XassidaVerse {
   transcription?: string;
   translation_fr?: string;
   translation_en?: string;
+  translation_wo?: string;
 }
 
 const PAGE_SIZE = 20;
@@ -359,6 +361,7 @@ const fallbackCopy = (text: string, onSuccess: () => void) => {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigateToXassida }: XassidasDetailProps) => {
+  const { language } = useLanguage();
   const [fontSize, setFontSize]           = useState(20);
   const [darkMode, setDarkMode]           = useState(false);
   const [showTranscription, setShowTr]    = useState(false);
@@ -381,7 +384,7 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
   const apiVerses: XassidaVerse[] = Array.isArray(apiDetail?.verses) ? apiDetail.verses : [];
 
   const hasTranscription = apiVerses.some((v) => v.transcription);
-  const hasTranslation   = apiVerses.some((v) => v.translation_fr || v.translation_en);
+  const hasTranslation   = apiVerses.some((v) => v.translation_fr || v.translation_en || v.translation_wo);
 
   // Group by chapter
   const byChapter = apiVerses.reduce<Record<number, XassidaVerse[]>>((acc, v) => {
@@ -401,7 +404,8 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
         // Search with accent-insensitive matching
         return searchMatch(v.text_arabic, verseSearch) ||
                searchMatch(v.transcription, verseSearch) ||
-               searchMatch(v.translation_fr, verseSearch);
+               searchMatch(v.translation_fr, verseSearch) ||
+               searchMatch(v.translation_wo, verseSearch);
       }
       return true;
     })
@@ -967,14 +971,21 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
 
                       {/* Translation */}
                       <AnimatePresence>
-                        {showTranslation && (verse.translation_fr || verse.translation_en) && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0, marginTop: 0 }} animate={{ opacity: 1, height: "auto", marginTop: 10 }} exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                          >
-                            <div className="h-px bg-border/20 mb-2" />
-                            <p className={`text-sm leading-relaxed ${trFr}`}>{verse.translation_fr || verse.translation_en}</p>
-                          </motion.div>
-                        )}
+                        {showTranslation && (verse.translation_fr || verse.translation_en || verse.translation_wo) && (() => {
+                          const tr = language === 'wo'
+                            ? (verse.translation_wo || verse.translation_fr || verse.translation_en)
+                            : language === 'en'
+                            ? (verse.translation_en || verse.translation_fr)
+                            : (verse.translation_fr || verse.translation_en);
+                          return tr ? (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0, marginTop: 0 }} animate={{ opacity: 1, height: "auto", marginTop: 10 }} exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                            >
+                              <div className="h-px bg-border/20 mb-2" />
+                              <p className={`text-sm leading-relaxed ${trFr}`}>{tr}</p>
+                            </motion.div>
+                          ) : null;
+                        })()}
                       </AnimatePresence>
                     </motion.div>
                   </div>
