@@ -165,7 +165,7 @@ export function XassidasAdmin() {
         const chunk = verses.slice(i, i + VERSES_CHUNK_SIZE);
         const response = await fetch(`${API_URL}/xassidas/${xassidaId}/verses`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({
             verses: chunk,
             replaceExisting: replaceExisting && chunkNumber === 1,
@@ -435,7 +435,7 @@ export function XassidasAdmin() {
     mutationFn: async (data: any) => {
       const response = await fetch(`${API_URL}/authors`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ name: data.name, description: data.description, tradition: data.tradition })
       });
       if (!response.ok) throw new Error('Impossible de créer l\'auteur');
@@ -447,6 +447,7 @@ export function XassidasAdmin() {
         formData.append('photo', authorPhotoFile);
         const uploadRes = await fetch(`${API_URL}/authors/${author.id}/upload-photo`, {
           method: 'POST',
+          headers: authHeaders,
           body: formData
         });
         if (!uploadRes.ok) {
@@ -492,7 +493,7 @@ export function XassidasAdmin() {
 
           const authorResponse = await fetch(`${API_URL}/authors`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...authHeaders },
             body: JSON.stringify({
               name: data.author_name.trim(),
               description: data.author_description?.trim() || ''
@@ -518,7 +519,7 @@ export function XassidasAdmin() {
         // Create xassida with the author ID
         const xassidaResponse = await fetch(`${API_URL}/xassidas`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({
             title: data.title.trim(),
             author_id: authorId,
@@ -540,7 +541,7 @@ export function XassidasAdmin() {
           try {
             const setYoutubeResponse = await fetch(`${API_URL}/xassidas/${xassidaData.id}/set-youtube-id`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', ...authHeaders },
               body: JSON.stringify({ youtube_url: data.youtube_url.trim() })
             });
 
@@ -664,7 +665,7 @@ export function XassidasAdmin() {
       // First, update the xassida basic info
       const response = await fetch(`${API_URL}/xassidas/${data.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
           title: data.title,
           description: data.description || '',
@@ -686,7 +687,7 @@ export function XassidasAdmin() {
       if (data.youtube_url && data.youtube_url.trim()) {
         const setYoutubeResponse = await fetch(`${API_URL}/xassidas/${data.id}/set-youtube-id`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({ youtube_url: data.youtube_url.trim() })
         });
 
@@ -755,7 +756,7 @@ export function XassidasAdmin() {
     mutationFn: async (translations: any[]) => {
       const response = await fetch(`${API_URL}/xassidas/admin/import-translations`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify(translations)
       });
 
@@ -788,7 +789,7 @@ export function XassidasAdmin() {
       
       const response = await fetch(`${API_URL}/xassidas/admin/import-translations`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify(payload)
       });
 
@@ -832,7 +833,7 @@ export function XassidasAdmin() {
     mutationFn: async (data: { name: string; description?: string; color?: string }) => {
       const response = await fetch(`${API_URL}/categories`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify(data)
       });
       if (!response.ok) throw new Error('Impossible de créer la catégorie');
@@ -852,7 +853,7 @@ export function XassidasAdmin() {
     mutationFn: async (data: { id: string; name?: string; description?: string; color?: string }) => {
       const response = await fetch(`${API_URL}/categories/${data.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ name: data.name, description: data.description, color: data.color })
       });
       if (!response.ok) throw new Error('Impossible de modifier la catégorie');
@@ -872,7 +873,8 @@ export function XassidasAdmin() {
   const deleteCategoryMutation = useMutation({
     mutationFn: async (id: string) => {
       const response = await fetch(`${API_URL}/categories/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: authHeaders
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
