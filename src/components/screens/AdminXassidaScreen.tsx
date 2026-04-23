@@ -1042,19 +1042,19 @@ export function XassidasAdmin() {
             </Button>
           </div>
           {/* Tab navigation intégrée dans le header */}
-          <div className="flex gap-1 relative">
+          <div className="flex gap-1 relative overflow-x-auto scrollbar-hide -mx-6 px-6">
             {[
-              { value: 'dashboard',  icon: <LayoutDashboard className="w-4 h-4" />, label: 'Stats',      show: true },
-              { value: 'xassidas',   icon: <BookOpen className="w-4 h-4" />,        label: 'Xassidas',   show: can('manage_xassidas') },
-              { value: 'authors',    icon: <Users className="w-4 h-4" />,           label: 'Auteurs',    show: can('manage_authors') },
-              { value: 'categories', icon: <FolderOpen className="w-4 h-4" />,      label: 'Catégories', show: can('manage_xassidas') },
+              { value: 'dashboard',  icon: <LayoutDashboard className="w-4 h-4" />, label: 'Stats',        show: true },
+              { value: 'xassidas',   icon: <BookOpen className="w-4 h-4" />,        label: 'Xassidas',     show: can('manage_xassidas') },
+              { value: 'authors',    icon: <Users className="w-4 h-4" />,           label: 'Auteurs',      show: can('manage_authors') },
+              { value: 'categories', icon: <FolderOpen className="w-4 h-4" />,      label: 'Catégories',   show: can('manage_xassidas') },
               { value: 'users',      icon: <ShieldCheck className="w-4 h-4" />,     label: 'Utilisateurs', show: can('manage_users') },
             ].filter(tab => tab.show).map(tab => (
               <button
                 key={tab.value}
                 onClick={() => setActiveTab(tab.value)}
                 className={cn(
-                  "flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors",
+                  "flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors shrink-0",
                   activeTab === tab.value
                     ? "bg-background text-foreground"
                     : "text-white/70 hover:text-white hover:bg-white/10"
