@@ -149,7 +149,7 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold text-secondary-foreground">{t("xassidasTitle")}</h1>
-            <p className="text-4xl font-arabic text-card mt-2">الْقَصَائِدُ</p>
+            {/* <p className="text-4xl font-arabic text-card mt-2">الْقَصَائِدُ</p> */}
             <p className="text-sm text-secondary-foreground/70 mt-2">
               {isLoading ? t("loading") : `${filteredQassidas.length} ${t("xassidasCount")}`}
             </p>
