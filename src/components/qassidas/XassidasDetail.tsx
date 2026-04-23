@@ -374,6 +374,10 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
   const [showSearch, setShowSearch]       = useState(false);
   const [globalSearchResults, setGlobalSearchResults] = useState<Qassida[]>([]);
 
+  const [showWolof, setShowWolof] = useState(false);
+  const [shared, setShared] = useState(false);
+  const audioSectionRef = useRef<HTMLDivElement>(null);
+
   const { toggleFavorite, isFavorite } = useFavorites();
   const { xassidas: allXassidas } = useXassidas();
   const favorite = isFavorite(selectedQassida.id);
@@ -383,8 +387,9 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
   const { data: apiDetail, isLoading: loadingVerses } = useXassidasDetail(selectedQassida.apiId || null);
   const apiVerses: XassidaVerse[] = Array.isArray(apiDetail?.verses) ? apiDetail.verses : [];
 
-  const hasTranscription = apiVerses.some((v) => v.transcription);
-  const hasTranslation   = apiVerses.some((v) => v.translation_fr || v.translation_en || v.translation_wo);
+  const hasTranscription  = apiVerses.some((v) => v.transcription);
+  const hasTranslation    = apiVerses.some((v) => v.translation_fr || v.translation_en);
+  const hasTranslationWo  = apiVerses.some((v) => v.translation_wo);
 
   // Group by chapter
   const byChapter = apiVerses.reduce<Record<number, XassidaVerse[]>>((acc, v) => {
@@ -634,8 +639,37 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                 bg: favorite ? "bg-secondary/20" : "bg-secondary/10 hover:bg-secondary/20",
                 action: () => toggleFavorite({ id: selectedQassida.id, title: selectedQassida.title, arabic: selectedQassida.arabic, author: selectedQassida.author, addedAt: Date.now() })
               },
-              { icon: <Headphones className="w-5 h-5 text-secondary" />, label: "Audio", bg: "bg-secondary/10 hover:bg-secondary/20", action: () => {} },
-              { icon: <Share2 className="w-5 h-5 text-primary" />, label: "Partager", bg: "bg-primary/10 hover:bg-primary/20", action: () => {} },
+              {
+                icon: <Headphones className={`w-5 h-5 ${(relevantAudios.length > 0 || legacyAudio) ? "text-secondary" : "text-muted-foreground/40"}`} />,
+                label: "Audio",
+                bg: (relevantAudios.length > 0 || legacyAudio) ? "bg-secondary/10 hover:bg-secondary/20" : "bg-muted/40 cursor-not-allowed",
+                action: () => {
+                  if (relevantAudios.length > 0 || legacyAudio) {
+                    audioSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }
+                }
+              },
+              {
+                icon: <Share2 className={`w-5 h-5 ${shared ? "text-green-500" : "text-primary"}`} />,
+                label: shared ? "Copié !" : "Partager",
+                bg: "bg-primary/10 hover:bg-primary/20",
+                action: async () => {
+                  const title = selectedQassida.title;
+                  const text = selectedQassida.arabic ? `${selectedQassida.arabic}\n${title}` : title;
+                  if (navigator.share) {
+                    try { await navigator.share({ title, text, url: window.location.href }); } catch {}
+                  } else {
+                    const toCopy = `${text}\nhttps://malikina.vercel.app`;
+                    if (navigator.clipboard && window.isSecureContext) {
+                      await navigator.clipboard.writeText(toCopy).catch(() => fallbackCopy(toCopy, () => {}));
+                    } else {
+                      fallbackCopy(toCopy, () => {});
+                    }
+                    setShared(true);
+                    setTimeout(() => setShared(false), 2000);
+                  }
+                }
+              },
             ].map(({ icon, label, bg: btnBg, action }) => (
               <button key={label} onClick={action} className="flex flex-col items-center gap-1">
                 <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${btnBg}`}>{icon}</div>
@@ -651,7 +685,7 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
 
         {/* ── Audio section ─────────────────────────────────── */}
         {(relevantAudios.length > 0 || legacyAudio) && (
-          <div className="mb-4">
+          <div className="mb-4" ref={audioSectionRef}>
             {/* Reciter selector — only shown when multiple options */}
             {relevantAudios.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2 mb-2 scrollbar-hide">
@@ -733,9 +767,16 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
               <AlignLeft className="w-3.5 h-3.5" /> Translitération
             </button>
           )}
-          <button onClick={() => setShowTl((s) => !s)} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${showTranslation ? active : ctrlBtn}`}>
-            <Languages className="w-3.5 h-3.5" /> Traduction
-          </button>
+          {hasTranslation && (
+            <button onClick={() => setShowTl((s) => !s)} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${showTranslation ? active : ctrlBtn}`}>
+              <Languages className="w-3.5 h-3.5" /> Traduction
+            </button>
+          )}
+          {hasTranslationWo && (
+            <button onClick={() => setShowWolof((s) => !s)} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${showWolof ? active : ctrlBtn}`}>
+              🇸🇳 Wolof
+            </button>
+          )}
           {apiVerses.length > 0 && (
             <button onClick={() => { setShowSearch((s) => !s); if (showSearch) setVerseSearch(""); }} className={`ml-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${showSearch ? active : ctrlBtn}`}>
               {showSearch ? <X className="w-3.5 h-3.5" /> : <Search className="w-3.5 h-3.5" />}
@@ -969,12 +1010,10 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                         )}
                       </AnimatePresence>
 
-                      {/* Translation */}
+                      {/* Translation FR/EN */}
                       <AnimatePresence>
-                        {showTranslation && (verse.translation_fr || verse.translation_en || verse.translation_wo) && (() => {
-                          const tr = language === 'wo'
-                            ? (verse.translation_wo || verse.translation_fr || verse.translation_en)
-                            : language === 'en'
+                        {showTranslation && (verse.translation_fr || verse.translation_en) && (() => {
+                          const tr = language === 'en'
                             ? (verse.translation_en || verse.translation_fr)
                             : (verse.translation_fr || verse.translation_en);
                           return tr ? (
@@ -986,6 +1025,20 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                             </motion.div>
                           ) : null;
                         })()}
+                      </AnimatePresence>
+
+                      {/* Translation Wolof */}
+                      <AnimatePresence>
+                        {showWolof && verse.translation_wo && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0, marginTop: 0 }} animate={{ opacity: 1, height: "auto", marginTop: 10 }} exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                          >
+                            <div className="h-px bg-border/20 mb-2" />
+                            <p className={`text-sm leading-relaxed ${d ? "text-amber-400/80" : "text-primary/80"}`}>
+                              🇸🇳 {verse.translation_wo}
+                            </p>
+                          </motion.div>
+                        )}
                       </AnimatePresence>
                     </motion.div>
                   </div>
