@@ -174,3 +174,8 @@
     display: none;  /* Chrome, Safari and Opera */
   }
 }
+
+@keyframes pulse {
+  from { transform: scaleY(0.3); }
+  to   { transform: scaleY(1); }
+}
