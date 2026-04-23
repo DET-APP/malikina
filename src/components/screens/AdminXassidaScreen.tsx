@@ -2198,128 +2198,360 @@ export function XassidasAdmin() {
 
 // ── Composant gestion utilisateurs (SuperAdmin) ──────────────────────────────
 
-const ROLES: string[] = ['SuperAdmin', 'Admin', 'GerantAudio', 'GerantXassida', 'Moderateur'];
+const ROLES: { value: string; label: string; color: string; desc: string }[] = [
+  { value: 'SuperAdmin',    label: 'Super Admin',      color: 'bg-red-100 text-red-700 border-red-200',       desc: 'Accès total — gestion utilisateurs incluse' },
+  { value: 'Admin',         label: 'Admin',            color: 'bg-orange-100 text-orange-700 border-orange-200', desc: 'Gestion xassidas, auteurs, verses, audio' },
+  { value: 'GerantXassida', label: 'Gérant Xassidas',  color: 'bg-green-100 text-green-700 border-green-200',  desc: 'Ajouter/modifier xassidas, auteurs, vers' },
+  { value: 'GerantAudio',   label: 'Gérant Audio',     color: 'bg-blue-100 text-blue-700 border-blue-200',    desc: 'Gérer les fichiers audio uniquement' },
+  { value: 'Moderateur',    label: 'Modérateur',       color: 'bg-gray-100 text-gray-700 border-gray-200',    desc: 'Lecture seule — statistiques et intégrité' },
+];
+
+const ROLE_PERMISSIONS_MATRIX: { label: string; roles: string[] }[] = [
+  { label: 'Gérer les utilisateurs',    roles: ['SuperAdmin'] },
+  { label: 'Supprimer xassidas',        roles: ['SuperAdmin', 'Admin'] },
+  { label: 'Afficher/masquer xassidas', roles: ['SuperAdmin', 'Admin'] },
+  { label: 'Importer traductions',      roles: ['SuperAdmin', 'Admin', 'GerantXassida'] },
+  { label: 'Modifier xassidas/auteurs', roles: ['SuperAdmin', 'Admin', 'GerantXassida'] },
+  { label: 'Gérer les vers',            roles: ['SuperAdmin', 'Admin', 'GerantXassida'] },
+  { label: 'Gérer l\'audio',            roles: ['SuperAdmin', 'Admin', 'GerantXassida', 'GerantAudio'] },
+  { label: 'Supprimer audio',           roles: ['SuperAdmin', 'Admin', 'GerantAudio'] },
+  { label: 'Voir les statistiques',     roles: ['SuperAdmin', 'Admin', 'GerantXassida', 'GerantAudio', 'Moderateur'] },
+];
+
+function getRoleStyle(role: string) {
+  return ROLES.find(r => r.value === role)?.color || 'bg-gray-100 text-gray-700 border-gray-200';
+}
+
+function getRoleLabel(role: string) {
+  return ROLES.find(r => r.value === role)?.label || role;
+}
+
+function formatDate(iso: string | null) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+interface AdminUserRow {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+}
 
 function UsersTab({ authHeaders }: { authHeaders: Record<string, string> }) {
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ email: '', password: '', full_name: '', role: 'GerantXassida' });
+  const [editUser, setEditUser] = useState<AdminUserRow | null>(null);
+  const [pwdUser, setPwdUser] = useState<AdminUserRow | null>(null);
+  const [deleteUser, setDeleteUser] = useState<AdminUserRow | null>(null);
+  const [showMatrix, setShowMatrix] = useState(false);
+  const [createForm, setCreateForm] = useState({ email: '', password: '', full_name: '', role: 'GerantXassida' });
+  const [editForm, setEditForm] = useState({ full_name: '', role: '' });
+  const [newPassword, setNewPassword] = useState('');
 
-  const { data: users = [], isLoading } = useQuery({
+  const { data: users = [], isLoading } = useQuery<AdminUserRow[]>({
     queryKey: ['admin-users'],
     queryFn: () => fetch(`${API_URL}/auth/users`, { headers: authHeaders }).then(r => r.json()),
   });
 
+  const apiMutate = async (url: string, method: string, body?: object) => {
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+    return res.json();
+  };
+
   const createMutation = useMutation({
-    mutationFn: async (data: typeof form) => {
-      const res = await fetch(`${API_URL}/auth/users`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
-      return res.json();
-    },
+    mutationFn: (data: typeof createForm) => apiMutate(`${API_URL}/auth/users`, 'POST', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       setShowCreate(false);
-      setForm({ email: '', password: '', full_name: '', role: 'GerantXassida' });
+      setCreateForm({ email: '', password: '', full_name: '', role: 'GerantXassida' });
     },
     onError: (e: any) => alert(e.message),
   });
 
-  const toggleActiveMutation = useMutation({
-    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const res = await fetch(`${API_URL}/auth/users/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ is_active }),
-      });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
-      return res.json();
+  const editMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: object }) =>
+      apiMutate(`${API_URL}/auth/users/${id}`, 'PATCH', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      setEditUser(null);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
+    onError: (e: any) => alert(e.message),
   });
 
-  const ROLE_COLORS: Record<string, string> = {
-    SuperAdmin: 'bg-red-100 text-red-700',
-    Admin: 'bg-orange-100 text-orange-700',
-    GerantAudio: 'bg-blue-100 text-blue-700',
-    GerantXassida: 'bg-green-100 text-green-700',
-    Moderateur: 'bg-gray-100 text-gray-700',
+  const pwdMutation = useMutation({
+    mutationFn: ({ id, password }: { id: string; password: string }) =>
+      apiMutate(`${API_URL}/auth/users/${id}/password`, 'PATCH', { password }),
+    onSuccess: () => { setPwdUser(null); setNewPassword(''); },
+    onError: (e: any) => alert(e.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiMutate(`${API_URL}/auth/users/${id}`, 'DELETE'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      setDeleteUser(null);
+    },
+    onError: (e: any) => alert(e.message),
+  });
+
+  const openEdit = (u: AdminUserRow) => {
+    setEditForm({ full_name: u.full_name, role: u.role });
+    setEditUser(u);
   };
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-bold">Utilisateurs ({users.length})</h2>
-        <Button size="sm" onClick={() => setShowCreate(true)}>
-          <Plus className="w-4 h-4 mr-2" /> Nouvel utilisateur
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowMatrix(v => !v)}>
+            <ShieldCheck className="w-4 h-4 mr-1.5" />
+            Rôles
+          </Button>
+          <Button size="sm" onClick={() => setShowCreate(true)}>
+            <Plus className="w-4 h-4 mr-1.5" /> Nouveau
+          </Button>
+        </div>
       </div>
 
+      {/* Matrice des permissions */}
+      {showMatrix && (
+        <Card className="border-primary/20">
+          <CardHeader className="pb-2 pt-3 px-4">
+            <CardTitle className="text-sm font-semibold">Permissions par rôle</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-3 overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr>
+                  <th className="text-left py-1 pr-3 font-medium text-muted-foreground w-48">Permission</th>
+                  {ROLES.map(r => (
+                    <th key={r.value} className="text-center py-1 px-2 font-medium">
+                      <span className={cn("px-1.5 py-0.5 rounded border text-xs", r.color)}>{r.label}</span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ROLE_PERMISSIONS_MATRIX.map(row => (
+                  <tr key={row.label} className="border-t border-border/40">
+                    <td className="py-1.5 pr-3 text-muted-foreground">{row.label}</td>
+                    {ROLES.map(r => (
+                      <td key={r.value} className="text-center py-1.5 px-2">
+                        {row.roles.includes(r.value)
+                          ? <span className="text-green-600 font-bold">✓</span>
+                          : <span className="text-muted-foreground/30">—</span>}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Role legend */}
+      <div className="grid grid-cols-1 gap-2">
+        {ROLES.map(r => (
+          <div key={r.value} className="flex items-center gap-2 text-xs">
+            <span className={cn("px-2 py-0.5 rounded border font-medium min-w-[110px] text-center", r.color)}>{r.label}</span>
+            <span className="text-muted-foreground">{r.desc}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* User list */}
       {isLoading && <div className="text-center py-8 text-muted-foreground">Chargement...</div>}
 
-      <div className="space-y-3">
-        {users.map((u: any) => (
-          <Card key={u.id} className={cn(!u.is_active && "opacity-50")}>
-            <CardContent className="flex items-center justify-between py-3 px-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm">{u.full_name}</span>
-                  <span className={cn("text-xs px-1.5 py-0.5 rounded-full font-medium", ROLE_COLORS[u.role] || 'bg-gray-100 text-gray-700')}>
-                    {u.role}
-                  </span>
-                  {!u.is_active && <span className="text-xs text-muted-foreground">(désactivé)</span>}
+      <div className="space-y-2">
+        {users.map((u) => (
+          <Card key={u.id} className={cn("transition-opacity", !u.is_active && "opacity-60")}>
+            <CardContent className="py-3 px-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-sm">{u.full_name}</span>
+                    {currentUser?.id === u.id && (
+                      <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">Vous</span>
+                    )}
+                    <span className={cn("text-xs px-1.5 py-0.5 rounded border font-medium", getRoleStyle(u.role))}>
+                      {getRoleLabel(u.role)}
+                    </span>
+                    {!u.is_active && (
+                      <span className="text-xs bg-destructive/10 text-destructive px-1.5 py-0.5 rounded">Désactivé</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">{u.email}</p>
+                  <div className="flex gap-3 mt-1">
+                    <span className="text-xs text-muted-foreground">Créé {formatDate(u.created_at)}</span>
+                    <span className="text-xs text-muted-foreground">Connecté {formatDate(u.last_login_at)}</span>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">{u.email}</p>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    size="sm" variant="ghost" className="h-8 w-8 p-0"
+                    title="Modifier"
+                    onClick={() => openEdit(u)}
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    size="sm" variant="ghost" className="h-8 w-8 p-0"
+                    title="Changer mot de passe"
+                    onClick={() => { setPwdUser(u); setNewPassword(''); }}
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={u.is_active ? "outline" : "default"}
+                    className="text-xs h-7 px-2"
+                    onClick={() => editMutation.mutate({ id: u.id, data: { is_active: !u.is_active } })}
+                  >
+                    {u.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </Button>
+                  {currentUser?.id !== u.id && (
+                    <Button
+                      size="sm" variant="ghost"
+                      className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      title="Supprimer"
+                      onClick={() => setDeleteUser(u)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                </div>
               </div>
-              <Button
-                size="sm"
-                variant={u.is_active ? "outline" : "default"}
-                className="text-xs h-7"
-                onClick={() => toggleActiveMutation.mutate({ id: u.id, is_active: !u.is_active })}
-              >
-                {u.is_active ? 'Désactiver' : 'Activer'}
-              </Button>
             </CardContent>
           </Card>
         ))}
       </div>
 
+      {/* Modal Créer */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Créer un utilisateur</DialogTitle></DialogHeader>
           <div className="space-y-3 pt-2">
             <div className="space-y-1">
               <label className="text-sm font-medium">Nom complet *</label>
-              <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Sheikh..." />
+              <Input value={createForm.full_name} onChange={e => setCreateForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Sheikh..." />
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Email *</label>
-              <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="user@malikina.app" />
+              <Input type="email" value={createForm.email} onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))} placeholder="user@malikina.app" />
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Mot de passe *</label>
-              <Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Min 8 caractères" />
+              <Input type="password" value={createForm.password} onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))} placeholder="Min 8 caractères" />
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Rôle *</label>
               <select
                 className="w-full h-10 border border-input rounded-md px-3 text-sm bg-background"
-                value={form.role}
-                onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+                value={createForm.role}
+                onChange={e => setCreateForm(f => ({ ...f, role: e.target.value }))}
               >
-                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
+              <p className="text-xs text-muted-foreground">{ROLES.find(r => r.value === createForm.role)?.desc}</p>
             </div>
             <Button
               className="w-full"
-              disabled={!form.email || !form.password || !form.full_name || createMutation.isPending}
-              onClick={() => createMutation.mutate(form)}
+              disabled={!createForm.email || !createForm.password || !createForm.full_name || createMutation.isPending}
+              onClick={() => createMutation.mutate(createForm)}
             >
               {createMutation.isPending ? 'Création...' : 'Créer'}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Éditer */}
+      <Dialog open={!!editUser} onOpenChange={open => !open && setEditUser(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Modifier {editUser?.full_name}</DialogTitle></DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Nom complet</label>
+              <Input value={editForm.full_name} onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Rôle</label>
+              <select
+                className="w-full h-10 border border-input rounded-md px-3 text-sm bg-background"
+                value={editForm.role}
+                onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))}
+              >
+                {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+              </select>
+              <p className="text-xs text-muted-foreground">{ROLES.find(r => r.value === editForm.role)?.desc}</p>
+            </div>
+            <Button
+              className="w-full"
+              disabled={!editForm.full_name || editMutation.isPending}
+              onClick={() => editUser && editMutation.mutate({ id: editUser.id, data: { full_name: editForm.full_name, role: editForm.role } })}
+            >
+              {editMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Mot de passe */}
+      <Dialog open={!!pwdUser} onOpenChange={open => !open && setPwdUser(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Mot de passe — {pwdUser?.full_name}</DialogTitle></DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Nouveau mot de passe *</label>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                placeholder="Min 8 caractères"
+              />
+            </div>
+            <Button
+              className="w-full"
+              disabled={newPassword.length < 8 || pwdMutation.isPending}
+              onClick={() => pwdUser && pwdMutation.mutate({ id: pwdUser.id, password: newPassword })}
+            >
+              {pwdMutation.isPending ? 'Mise à jour...' : 'Changer le mot de passe'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Supprimer */}
+      <Dialog open={!!deleteUser} onOpenChange={open => !open && setDeleteUser(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Supprimer cet utilisateur ?</DialogTitle></DialogHeader>
+          <div className="pt-2 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Vous allez supprimer <strong>{deleteUser?.full_name}</strong> ({deleteUser?.email}). Cette action est irréversible.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setDeleteUser(null)}>Annuler</Button>
+              <Button
+                variant="destructive" className="flex-1"
+                disabled={deleteMutation.isPending}
+                onClick={() => deleteUser && deleteMutation.mutate(deleteUser.id)}
+              >
+                {deleteMutation.isPending ? 'Suppression...' : 'Supprimer'}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
