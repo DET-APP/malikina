@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Plus, BookOpen, Upload, Trash2, ChevronLeft, Save, Loader2, FileText, Languages, Eye } from 'lucide-react';
+import { Plus, BookOpen, Trash2, ChevronLeft, Save, Loader2, FileText, Languages, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -39,7 +39,8 @@ interface ExtractedVerse {
 type View = 'list' | 'verses' | 'pdf-arabic' | 'pdf-french';
 
 const FiqhAdminTab = () => {
-  const { authHeaders } = useAuth();
+  const { token } = useAuth();
+  const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
   const queryClient = useQueryClient();
   const [view, setView] = useState<View>('list');
   const [selectedBook, setSelectedBook] = useState<FiqhBook | null>(null);
@@ -344,19 +345,16 @@ const FiqhAdminTab = () => {
                     </Button>
 
                     {/* Upload Arabic PDF */}
-                    <label className="cursor-pointer">
-                      <Button variant="outline" size="sm" asChild disabled={isPdfLoading}>
-                        <span>
-                          <FileText className="w-4 h-4 mr-1.5" />
-                          {isPdfLoading && selectedBook?.id === book.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : 'PDF Arabe'}
-                        </span>
-                      </Button>
+                    <label className="inline-flex items-center gap-1.5 h-8 px-3 text-sm font-medium rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer">
+                      {isPdfLoading && selectedBook?.id === book.id
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <FileText className="w-3.5 h-3.5" />}
+                      PDF Arabe
                       <input
                         type="file"
                         accept="application/pdf"
                         className="hidden"
+                        disabled={isPdfLoading}
                         onChange={e => {
                           const file = e.target.files?.[0];
                           if (file) { setSelectedBook(book); handlePdfUpload(file, 'arabic'); }
@@ -366,19 +364,16 @@ const FiqhAdminTab = () => {
                     </label>
 
                     {/* Upload French PDF (translations) */}
-                    <label className="cursor-pointer">
-                      <Button variant="outline" size="sm" asChild disabled={isPdfLoading}>
-                        <span>
-                          <Languages className="w-4 h-4 mr-1.5" />
-                          {isPdfLoading && selectedBook?.id === book.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : 'PDF Français'}
-                        </span>
-                      </Button>
+                    <label className="inline-flex items-center gap-1.5 h-8 px-3 text-sm font-medium rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer">
+                      {isPdfLoading && selectedBook?.id === book.id
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <Languages className="w-3.5 h-3.5" />}
+                      PDF Français
                       <input
                         type="file"
                         accept="application/pdf"
                         className="hidden"
+                        disabled={isPdfLoading}
                         onChange={e => {
                           const file = e.target.files?.[0];
                           if (file) { setSelectedBook(book); handlePdfUpload(file, 'french'); }
