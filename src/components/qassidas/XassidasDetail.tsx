@@ -146,7 +146,7 @@ const PlayerShell = ({ playing, loading, error, progress, effectiveDuration, dar
         {/* Info + scrubber */}
         <div className="flex-1 min-w-0">
           {/* Title row */}
-          <div className="flex items-baseline justify-between gap-2 mb-2">
+          <div className="flex items-start justify-between gap-2 mb-2">
             <div className="min-w-0">
               {reciterName && (
                 <p className={`text-sm font-semibold truncate leading-tight ${nameC}`}>{reciterName}</p>
@@ -165,7 +165,7 @@ const PlayerShell = ({ playing, loading, error, progress, effectiveDuration, dar
                   <div
                     key={i}
                     className={`w-[3px] rounded-full ${d ? "bg-amber-400" : "bg-secondary"}`}
-                    style={{ height: `${[40,80,60,90][i-1]}%`, animation: `pulse ${0.6 + i * 0.1}s ease-in-out infinite alternate` }}
+                    style={{ height: `${[40,80,60,90][i-1]}%`, animation: `pulse ${0.6 + i * 0.1}s ease-in-out infinite alternate`, transformOrigin: 'bottom' }}
                   />
                 ))}
               </div>
