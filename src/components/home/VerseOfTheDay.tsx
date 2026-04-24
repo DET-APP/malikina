@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { BookOpen, ChevronRight, Camera } from "lucide-react";
+import { BookOpen, ChevronRight, Share2 } from "lucide-react";
 import html2canvas from "html2canvas";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { VerseOfTheDay as VerseOfTheDayType } from "@/hooks/useVerseOfTheDay";
@@ -98,106 +98,131 @@ const VerseOfTheDay = ({ verse, loading, onNavigate, itemVariants }: VerseOfTheD
           position: "fixed",
           left: "-9999px",
           top: 0,
-          width: "390px",
-          padding: "32px 24px 28px",
-          background: "linear-gradient(145deg, #ede8dc 0%, #d0e8e0 100%)",
-          borderRadius: "24px",
+          width: "420px",
+          padding: "0",
+          background: "linear-gradient(160deg, #f2ede3 0%, #dceee5 100%)",
+          borderRadius: "28px",
           fontFamily: "'Open Sans', system-ui, sans-serif",
           boxSizing: "border-box",
+          overflow: "hidden",
         }}
       >
-        {/* En-tête : logo + titre + date */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
-          <img
-            src="/icons/icon-192.png"
-            alt="Malikina"
-            crossOrigin="anonymous"
-            style={{ width: 44, height: 44, borderRadius: 12 }}
-          />
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 16, color: "#2d6a4f", lineHeight: 1.2 }}>Malikina</div>
-            <div style={{ fontSize: 11, color: "#b5832a", fontWeight: 600 }}>Vers du Jour</div>
-          </div>
-          <div style={{ marginLeft: "auto", fontSize: 10, color: "#7a9e8a", textAlign: "right", maxWidth: 110, lineHeight: 1.4 }}>
-            {formatDateFr(new Date())}
-          </div>
-        </div>
-
-        {/* Badge : numéro du vers */}
-        <div style={{ textAlign: "center", marginBottom: "16px" }}>
-          <span style={{
-            fontSize: 11,
-            color: "#2d6a4f",
-            background: "rgba(45,106,79,0.1)",
-            padding: "4px 14px",
-            borderRadius: 20,
-            fontWeight: 500,
-          }}>
-            {verse.verse_number > 0 ? `Vers ${verse.verse_number}` : ""}
-            {verse.chapter_number > 1 ? ` · Chapitre ${verse.chapter_number}` : ""}
-            {" — Khilâss Zahab"}
-          </span>
-        </div>
-
-        {/* Texte arabe */}
+        {/* Bande dorée en haut */}
         <div style={{
-          background: "rgba(255,255,255,0.65)",
-          borderRadius: 16,
-          padding: "20px 16px",
-          marginBottom: 14,
-          border: "1px solid rgba(45,106,79,0.12)",
-          textAlign: "right",
-          direction: "rtl",
-        }}>
-          <p style={{
-            fontSize: 22,
-            lineHeight: 1.9,
-            color: "#1a4a2e",
-            fontFamily: "'Amiri', serif",
-            margin: 0,
-          }}>
-            {verse.text_arabic}
-          </p>
-        </div>
+          height: 5,
+          background: "linear-gradient(90deg, #b5832a 0%, #d4a843 50%, #b5832a 100%)",
+        }} />
 
-        {/* Translittération */}
-        {verse.transcription && (
-          <p style={{
-            fontSize: 12,
-            color: "#6b8e7a",
-            textAlign: "center",
-            fontStyle: "italic",
-            marginBottom: 12,
-            lineHeight: 1.5,
-          }}>
-            {verse.transcription}
-          </p>
-        )}
+        <div style={{ padding: "28px 28px 24px" }}>
+          {/* En-tête : logo + titre + date */}
+          <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "22px" }}>
+            <img
+              src="/icons/icon-192.png"
+              alt="Malikina"
+              crossOrigin="anonymous"
+              style={{ width: 48, height: 48, borderRadius: 14 }}
+            />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 17, color: "#1a4a2e", lineHeight: 1.2 }}>Malikina</div>
+              <div style={{ fontSize: 11, color: "#b5832a", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}>Vers du Jour</div>
+            </div>
+            <div style={{
+              marginLeft: "auto",
+              fontSize: 11,
+              color: "#7a9e8a",
+              textAlign: "right",
+              lineHeight: 1.4,
+              maxWidth: 120,
+            }}>
+              {formatDateFr(new Date())}
+            </div>
+          </div>
 
-        {/* Traduction française */}
-        {verse.translation_fr && (
-          <p style={{
-            fontSize: 13,
-            color: "#374151",
-            fontStyle: "italic",
-            lineHeight: 1.65,
-            marginBottom: 24,
-            padding: "0 4px",
-          }}>
-            &ldquo;{verse.translation_fr}&rdquo;
-          </p>
-        )}
+          {/* Badge : numéro du vers */}
+          <div style={{ textAlign: "center", marginBottom: "18px" }}>
+            <span style={{
+              fontSize: 11,
+              color: "#2d6a4f",
+              background: "rgba(45,106,79,0.08)",
+              border: "1px solid rgba(45,106,79,0.15)",
+              padding: "5px 16px",
+              borderRadius: 20,
+              fontWeight: 600,
+              letterSpacing: "0.02em",
+            }}>
+              {verse.verse_number > 0 ? `Vers ${verse.verse_number}` : ""}
+              {verse.chapter_number > 1 ? ` · Chapitre ${verse.chapter_number}` : ""}
+              {" — Khilâss Zahab"}
+            </span>
+          </div>
 
-        {/* Pied de page */}
-        <div style={{
-          borderTop: "1px solid rgba(45,106,79,0.15)",
-          paddingTop: 14,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}>
-          <span style={{ fontSize: 10, color: "#9ca3af" }}>malikina.app</span>
-          <span style={{ fontSize: 10, color: "#b5832a", fontWeight: 500 }}>Al Moutahabbina Fillahi</span>
+          {/* Texte arabe */}
+          <div style={{
+            background: "rgba(255,255,255,0.7)",
+            borderRadius: 18,
+            padding: "22px 18px",
+            marginBottom: 16,
+            border: "1px solid rgba(45,106,79,0.1)",
+            textAlign: "right",
+            direction: "rtl",
+          }}>
+            <p style={{
+              fontSize: 24,
+              lineHeight: 2,
+              color: "#1a4a2e",
+              fontFamily: "'Amiri', serif",
+              margin: 0,
+            }}>
+              {verse.text_arabic}
+            </p>
+          </div>
+
+          {/* Translittération */}
+          {verse.transcription && (
+            <p style={{
+              fontSize: 12,
+              color: "#6b8e7a",
+              textAlign: "center",
+              fontStyle: "italic",
+              marginBottom: 14,
+              lineHeight: 1.6,
+            }}>
+              {verse.transcription}
+            </p>
+          )}
+
+          {/* Traduction française */}
+          {verse.translation_fr && (
+            <div style={{
+              background: "rgba(181,131,42,0.06)",
+              borderLeft: "3px solid #b5832a",
+              borderRadius: "0 8px 8px 0",
+              padding: "10px 14px",
+              marginBottom: 24,
+            }}>
+              <p style={{
+                fontSize: 13,
+                color: "#374151",
+                fontStyle: "italic",
+                lineHeight: 1.7,
+                margin: 0,
+              }}>
+                &ldquo;{verse.translation_fr}&rdquo;
+              </p>
+            </div>
+          )}
+
+          {/* Pied de page */}
+          <div style={{
+            borderTop: "1px solid rgba(45,106,79,0.12)",
+            paddingTop: 14,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}>
+            <span style={{ fontSize: 10, color: "#aab8b0", letterSpacing: "0.03em" }}>malikina.app</span>
+            <span style={{ fontSize: 10, color: "#b5832a", fontWeight: 600, letterSpacing: "0.03em" }}>Al Moutahabbina Fillahi</span>
+          </div>
         </div>
       </div>
 
@@ -231,10 +256,10 @@ const VerseOfTheDay = ({ verse, loading, onNavigate, itemVariants }: VerseOfTheD
                   animate={{ opacity: [1, 0.4, 1] }}
                   transition={{ duration: 1, repeat: Infinity }}
                 >
-                  <Camera className="w-4 h-4 text-secondary" />
+                  <Share2 className="w-4 h-4 text-secondary" />
                 </motion.div>
               ) : (
-                <Camera className="w-4 h-4 text-muted-foreground" />
+                <Share2 className="w-4 h-4 text-muted-foreground" />
               )}
             </motion.button>
           </div>
