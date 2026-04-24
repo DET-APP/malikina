@@ -1,5 +1,7 @@
+import { useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { BookOpen, RefreshCw, ChevronRight } from "lucide-react";
+import { BookOpen, ChevronRight, Camera } from "lucide-react";
+import html2canvas from "html2canvas";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { VerseOfTheDay as VerseOfTheDayType } from "@/hooks/useVerseOfTheDay";
 
@@ -11,7 +13,59 @@ interface VerseOfTheDayProps {
   itemVariants: any;
 }
 
-const VerseOfTheDay = ({ verse, loading, onRefresh, onNavigate, itemVariants }: VerseOfTheDayProps) => {
+function formatDateFr(date: Date): string {
+  return date.toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+const VerseOfTheDay = ({ verse, loading, onNavigate, itemVariants }: VerseOfTheDayProps) => {
+  const shareCardRef = useRef<HTMLDivElement>(null);
+  const [capturing, setCapturing] = useState(false);
+
+  const handleCapture = async () => {
+    if (!shareCardRef.current || capturing) return;
+    setCapturing(true);
+    try {
+      await document.fonts.ready;
+      const canvas = await html2canvas(shareCardRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: null,
+        logging: false,
+      });
+
+      const dataUrl = canvas.toDataURL("image/png");
+
+      // Web Share API (mobile natif)
+      if (navigator.share) {
+        try {
+          const blob = await (await fetch(dataUrl)).blob();
+          const file = new File([blob], "vers-du-jour.png", { type: "image/png" });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: "Vers du Jour — Malikina" });
+            return;
+          }
+        } catch {
+          // fallback download
+        }
+      }
+
+      // Fallback : téléchargement
+      const link = document.createElement("a");
+      link.download = "vers-du-jour.png";
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error("Capture error:", err);
+    } finally {
+      setCapturing(false);
+    }
+  };
+
   if (loading) {
     return (
       <motion.section variants={itemVariants}>
@@ -29,80 +83,201 @@ const VerseOfTheDay = ({ verse, loading, onRefresh, onNavigate, itemVariants }: 
       <motion.section variants={itemVariants}>
         <div className="bg-gradient-to-br from-secondary/10 to-primary/10 rounded-2xl p-6 shadow-card border border-secondary/20">
           <p className="text-center text-muted-foreground">Impossible de charger le vers du jour</p>
-          <button
-            onClick={onRefresh}
-            className="mt-4 w-full bg-primary/10 text-primary py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" /> Réessayer
-          </button>
         </div>
       </motion.section>
     );
   }
 
   return (
-    <motion.section variants={itemVariants}>
-      <div className="bg-gradient-to-br from-secondary/10 to-primary/10 rounded-2xl p-6 shadow-card border border-secondary/20">
-
-        {/* En-tête */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-secondary/20 flex items-center justify-center">
-              <BookOpen className="w-4 h-4 text-secondary" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">Vers du Jour</h3>
-              <p className="text-xs text-muted-foreground">Khilâss Zahab</p>
-            </div>
+    <>
+      {/* Carte cachée pour la capture — rendue hors écran */}
+      <div
+        ref={shareCardRef}
+        aria-hidden="true"
+        style={{
+          position: "fixed",
+          left: "-9999px",
+          top: 0,
+          width: "390px",
+          padding: "32px 24px 28px",
+          background: "linear-gradient(145deg, #ede8dc 0%, #d0e8e0 100%)",
+          borderRadius: "24px",
+          fontFamily: "'Open Sans', system-ui, sans-serif",
+          boxSizing: "border-box",
+        }}
+      >
+        {/* En-tête : logo + titre + date */}
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
+          <img
+            src="/icons/icon-192.png"
+            alt="Malikina"
+            crossOrigin="anonymous"
+            style={{ width: 44, height: 44, borderRadius: 12 }}
+          />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "#2d6a4f", lineHeight: 1.2 }}>Malikina</div>
+            <div style={{ fontSize: 11, color: "#b5832a", fontWeight: 600 }}>Vers du Jour</div>
           </div>
-          <motion.button
-            onClick={onRefresh}
-            className="w-8 h-8 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
-            whileHover={{ rotate: 180 }}
-            transition={{ duration: 0.3 }}
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </motion.button>
+          <div style={{ marginLeft: "auto", fontSize: 10, color: "#7a9e8a", textAlign: "right", maxWidth: 110, lineHeight: 1.4 }}>
+            {formatDateFr(new Date())}
+          </div>
         </div>
 
-        {/* Numéro du vers */}
-        <div className="text-center mb-4">
-          <p className="text-xs text-muted-foreground">
-            Vers {verse.verse_number}
-            {verse.chapter_number > 1 ? ` · Chapitre ${verse.chapter_number}` : ''}
-          </p>
+        {/* Badge : numéro du vers */}
+        <div style={{ textAlign: "center", marginBottom: "16px" }}>
+          <span style={{
+            fontSize: 11,
+            color: "#2d6a4f",
+            background: "rgba(45,106,79,0.1)",
+            padding: "4px 14px",
+            borderRadius: 20,
+            fontWeight: 500,
+          }}>
+            {verse.verse_number > 0 ? `Vers ${verse.verse_number}` : ""}
+            {verse.chapter_number > 1 ? ` · Chapitre ${verse.chapter_number}` : ""}
+            {" — Khilâss Zahab"}
+          </span>
         </div>
 
         {/* Texte arabe */}
-        <div className="bg-card/50 rounded-xl p-4 mb-3 border border-border">
-          <p className="text-right text-xl font-arabic leading-loose">{verse.text_arabic}</p>
+        <div style={{
+          background: "rgba(255,255,255,0.65)",
+          borderRadius: 16,
+          padding: "20px 16px",
+          marginBottom: 14,
+          border: "1px solid rgba(45,106,79,0.12)",
+          textAlign: "right",
+          direction: "rtl",
+        }}>
+          <p style={{
+            fontSize: 22,
+            lineHeight: 1.9,
+            color: "#1a4a2e",
+            fontFamily: "'Amiri', serif",
+            margin: 0,
+          }}>
+            {verse.text_arabic}
+          </p>
         </div>
 
         {/* Translittération */}
         {verse.transcription && (
-          <p className="text-sm text-muted-foreground text-center mb-3 italic">{verse.transcription}</p>
+          <p style={{
+            fontSize: 12,
+            color: "#6b8e7a",
+            textAlign: "center",
+            fontStyle: "italic",
+            marginBottom: 12,
+            lineHeight: 1.5,
+          }}>
+            {verse.transcription}
+          </p>
         )}
 
         {/* Traduction française */}
         {verse.translation_fr && (
-          <div className="mb-4">
-            <p className="text-sm text-foreground italic">"{verse.translation_fr}"</p>
-          </div>
+          <p style={{
+            fontSize: 13,
+            color: "#374151",
+            fontStyle: "italic",
+            lineHeight: 1.65,
+            marginBottom: 24,
+            padding: "0 4px",
+          }}>
+            &ldquo;{verse.translation_fr}&rdquo;
+          </p>
         )}
 
-        {/* Bouton naviguer */}
-        <motion.button
-          onClick={() => onNavigate("qassidas")}
-          className="w-full bg-primary/10 text-primary py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-primary/20 transition-colors"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <BookOpen className="w-4 h-4" />
-          Lire Khilâss Zahab
-          <ChevronRight className="w-4 h-4" />
-        </motion.button>
+        {/* Pied de page */}
+        <div style={{
+          borderTop: "1px solid rgba(45,106,79,0.15)",
+          paddingTop: 14,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}>
+          <span style={{ fontSize: 10, color: "#9ca3af" }}>malikina.app</span>
+          <span style={{ fontSize: 10, color: "#b5832a", fontWeight: 500 }}>Al Moutahabbina Fillahi</span>
+        </div>
       </div>
-    </motion.section>
+
+      {/* Carte visible */}
+      <motion.section variants={itemVariants}>
+        <div className="bg-gradient-to-br from-secondary/10 to-primary/10 rounded-2xl p-6 shadow-card border border-secondary/20">
+
+          {/* En-tête */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-secondary/20 flex items-center justify-center">
+                <BookOpen className="w-4 h-4 text-secondary" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Vers du Jour</h3>
+                <p className="text-xs text-muted-foreground">Khilâss Zahab</p>
+              </div>
+            </div>
+
+            {/* Bouton capture */}
+            <motion.button
+              onClick={handleCapture}
+              disabled={capturing}
+              className="w-8 h-8 rounded-full bg-muted flex items-center justify-center hover:bg-secondary/20 transition-colors"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              title="Partager ce vers"
+            >
+              {capturing ? (
+                <motion.div
+                  animate={{ opacity: [1, 0.4, 1] }}
+                  transition={{ duration: 1, repeat: Infinity }}
+                >
+                  <Camera className="w-4 h-4 text-secondary" />
+                </motion.div>
+              ) : (
+                <Camera className="w-4 h-4 text-muted-foreground" />
+              )}
+            </motion.button>
+          </div>
+
+          {/* Numéro du vers */}
+          <div className="text-center mb-4">
+            <p className="text-xs text-muted-foreground">
+              Vers {verse.verse_number}
+              {verse.chapter_number > 1 ? ` · Chapitre ${verse.chapter_number}` : ""}
+            </p>
+          </div>
+
+          {/* Texte arabe */}
+          <div className="bg-card/50 rounded-xl p-4 mb-3 border border-border">
+            <p className="text-right text-xl font-arabic leading-loose">{verse.text_arabic}</p>
+          </div>
+
+          {/* Translittération */}
+          {verse.transcription && (
+            <p className="text-sm text-muted-foreground text-center mb-3 italic">{verse.transcription}</p>
+          )}
+
+          {/* Traduction française */}
+          {verse.translation_fr && (
+            <div className="mb-4">
+              <p className="text-sm text-foreground italic">&ldquo;{verse.translation_fr}&rdquo;</p>
+            </div>
+          )}
+
+          {/* Bouton naviguer */}
+          <motion.button
+            onClick={() => onNavigate("qassidas")}
+            className="w-full bg-primary/10 text-primary py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-primary/20 transition-colors"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <BookOpen className="w-4 h-4" />
+            Lire Khilâss Zahab
+            <ChevronRight className="w-4 h-4" />
+          </motion.button>
+        </div>
+      </motion.section>
+    </>
   );
 };
 
