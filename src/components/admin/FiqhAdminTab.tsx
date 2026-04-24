@@ -1,9 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
-import { Plus, BookOpen, Trash2, ChevronLeft, Save, Loader2, FileText, Languages, Eye, Download, Upload } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Plus, BookOpen, Trash2, ChevronLeft, Save, Loader2, FileText, Languages,
+  Eye, Download, Upload, Pencil, ChevronDown, Mic, X,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -31,10 +34,13 @@ interface VerseRow {
   text_arabic?: string;
   transcription?: string;
   translation_fr?: string;
+  translation_en?: string;
+  translation_wo?: string;
+  audio_url?: string;
   content?: string;
 }
 
-type View = 'list' | 'verses' | 'pdf-arabic' | 'pdf-french';
+type View = 'list' | 'chapters' | 'pdf-arabic' | 'pdf-french';
 
 const BLANK_VERSE: Omit<VerseRow, 'id'> = {
   verse_number: 1,
@@ -42,12 +48,13 @@ const BLANK_VERSE: Omit<VerseRow, 'id'> = {
   text_arabic: '',
   transcription: '',
   translation_fr: '',
+  translation_wo: '',
+  audio_url: '',
 };
 
-// ── JSON template the user can fill and re-upload ─────────────────────────
 const JSON_TEMPLATE: VerseRow[] = [
-  { verse_number: 1, chapter_number: 1, text_arabic: 'النص العربي', transcription: 'Translittération latine', translation_fr: 'Traduction française' },
-  { verse_number: 2, chapter_number: 1, text_arabic: 'النص العربي', transcription: 'Translittération latine', translation_fr: 'Traduction française' },
+  { verse_number: 1, chapter_number: 1, text_arabic: 'النص العربي', transcription: 'Translittération latine', translation_fr: 'Traduction française', translation_wo: 'Traduction wolof' },
+  { verse_number: 2, chapter_number: 1, text_arabic: 'النص العربي', transcription: 'Translittération latine', translation_fr: 'Traduction française', translation_wo: 'Traduction wolof' },
 ];
 
 function downloadJson(data: object, filename: string) {
@@ -58,26 +65,26 @@ function downloadJson(data: object, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-const VERSES_PER_PAGE = 20;
-
 // ─────────────────────────────────────────────────────────────────────────────
 
 const FiqhAdminTab = () => {
   const { token } = useAuth();
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
   const queryClient = useQueryClient();
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   const [view, setView] = useState<View>('list');
   const [selectedBook, setSelectedBook] = useState<FiqhBook | null>(null);
+  const [expandedChapters, setExpandedChapters] = useState<Set<number>>(new Set());
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showAddVerseModal, setShowAddVerseModal] = useState(false);
-  const [newVerse, setNewVerse] = useState<Omit<VerseRow, 'id'>>(BLANK_VERSE);
+  const [showVerseModal, setShowVerseModal] = useState(false);
+  const [editingVerseId, setEditingVerseId] = useState<number | null>(null);
+  const [verseForm, setVerseForm] = useState<Omit<VerseRow, 'id'>>(BLANK_VERSE);
+  const [isAudioUploading, setIsAudioUploading] = useState(false);
   const [pdfExtracted, setPdfExtracted] = useState<VerseRow[]>([]);
   const [pdfFilename, setPdfFilename] = useState('');
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [isJsonLoading, setIsJsonLoading] = useState(false);
-  const [versePage, setVersePage] = useState(1);
-
   const [createForm, setCreateForm] = useState({ title: '', arabic_name: '', author_id: '', description: '' });
 
   // ── Queries ───────────────────────────────────────────────────────────────
@@ -106,8 +113,23 @@ const FiqhAdminTab = () => {
       if (!res.ok) throw new Error();
       return res.json();
     },
-    enabled: !!selectedBook && view === 'verses',
+    enabled: !!selectedBook && view === 'chapters',
   });
+
+  // ── Chapter groups ────────────────────────────────────────────────────────
+  const chapterGroups = useMemo(() => {
+    const groups = new Map<number, VerseRow[]>();
+    for (const verse of bookVerses) {
+      const ch = verse.chapter_number ?? 1;
+      if (!groups.has(ch)) groups.set(ch, []);
+      groups.get(ch)!.push(verse);
+    }
+    return Array.from(groups.entries()).sort(([a], [b]) => a - b);
+  }, [bookVerses]);
+
+  const nextChapterNumber = chapterGroups.length > 0
+    ? Math.max(...chapterGroups.map(([n]) => n)) + 1
+    : 1;
 
   // ── Mutations ─────────────────────────────────────────────────────────────
   const createMutation = useMutation({
@@ -135,27 +157,52 @@ const FiqhAdminTab = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['fiqh-books-admin'] }),
   });
 
-  // Add a single verse (append mode)
-  const addVerseMutation = useMutation({
+  const saveVerseMutation = useMutation({
     mutationFn: async (verse: Omit<VerseRow, 'id'>) => {
-      const res = await fetch(`${API_URL}/xassidas/${selectedBook!.id}/verses`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ verses: [verse] }),
-      });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Erreur'); }
-      return res.json();
+      if (editingVerseId) {
+        // Update existing
+        const res = await fetch(`${API_URL}/xassidas/${selectedBook!.id}/verses/${editingVerseId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify(verse),
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Erreur'); }
+        return res.json();
+      } else {
+        // Create new
+        const res = await fetch(`${API_URL}/xassidas/${selectedBook!.id}/verses`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify({ verses: [verse] }),
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Erreur'); }
+        return res.json();
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fiqh-verses', selectedBook?.id] });
       queryClient.invalidateQueries({ queryKey: ['fiqh-books-admin'] });
-      setShowAddVerseModal(false);
-      setNewVerse(BLANK_VERSE);
+      setShowVerseModal(false);
+      setVerseForm(BLANK_VERSE);
+      setEditingVerseId(null);
     },
   });
 
-  // Save batch verses (PDF preview or JSON import)
-  const saveVersesMutation = useMutation({
+  const deleteVerseMutation = useMutation({
+    mutationFn: async (verseId: number) => {
+      const res = await fetch(`${API_URL}/xassidas/${selectedBook!.id}/verses/${verseId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+      if (!res.ok) throw new Error('Erreur suppression');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fiqh-verses', selectedBook?.id] });
+      queryClient.invalidateQueries({ queryKey: ['fiqh-books-admin'] });
+    },
+  });
+
+  const saveVersesBatch = useMutation({
     mutationFn: async ({ bookId, verses }: { bookId: string; verses: VerseRow[] }) => {
       const CHUNK = 50;
       for (let i = 0; i < verses.length; i += CHUNK) {
@@ -170,7 +217,7 @@ const FiqhAdminTab = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fiqh-books-admin'] });
       queryClient.invalidateQueries({ queryKey: ['fiqh-verses', selectedBook?.id] });
-      setPdfExtracted([]); setView('verses');
+      setPdfExtracted([]); setView('chapters');
     },
   });
 
@@ -186,11 +233,49 @@ const FiqhAdminTab = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fiqh-verses', selectedBook?.id] });
-      setPdfExtracted([]); setView('verses');
+      setPdfExtracted([]); setView('chapters');
     },
   });
 
   // ── Handlers ──────────────────────────────────────────────────────────────
+  const openAddVerse = (chapterNumber: number) => {
+    const chapterVerses = bookVerses.filter(v => v.chapter_number === chapterNumber);
+    const nextVerse = chapterVerses.length > 0 ? Math.max(...chapterVerses.map(v => v.verse_number)) + 1 : 1;
+    setEditingVerseId(null);
+    setVerseForm({ ...BLANK_VERSE, chapter_number: chapterNumber, verse_number: nextVerse });
+    setShowVerseModal(true);
+  };
+
+  const openEditVerse = (verse: VerseRow) => {
+    setEditingVerseId(verse.id ?? null);
+    setVerseForm({
+      verse_number: verse.verse_number,
+      chapter_number: verse.chapter_number ?? 1,
+      text_arabic: verse.text_arabic ?? '',
+      transcription: verse.transcription ?? '',
+      translation_fr: verse.translation_fr ?? '',
+      translation_wo: verse.translation_wo ?? '',
+      audio_url: verse.audio_url ?? '',
+    });
+    setShowVerseModal(true);
+  };
+
+  const handleAudioUpload = async (file: File) => {
+    if (!selectedBook) return;
+    setIsAudioUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${API_URL}/xassidas/${selectedBook.id}/upload-audio`, {
+        method: 'POST', headers: authHeaders, body: formData,
+      });
+      if (!res.ok) throw new Error('Erreur upload audio');
+      const data = await res.json();
+      setVerseForm(f => ({ ...f, audio_url: data.audioUrl }));
+    } catch (e: any) { alert(e.message); }
+    finally { setIsAudioUploading(false); }
+  };
+
   const handlePdfUpload = async (file: File, type: 'arabic' | 'french') => {
     if (!selectedBook) return;
     setIsPdfLoading(true); setPdfFilename(file.name);
@@ -216,218 +301,360 @@ const FiqhAdminTab = () => {
       const parsed: VerseRow[] = JSON.parse(text);
       if (!Array.isArray(parsed)) throw new Error('Le fichier doit contenir un tableau JSON');
       if (parsed.length === 0) throw new Error('Le fichier est vide');
-      if (!parsed[0].verse_number) throw new Error('Chaque vers doit avoir un "verse_number"');
-      await saveVersesMutation.mutateAsync({ bookId: selectedBook.id, verses: parsed });
+      if (!parsed[0].verse_number) throw new Error('Chaque règle doit avoir un "verse_number"');
+      await saveVersesBatch.mutateAsync({ bookId: selectedBook.id, verses: parsed });
     } catch (e: any) { alert(`Erreur: ${e.message}`); }
     finally { setIsJsonLoading(false); }
   };
 
-  const pagedVerses = useMemo(() => {
-    const src = view === 'verses' ? bookVerses : pdfExtracted;
-    const start = (versePage - 1) * VERSES_PER_PAGE;
-    return src.slice(start, start + VERSES_PER_PAGE);
-  }, [view, bookVerses, pdfExtracted, versePage]);
+  const toggleChapter = (chapterNum: number) => {
+    setExpandedChapters(prev => {
+      const next = new Set(prev);
+      if (next.has(chapterNum)) next.delete(chapterNum);
+      else next.add(chapterNum);
+      return next;
+    });
+  };
 
-  const totalPages = Math.ceil((view === 'verses' ? bookVerses.length : pdfExtracted.length) / VERSES_PER_PAGE);
-
-  // ── Verse list view ───────────────────────────────────────────────────────
-  if (view === 'verses' || view === 'pdf-arabic' || view === 'pdf-french') {
-    const isPdfPreview = view === 'pdf-arabic' || view === 'pdf-french';
+  // ── PDF preview view ──────────────────────────────────────────────────────
+  if (view === 'pdf-arabic' || view === 'pdf-french') {
     const isFrench = view === 'pdf-french';
-    const sourceVerses = isPdfPreview ? pdfExtracted : bookVerses;
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0"
+            onClick={() => { setView('chapters'); setPdfExtracted([]); }}>
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+          <div className="flex-1">
+            <h2 className="font-bold text-foreground">{selectedBook?.title}</h2>
+            <p className="text-xs text-muted-foreground">Aperçu PDF: {pdfFilename} — {pdfExtracted.length} règles extraites</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => { setPdfExtracted([]); setView('chapters'); }}>Annuler</Button>
+          <Button size="sm"
+            disabled={saveVersesBatch.isPending || importTranslationsMutation.isPending}
+            onClick={() => {
+              if (isFrench) {
+                importTranslationsMutation.mutate({
+                  bookId: selectedBook!.id,
+                  translations: pdfExtracted.map((v, i) => ({
+                    verse_number: v.verse_number || i + 1,
+                    translation_fr: v.translation_fr || v.content || '',
+                  })),
+                });
+              } else {
+                saveVersesBatch.mutate({ bookId: selectedBook!.id, verses: pdfExtracted });
+              }
+            }}>
+            {(saveVersesBatch.isPending || importTranslationsMutation.isPending)
+              ? <Loader2 className="w-4 h-4 animate-spin mr-1" />
+              : <Save className="w-4 h-4 mr-1" />}
+            {isFrench ? 'Importer traductions' : 'Sauvegarder les règles'}
+          </Button>
+        </div>
+        <Card>
+          <CardContent className="p-0 divide-y divide-border">
+            {pdfExtracted.map((verse, idx) => (
+              <div key={idx} className="p-4 space-y-1.5">
+                <Badge variant="outline" className="text-xs">
+                  Règle {verse.verse_number || idx + 1}
+                  {verse.chapter_number && verse.chapter_number > 1 ? ` · Chapitre ${verse.chapter_number}` : ''}
+                </Badge>
+                {verse.text_arabic && <p className="text-right font-arabic text-lg leading-loose">{verse.text_arabic}</p>}
+                {verse.transcription && <p className="text-sm text-muted-foreground italic">{verse.transcription}</p>}
+                {(verse.translation_fr || verse.content) && <p className="text-sm">« {verse.translation_fr || verse.content} »</p>}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
+  // ── Chapters view ─────────────────────────────────────────────────────────
+  if (view === 'chapters') {
     return (
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0"
-            onClick={() => { setView('list'); setVersePage(1); setPdfExtracted([]); }}>
+            onClick={() => { setView('list'); setExpandedChapters(new Set()); }}>
             <ChevronLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
             <h2 className="font-bold text-foreground">{selectedBook?.title}</h2>
             <p className="text-xs text-muted-foreground">
-              {isPdfPreview
-                ? `Aperçu PDF: ${pdfFilename} — ${sourceVerses.length} vers extraits`
-                : `${sourceVerses.length} vers enregistrés`}
+              {chapterGroups.length} chapitre{chapterGroups.length !== 1 ? 's' : ''} · {bookVerses.length} règles
             </p>
           </div>
         </div>
 
-        {/* Actions bar */}
-        {!isPdfPreview ? (
-          <div className="flex flex-wrap gap-2">
-            {/* Add single verse */}
-            <Button size="sm" onClick={() => {
-              const next = bookVerses.length > 0 ? Math.max(...bookVerses.map(v => v.verse_number)) + 1 : 1;
-              setNewVerse({ ...BLANK_VERSE, verse_number: next });
-              setShowAddVerseModal(true);
-            }}>
-              <Plus className="w-4 h-4 mr-1.5" /> Ajouter un vers
-            </Button>
+        {/* Action buttons */}
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" onClick={() => openAddVerse(nextChapterNumber)}>
+            <Plus className="w-4 h-4 mr-1.5" /> Nouveau chapitre
+          </Button>
+          <Button variant="outline" size="sm"
+            onClick={() => downloadJson(JSON_TEMPLATE, 'modele-fiqh.json')}>
+            <Download className="w-4 h-4 mr-1.5" /> Modèle JSON
+          </Button>
+          <label className="inline-flex items-center gap-1.5 h-8 px-3 text-sm font-medium rounded-md border border-input bg-background hover:bg-accent transition-colors cursor-pointer">
+            {isJsonLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+            Importer JSON
+            <input type="file" accept=".json,application/json" className="hidden" disabled={isJsonLoading}
+              onChange={e => { const f = e.target.files?.[0]; if (f) handleJsonImport(f); e.target.value = ''; }} />
+          </label>
+          <label className="inline-flex items-center gap-1.5 h-8 px-3 text-sm font-medium rounded-md border border-input bg-background hover:bg-accent transition-colors cursor-pointer">
+            {isPdfLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+            PDF Arabe
+            <input type="file" accept="application/pdf" className="hidden" disabled={isPdfLoading}
+              onChange={e => { const f = e.target.files?.[0]; if (f) handlePdfUpload(f, 'arabic'); e.target.value = ''; }} />
+          </label>
+          <label className="inline-flex items-center gap-1.5 h-8 px-3 text-sm font-medium rounded-md border border-input bg-background hover:bg-accent transition-colors cursor-pointer">
+            {isPdfLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Languages className="w-3.5 h-3.5" />}
+            PDF Français
+            <input type="file" accept="application/pdf" className="hidden" disabled={isPdfLoading}
+              onChange={e => { const f = e.target.files?.[0]; if (f) handlePdfUpload(f, 'french'); e.target.value = ''; }} />
+          </label>
+        </div>
 
-            {/* Download JSON template */}
-            <Button variant="outline" size="sm"
-              onClick={() => downloadJson(JSON_TEMPLATE, `modele-vers-fiqh.json`)}>
-              <Download className="w-4 h-4 mr-1.5" /> Modèle JSON
-            </Button>
-
-            {/* Import JSON */}
-            <label className="inline-flex items-center gap-1.5 h-8 px-3 text-sm font-medium rounded-md border border-input bg-background hover:bg-accent transition-colors cursor-pointer">
-              {isJsonLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-              Importer JSON
-              <input type="file" accept=".json,application/json" className="hidden" disabled={isJsonLoading}
-                onChange={e => { const f = e.target.files?.[0]; if (f) handleJsonImport(f); e.target.value = ''; }} />
-            </label>
-
-            {/* PDF Arabic */}
-            <label className="inline-flex items-center gap-1.5 h-8 px-3 text-sm font-medium rounded-md border border-input bg-background hover:bg-accent transition-colors cursor-pointer">
-              {isPdfLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
-              PDF Arabe
-              <input type="file" accept="application/pdf" className="hidden" disabled={isPdfLoading}
-                onChange={e => { const f = e.target.files?.[0]; if (f) handlePdfUpload(f, 'arabic'); e.target.value = ''; }} />
-            </label>
-
-            {/* PDF French */}
-            <label className="inline-flex items-center gap-1.5 h-8 px-3 text-sm font-medium rounded-md border border-input bg-background hover:bg-accent transition-colors cursor-pointer">
-              {isPdfLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Languages className="w-3.5 h-3.5" />}
-              PDF Français
-              <input type="file" accept="application/pdf" className="hidden" disabled={isPdfLoading}
-                onChange={e => { const f = e.target.files?.[0]; if (f) handlePdfUpload(f, 'french'); e.target.value = ''; }} />
-            </label>
-          </div>
-        ) : (
-          /* PDF preview actions */
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => { setPdfExtracted([]); setView('verses'); }}>
-              Annuler
-            </Button>
-            <Button size="sm"
-              disabled={saveVersesMutation.isPending || importTranslationsMutation.isPending}
-              onClick={() => {
-                if (isFrench) {
-                  importTranslationsMutation.mutate({
-                    bookId: selectedBook!.id,
-                    translations: pdfExtracted.map((v, i) => ({
-                      verse_number: v.verse_number || i + 1,
-                      translation_fr: v.translation_fr || v.content || '',
-                    })),
-                  });
-                } else {
-                  saveVersesMutation.mutate({ bookId: selectedBook!.id, verses: pdfExtracted });
-                }
-              }}>
-              {(saveVersesMutation.isPending || importTranslationsMutation.isPending)
-                ? <Loader2 className="w-4 h-4 animate-spin mr-1" />
-                : <Save className="w-4 h-4 mr-1" />}
-              {isFrench ? 'Importer traductions' : 'Sauvegarder les vers'}
-            </Button>
-          </div>
-        )}
-
-        {/* JSON format hint */}
-        {!isPdfPreview && (
-          <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground">
-            <p className="font-mono font-semibold mb-1">Format fichier JSON attendu :</p>
-            <pre className="overflow-x-auto">{`[
-  { "verse_number": 1, "chapter_number": 1, "text_arabic": "...", "transcription": "...", "translation_fr": "..." },
-  { "verse_number": 2, "chapter_number": 1, ... }
-]`}</pre>
-            <p className="mt-1 opacity-70">Téléchargez le modèle JSON pour partir d'un fichier pré-rempli.</p>
-          </div>
-        )}
-
-        {/* Verse list */}
-        {view === 'verses' && versesLoading ? (
+        {/* Chapter cards */}
+        {versesLoading ? (
           <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-        ) : (
+        ) : chapterGroups.length === 0 ? (
           <Card>
-            <CardContent className="p-0 divide-y divide-border">
-              {pagedVerses.map((verse, idx) => (
-                <div key={verse.id ?? idx} className="p-4 space-y-1.5">
-                  <Badge variant="outline" className="text-xs">
-                    Vers {verse.verse_number || (versePage - 1) * VERSES_PER_PAGE + idx + 1}
-                    {verse.chapter_number && verse.chapter_number > 1 ? ` · Chapitre ${verse.chapter_number}` : ''}
-                  </Badge>
-                  {verse.text_arabic && (
-                    <p className="text-right font-arabic text-lg leading-loose">{verse.text_arabic}</p>
-                  )}
-                  {verse.transcription && (
-                    <p className="text-sm text-muted-foreground italic">{verse.transcription}</p>
-                  )}
-                  {(verse.translation_fr || verse.content) && (
-                    <p className="text-sm text-foreground">« {verse.translation_fr || verse.content} »</p>
-                  )}
-                </div>
-              ))}
-              {sourceVerses.length === 0 && (
-                <div className="flex flex-col items-center py-12 gap-3">
-                  <BookOpen className="w-8 h-8 text-muted-foreground/40" />
-                  <p className="text-sm text-muted-foreground">Aucun vers. Ajoutez-en un ou importez un fichier JSON.</p>
-                </div>
-              )}
+            <CardContent className="flex flex-col items-center py-16 gap-4">
+              <BookOpen className="w-10 h-10 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground text-center">Aucune règle. Créez le premier chapitre.</p>
+              <Button size="sm" onClick={() => openAddVerse(1)}>
+                <Plus className="w-4 h-4 mr-1.5" /> Ajouter une règle
+              </Button>
             </CardContent>
           </Card>
-        )}
+        ) : (
+          <div className="space-y-3">
+            {chapterGroups.map(([chapterNum, verses]) => {
+              const isExpanded = expandedChapters.has(chapterNum);
+              return (
+                <motion.div key={chapterNum} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+                  <Card>
+                    {/* Chapter header */}
+                    <CardHeader
+                      className="cursor-pointer select-none py-3 px-4"
+                      onClick={() => toggleChapter(chapterNum)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-bold text-primary">{chapterNum}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm text-foreground">Chapitre {chapterNum}</p>
+                          <p className="text-xs text-muted-foreground">{verses.length} règle{verses.length !== 1 ? 's' : ''}</p>
+                        </div>
+                        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      </div>
+                    </CardHeader>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2">
-            <Button variant="outline" size="sm" disabled={versePage === 1} onClick={() => setVersePage(p => p - 1)}>
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <span className="text-sm text-muted-foreground">Page {versePage} / {totalPages}</span>
-            <Button variant="outline" size="sm" disabled={versePage === totalPages} onClick={() => setVersePage(p => p + 1)}>
-              <ChevronLeft className="w-4 h-4 rotate-180" />
-            </Button>
+                    {/* Expanded verse list */}
+                    <AnimatePresence initial={false}>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          style={{ overflow: 'hidden' }}
+                        >
+                          <CardContent className="pt-0 px-4 pb-4">
+                            <div className="border-t border-border divide-y divide-border mb-3">
+                              {verses.map((verse) => (
+                                <div key={verse.id} className="py-3 space-y-1.5">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <Badge variant="outline" className="text-xs shrink-0">
+                                      Règle {verse.verse_number}
+                                    </Badge>
+                                    <div className="flex gap-1 ml-auto">
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-7 w-7"
+                                        onClick={() => openEditVerse(verse)}
+                                      >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                      </Button>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                        disabled={deleteVerseMutation.isPending}
+                                        onClick={() => {
+                                          if (verse.id && confirm(`Supprimer la règle ${verse.verse_number} ?`)) {
+                                            deleteVerseMutation.mutate(verse.id);
+                                          }
+                                        }}
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  {verse.text_arabic && (
+                                    <p className="text-right font-arabic text-xl leading-loose">{verse.text_arabic}</p>
+                                  )}
+                                  {verse.transcription && (
+                                    <p className="text-sm text-muted-foreground italic">{verse.transcription}</p>
+                                  )}
+                                  {verse.translation_fr && (
+                                    <p className="text-sm text-foreground">« {verse.translation_fr} »</p>
+                                  )}
+                                  {verse.translation_wo && (
+                                    <p className="text-sm text-blue-700 dark:text-blue-400 font-medium">
+                                      {verse.translation_wo}
+                                    </p>
+                                  )}
+                                  {verse.audio_url && (
+                                    <audio controls src={verse.audio_url} className="w-full h-8 mt-1" />
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full"
+                              onClick={() => openAddVerse(chapterNum)}
+                            >
+                              <Plus className="w-3.5 h-3.5 mr-1.5" /> Ajouter une règle au chapitre {chapterNum}
+                            </Button>
+                          </CardContent>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </Card>
+                </motion.div>
+              );
+            })}
           </div>
         )}
 
-        {/* Add single verse modal */}
-        <Dialog open={showAddVerseModal} onOpenChange={setShowAddVerseModal}>
-          <DialogContent className="sm:max-w-lg">
+        {/* Add/Edit verse modal */}
+        <Dialog open={showVerseModal} onOpenChange={open => { if (!open) { setShowVerseModal(false); setEditingVerseId(null); setVerseForm(BLANK_VERSE); } }}>
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Ajouter un vers</DialogTitle>
+              <DialogTitle>{editingVerseId ? 'Modifier la règle' : 'Ajouter une règle'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-2">
+              {/* Chapter + Verse number */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium mb-1 block">N° du vers *</label>
-                  <Input type="number" min={1} value={newVerse.verse_number}
-                    onChange={e => setNewVerse(v => ({ ...v, verse_number: parseInt(e.target.value) || 1 }))} />
+                  <label className="text-sm font-medium mb-1 block">Chapitre</label>
+                  <Input type="number" min={1}
+                    value={verseForm.chapter_number ?? 1}
+                    onChange={e => setVerseForm(f => ({ ...f, chapter_number: parseInt(e.target.value) || 1 }))} />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-1 block">N° chapitre</label>
-                  <Input type="number" min={1} value={newVerse.chapter_number ?? 1}
-                    onChange={e => setNewVerse(v => ({ ...v, chapter_number: parseInt(e.target.value) || 1 }))} />
+                  <label className="text-sm font-medium mb-1 block">N° Règle *</label>
+                  <Input type="number" min={1}
+                    value={verseForm.verse_number}
+                    onChange={e => setVerseForm(f => ({ ...f, verse_number: parseInt(e.target.value) || 1 }))} />
                 </div>
               </div>
+
+              {/* Arabic */}
               <div>
                 <label className="text-sm font-medium mb-1 block">Texte arabe</label>
-                <Textarea placeholder="النص العربي..." value={newVerse.text_arabic}
-                  onChange={e => setNewVerse(v => ({ ...v, text_arabic: e.target.value }))}
-                  className="text-right font-arabic text-lg leading-loose" dir="rtl" rows={3} />
+                <Textarea
+                  placeholder="النص العربي..."
+                  value={verseForm.text_arabic}
+                  onChange={e => setVerseForm(f => ({ ...f, text_arabic: e.target.value }))}
+                  className="text-right font-arabic text-xl leading-loose"
+                  dir="rtl"
+                  rows={3}
+                />
               </div>
+
+              {/* Transcription */}
               <div>
                 <label className="text-sm font-medium mb-1 block">Translittération</label>
-                <Input placeholder="Lecture en lettres latines..." value={newVerse.transcription}
-                  onChange={e => setNewVerse(v => ({ ...v, transcription: e.target.value }))} />
+                <Input
+                  placeholder="Lecture en lettres latines..."
+                  value={verseForm.transcription}
+                  onChange={e => setVerseForm(f => ({ ...f, transcription: e.target.value }))}
+                />
               </div>
+
+              {/* French */}
               <div>
                 <label className="text-sm font-medium mb-1 block">Traduction française</label>
-                <Textarea placeholder="Traduction en français..." value={newVerse.translation_fr}
-                  onChange={e => setNewVerse(v => ({ ...v, translation_fr: e.target.value }))}
-                  rows={2} />
+                <Textarea
+                  placeholder="Traduction en français..."
+                  value={verseForm.translation_fr}
+                  onChange={e => setVerseForm(f => ({ ...f, translation_fr: e.target.value }))}
+                  rows={2}
+                />
               </div>
-              <Button className="w-full" disabled={!newVerse.verse_number || addVerseMutation.isPending}
-                onClick={() => addVerseMutation.mutate(newVerse)}>
-                {addVerseMutation.isPending
+
+              {/* Wolof */}
+              <div>
+                <label className="text-sm font-medium mb-1 block">Traduction wolof</label>
+                <Textarea
+                  placeholder="Traduction en wolof..."
+                  value={verseForm.translation_wo}
+                  onChange={e => setVerseForm(f => ({ ...f, translation_wo: e.target.value }))}
+                  rows={2}
+                />
+              </div>
+
+              {/* Audio */}
+              <div>
+                <label className="text-sm font-medium mb-1 block">Audio</label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="URL audio..."
+                    value={verseForm.audio_url}
+                    onChange={e => setVerseForm(f => ({ ...f, audio_url: e.target.value }))}
+                    className="flex-1"
+                  />
+                  <label className="inline-flex items-center gap-1.5 h-10 px-3 text-sm font-medium rounded-md border border-input bg-background hover:bg-accent transition-colors cursor-pointer shrink-0">
+                    {isAudioUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+                    <input
+                      ref={audioInputRef}
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      disabled={isAudioUploading}
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleAudioUpload(f); e.target.value = ''; }}
+                    />
+                  </label>
+                </div>
+                {verseForm.audio_url && (
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <audio controls src={verseForm.audio_url} className="flex-1 h-8" />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-muted-foreground shrink-0"
+                      onClick={() => setVerseForm(f => ({ ...f, audio_url: '' }))}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <Button
+                className="w-full"
+                disabled={!verseForm.verse_number || saveVerseMutation.isPending}
+                onClick={() => saveVerseMutation.mutate(verseForm)}
+              >
+                {saveVerseMutation.isPending
                   ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
-                  : <Plus className="w-4 h-4 mr-1.5" />}
-                Enregistrer le vers
+                  : <Save className="w-4 h-4 mr-1.5" />}
+                {editingVerseId ? 'Enregistrer les modifications' : 'Ajouter la règle'}
               </Button>
-              {addVerseMutation.isError && (
-                <p className="text-xs text-destructive text-center">{(addVerseMutation.error as Error).message}</p>
+              {saveVerseMutation.isError && (
+                <p className="text-xs text-destructive text-center">{(saveVerseMutation.error as Error).message}</p>
               )}
             </div>
           </DialogContent>
@@ -455,7 +682,7 @@ const FiqhAdminTab = () => {
         <Card>
           <CardContent className="flex flex-col items-center py-16 gap-4">
             <BookOpen className="w-12 h-12 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground text-center">Aucun livre. Créez Fakihatou Tullab pour commencer.</p>
+            <p className="text-sm text-muted-foreground text-center">Aucun livre. Créez Al-Akhdari pour commencer.</p>
             <Button onClick={() => setShowCreateModal(true)}>
               <Plus className="w-4 h-4 mr-1.5" /> Créer un livre
             </Button>
@@ -470,25 +697,25 @@ const FiqhAdminTab = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <CardTitle className="text-base">{book.title}</CardTitle>
+                        <p className="font-bold text-base text-foreground">{book.title}</p>
                         <Badge variant="secondary" className="text-xs">Fiqh</Badge>
                       </div>
                       {book.arabic_name && <p className="font-arabic text-lg text-muted-foreground">{book.arabic_name}</p>}
                       {book.author_name && <p className="text-xs text-muted-foreground mt-0.5">par {book.author_name}</p>}
                       {book.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{book.description}</p>}
                     </div>
-                    <Badge variant="outline">{book.actual_verse_count} vers</Badge>
+                    <Badge variant="outline">{book.actual_verse_count} règles</Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0 flex gap-2 flex-wrap">
                   <Button variant="outline" size="sm"
-                    onClick={() => { setSelectedBook(book); setVersePage(1); setView('verses'); }}>
-                    <Eye className="w-4 h-4 mr-1.5" /> Gérer les vers
+                    onClick={() => { setSelectedBook(book); setExpandedChapters(new Set()); setView('chapters'); }}>
+                    <Eye className="w-4 h-4 mr-1.5" /> Gérer les chapitres
                   </Button>
                   <Button variant="ghost" size="sm"
                     className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     disabled={deleteMutation.isPending}
-                    onClick={() => { if (confirm(`Supprimer "${book.title}" et tous ses vers ?`)) deleteMutation.mutate(book.id); }}>
+                    onClick={() => { if (confirm(`Supprimer "${book.title}" et toutes ses règles ?`)) deleteMutation.mutate(book.id); }}>
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </CardContent>
@@ -505,12 +732,12 @@ const FiqhAdminTab = () => {
           <div className="space-y-4 pt-2">
             <div>
               <label className="text-sm font-medium mb-1.5 block">Titre (français) *</label>
-              <Input placeholder="ex: Fakihatou Tullab" value={createForm.title}
+              <Input placeholder="ex: Al-Akhdari" value={createForm.title}
                 onChange={e => setCreateForm(f => ({ ...f, title: e.target.value }))} />
             </div>
             <div>
               <label className="text-sm font-medium mb-1.5 block">Nom arabe</label>
-              <Input placeholder="ex: فاكهة الطلاب" value={createForm.arabic_name}
+              <Input placeholder="ex: مختصر الأخضري" value={createForm.arabic_name}
                 onChange={e => setCreateForm(f => ({ ...f, arabic_name: e.target.value }))}
                 className="text-right font-arabic" dir="rtl" />
             </div>
