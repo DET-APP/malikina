@@ -13,14 +13,6 @@ interface VerseOfTheDayProps {
   itemVariants: any;
 }
 
-function formatDateFr(date: Date): string {
-  return date.toLocaleDateString("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
 
 const VerseOfTheDay = ({ verse, loading, onNavigate, itemVariants }: VerseOfTheDayProps) => {
   const shareCardRef = useRef<HTMLDivElement>(null);
@@ -114,8 +106,8 @@ const VerseOfTheDay = ({ verse, loading, onNavigate, itemVariants }: VerseOfTheD
         }} />
 
         <div style={{ padding: "28px 28px 24px" }}>
-          {/* En-tête : logo + titre + date */}
-          <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "22px" }}>
+          {/* En-tête : logo + titre */}
+          <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "20px" }}>
             <img
               src="/icons/icon-192.png"
               alt="Malikina"
@@ -126,21 +118,31 @@ const VerseOfTheDay = ({ verse, loading, onNavigate, itemVariants }: VerseOfTheD
               <div style={{ fontWeight: 700, fontSize: 17, color: "#1a4a2e", lineHeight: 1.2 }}>Malikina</div>
               <div style={{ fontSize: 11, color: "#b5832a", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}>Vers du Jour</div>
             </div>
+            {/* Ornement décoratif islamique */}
             <div style={{
               marginLeft: "auto",
-              fontSize: 11,
-              color: "#7a9e8a",
-              textAlign: "right",
-              lineHeight: 1.4,
-              maxWidth: 120,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 2,
             }}>
-              {formatDateFr(new Date())}
+              <span style={{ color: "#b5832a", fontSize: 18, lineHeight: 1 }}>✦</span>
+              <span style={{ color: "#d4a843", fontSize: 10, lineHeight: 1 }}>✦</span>
+              <span style={{ color: "#b5832a", fontSize: 18, lineHeight: 1 }}>✦</span>
             </div>
+          </div>
+
+          {/* Séparateur décoratif */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "18px" }}>
+            <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, transparent, rgba(181,131,42,0.4))" }} />
+            <span style={{ color: "#b5832a", fontSize: 14 }}>❧</span>
+            <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, rgba(181,131,42,0.4), transparent)" }} />
           </div>
 
           {/* Badge : numéro du vers */}
           <div style={{ textAlign: "center", marginBottom: "18px" }}>
             <span style={{
+              display: "inline-block",
               fontSize: 11,
               color: "#2d6a4f",
               background: "rgba(45,106,79,0.08)",
@@ -149,6 +151,10 @@ const VerseOfTheDay = ({ verse, loading, onNavigate, itemVariants }: VerseOfTheD
               borderRadius: 20,
               fontWeight: 600,
               letterSpacing: "0.02em",
+              maxWidth: "100%",
+              whiteSpace: "normal",
+              wordBreak: "break-word",
+              lineHeight: 1.6,
             }}>
               {verse.verse_number > 0 ? `Vers ${verse.verse_number}` : ""}
               {verse.chapter_number > 1 ? ` · Chapitre ${verse.chapter_number}` : ""}
@@ -167,7 +173,7 @@ const VerseOfTheDay = ({ verse, loading, onNavigate, itemVariants }: VerseOfTheD
             direction: "rtl",
           }}>
             <p style={{
-              fontSize: 24,
+              fontSize: 32,
               lineHeight: 2,
               color: "#1a4a2e",
               fontFamily: "'Amiri', serif",
