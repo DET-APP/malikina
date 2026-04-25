@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useForm } from 'react-hook-form';
 import { cn } from '@/lib/utils';
-import { Plus, Edit2, Trash2, Upload, Save, ChevronLeft, ChevronRight, Loader2, Lock, Users, BookOpen, FileText, Music, Link, Youtube, FolderOpen, Pencil, Globe, BarChart3, Settings, X, Search, LayoutDashboard, Filter, Eye, EyeOff, ShieldCheck, LogOut, GraduationCap } from 'lucide-react';
+import { Plus, Edit2, Trash2, Upload, Save, ChevronLeft, ChevronRight, Loader2, Lock, Users, BookOpen, FileText, Music, Link, Youtube, FolderOpen, Pencil, Globe, BarChart3, Settings, X, Search, LayoutDashboard, Filter, Eye, EyeOff, ShieldCheck, LogOut, GraduationCap, Download } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL as API_URL } from '@/lib/apiUrl';
 import FiqhAdminTab from '@/components/admin/FiqhAdminTab';
@@ -285,6 +285,25 @@ export function XassidasAdmin() {
       setEditingAudioId(null);
     },
     onError: (e: any) => alert(e.message),
+  });
+
+  const [downloadingAudioId, setDownloadingAudioId] = useState<string | null>(null);
+  const downloadToSpacesMutation = useMutation({
+    mutationFn: async (audioId: string) => {
+      setDownloadingAudioId(audioId);
+      const res = await fetch(`${API_URL}/xassidas/${editingXassida!.id}/audios/${audioId}/download-to-spaces`, {
+        method: 'POST',
+        headers: authHeaders,
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Erreur téléchargement'); }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['xassida-audios-admin', editingXassida?.id] });
+      queryClient.invalidateQueries({ queryKey: ['xassida-audios', editingXassida?.id] });
+      setDownloadingAudioId(null);
+    },
+    onError: (e: any) => { alert(e.message); setDownloadingAudioId(null); },
   });
 
   const [showEditAuthorDialog, setShowEditAuthorDialog] = useState(false);
@@ -1990,9 +2009,23 @@ export function XassidasAdmin() {
                         <p className="text-xs text-muted-foreground">
                           {audio.chapter_number !== null ? `Ch. ${audio.chapter_number}` : 'Toute la xassida'}
                           {' · '}
-                          {audio.youtube_id ? '▶ YouTube' : '🎵 MP3'}
+                          {audio.audio_url ? '☁️ Spaces' : audio.youtube_id ? '▶ YouTube' : '🎵 MP3'}
                         </p>
                       </div>
+                      {/* Download YouTube → Spaces button */}
+                      {audio.youtube_id && (
+                        <button
+                          type="button"
+                          title={audio.audio_url ? 'Re-télécharger vers Spaces' : 'Télécharger vers Spaces'}
+                          disabled={downloadingAudioId === audio.id}
+                          onClick={() => downloadToSpacesMutation.mutate(audio.id)}
+                          className={`flex-shrink-0 p-1 rounded transition-colors ${audio.audio_url ? 'text-green-600 hover:text-green-700' : 'text-primary hover:text-primary/70'}`}
+                        >
+                          {downloadingAudioId === audio.id
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <Download className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => {

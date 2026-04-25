@@ -46,19 +46,37 @@ interface VerseRow {
 
 type View = 'list' | 'chapters' | 'pdf-arabic' | 'pdf-french';
 
-// ── Icons list for chapters ──────────────────────────────────────────────────
-const CHAPTER_ICONS = [
-  '📖', '✅', '🔧', '↩️', '⚠️', '👥', '📚', '🌙', '💧', '🕌',
-  '📝', '🎯', '⚡', '🔑', '💡', '🌟', '📊', '📈', '🎓', '🤝',
-  '🙏', '❤️', '👨', '👩', '👶', '👴', '👵', '🧑', '🤵', '💼',
-  '🏠', '🏡', '🏢', '🏛️', '🕌', '⛪', '🕍', '🛕', '✡️', '☪️',
-  '⚖️', '⚔️', '🛡️', '🔱', '🔰', '🆔', '🆕', '🆙', '🆒', '🆓',
-  '🅰️', '🅱️', '🅾️', '💠', '🔶', '🔹', '🔸', '🔺', '🔻', '💎',
-  '🌍', '🌎', '🌏', '🌐', '🌑', '🌒', '🌓', '🌔', '🌕', '🌖',
-  '🌗', '🌘', '🌚', '🌝', '🌞', '⭐', '🌟', '✨', '⚡', '☄️',
-  '🔥', '💥', '🌪️', '🌈', '☀️', '🌤️', '⛅', '🌥️', '☁️', '🌦️',
-  '🍎', '🍊', '🍋', '🍌', '🍉', '🍇', '🥒', '🥬', '🥦', '🌽',
+const FIQH_EMOJIS = [
+  // Piliers / Actes d'adoration
+  '🕌','🕋','☪️','📿','🤲','🙏','🌙','⭐','☀️','🌟',
+  // Purification / Eau
+  '💧','🌊','🚿','🛁','🫧','💦','🪣',
+  // Connaissance / Étude
+  '📚','📖','📝','✏️','🎓','📜','🗒️','📋','🗂️','📑','🔖',
+  // Règles / Loi
+  '✅','❌','⚠️','↩️','🔄','➕','➖','🔑','🗝️','⚖️','📏',
+  // Prière / Culte
+  '⏰','🔔','🕐','🕑','🕕','🧎','🙇',
+  // Jeûne / Nourriture
+  '🍽️','🥗','🌙','🍴','🚫',
+  // Zakat / Argent
+  '💰','💵','🪙','💎','🏦','🤲','💝',
+  // Hajj / Voyage
+  '✈️','🚶','🏔️','🏕️','🧭','🗺️',
+  // Transactions / Commerce
+  '🤝','🏪','🛒','📊','🏷️',
+  // Personnes / Social
+  '👥','👤','🧕','👨','👩','👶','👴','👵','👨‍👩‍👧',
+  // Nature / Éléments
+  '🌿','🌸','🌺','🍃','☁️','⛅','🌈','🔥','🌱',
+  // Concepts / Général
+  '💡','🎯','📌','🔧','⚙️','🔍','💬','📢','🏷️','🎖️',
+  // Chiffres / Ordre
+  '1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣',
+  // Symboles
+  '♻️','🔰','⚜️','🕊️','🌐','🏠','🏫','🏛️',
 ];
+
 
 const BLANK_VERSE: Omit<VerseRow, 'id'> = {
   verse_number: 1,
@@ -106,6 +124,7 @@ const FiqhAdminTab = () => {
   const [createForm, setCreateForm] = useState({ title: '', arabic_name: '', author_id: '', description: '' });
   const [editableChapters, setEditableChapters] = useState<Record<string, { name: string; icon: string; arabic: string }>>({});
   const [showChapterNamesPanel, setShowChapterNamesPanel] = useState(false);
+  const [openEmojiPicker, setOpenEmojiPicker] = useState<string | null>(null);
 
   // ── Queries ───────────────────────────────────────────────────────────────
   const { data: books = [], isLoading } = useQuery<FiqhBook[]>({
@@ -497,22 +516,40 @@ const FiqhAdminTab = () => {
                       {chapterGroups.map(([num]) => {
                         const key = String(num);
                         const ch = editableChapters[key] ?? { name: `Chapitre ${num}`, icon: '📖', arabic: '' };
+                        const pickerOpen = openEmojiPicker === key;
                         return (
                           <div key={num} className="flex items-center gap-2">
                             <span className="text-xs text-muted-foreground w-5 shrink-0 text-center">{num}</span>
-                            {/* Icon Select Dropdown */}
-                            <Select value={ch.icon} onValueChange={(icon) => setEditableChapters(p => ({ ...p, [key]: { ...ch, icon } }))}>
-                              <SelectTrigger className="w-14 px-1.5">
-                                <SelectValue placeholder="📖" />
-                              </SelectTrigger>
-                              <SelectContent className="max-h-64">
-                                {CHAPTER_ICONS.map((icon) => (
-                                  <SelectItem key={icon} value={icon}>
-                                    <span className="text-lg">{icon}</span>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            {/* Emoji grid picker */}
+                            <div className="relative shrink-0">
+                              <button
+                                type="button"
+                                className="w-12 h-10 flex items-center justify-center text-xl border border-input rounded-md bg-background hover:bg-accent transition-colors"
+                                onClick={() => setOpenEmojiPicker(pickerOpen ? null : key)}
+                              >
+                                {ch.icon || '📖'}
+                              </button>
+                              {pickerOpen && (
+                                <>
+                                  <div className="fixed inset-0 z-40" onClick={() => setOpenEmojiPicker(null)} />
+                                  <div className="absolute top-full left-0 z-50 mt-1 bg-card border border-border rounded-xl shadow-lg p-2 grid grid-cols-8 gap-0.5 w-72 max-h-56 overflow-y-auto">
+                                    {FIQH_EMOJIS.map(emoji => (
+                                      <button
+                                        key={emoji}
+                                        type="button"
+                                        className={`w-8 h-8 flex items-center justify-center text-lg rounded hover:bg-accent transition-colors ${ch.icon === emoji ? 'bg-primary/10 ring-1 ring-primary' : ''}`}
+                                        onClick={() => {
+                                          setEditableChapters(p => ({ ...p, [key]: { ...ch, icon: emoji } }));
+                                          setOpenEmojiPicker(null);
+                                        }}
+                                      >
+                                        {emoji}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
+                            </div>
                             {/* Chapter name */}
                             <Input
                               placeholder={`Chapitre ${num}`}

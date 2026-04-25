@@ -785,7 +785,7 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
           )}
           {hasTranslationWo && (
             <button onClick={() => setShowWolof((s) => !s)} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${showWolof ? active : ctrlBtn}`}>
-              🇸🇳 Wolof
+              Wolof
             </button>
           )}
           {apiVerses.length > 0 && (
@@ -1045,8 +1045,8 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                             initial={{ opacity: 0, height: 0, marginTop: 0 }} animate={{ opacity: 1, height: "auto", marginTop: 10 }} exit={{ opacity: 0, height: 0, marginTop: 0 }}
                           >
                             <div className="h-px bg-border/20 mb-2" />
-                            <p className={`text-sm leading-relaxed ${d ? "text-amber-400/80" : "text-primary/80"}`}>
-                              🇸🇳 {verse.translation_wo}
+                            <p className={`text-sm leading-relaxed ${d ? "text-secondary" : "text-foreground"}`}>
+                              {verse.translation_wo}
                             </p>
                           </motion.div>
                         )}
