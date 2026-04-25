@@ -362,7 +362,8 @@ export function XassidasAdmin() {
           body: formData
         });
         if (!uploadRes.ok) {
-          console.warn('Photo upload failed');
+          const err = await uploadRes.json().catch(() => ({}));
+          throw new Error(err.error || 'Échec upload photo');
         }
       }
 
@@ -471,7 +472,8 @@ export function XassidasAdmin() {
           body: formData
         });
         if (!uploadRes.ok) {
-          console.warn('Photo upload failed');
+          const err = await uploadRes.json().catch(() => ({}));
+          throw new Error(err.error || 'Échec upload photo');
         }
       }
 
@@ -1723,12 +1725,16 @@ export function XassidasAdmin() {
                         <div className="flex items-start gap-4">
                           <div className="relative">
                             {author.photo_url ? (
-                              <img src={author.photo_url} alt={author.name} className="w-16 h-16 object-cover rounded-xl shadow-sm" />
-                            ) : (
-                              <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
-                                <span className="text-xl font-bold text-primary">{author.name[0]}</span>
-                              </div>
-                            )}
+                              <img
+                                src={author.photo_url}
+                                alt={author.name}
+                                className="w-16 h-16 object-cover rounded-xl shadow-sm"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
+                              />
+                            ) : null}
+                            <div className={`w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 ${author.photo_url ? 'hidden' : ''}`}>
+                              <span className="text-xl font-bold text-primary">{author.name[0]}</span>
+                            </div>
                             <Button 
                               size="sm" 
                               variant="secondary" 
