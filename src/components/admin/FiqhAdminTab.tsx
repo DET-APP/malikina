@@ -46,6 +46,20 @@ interface VerseRow {
 
 type View = 'list' | 'chapters' | 'pdf-arabic' | 'pdf-french';
 
+// ── Icons list for chapters ──────────────────────────────────────────────────
+const CHAPTER_ICONS = [
+  '📖', '✅', '🔧', '↩️', '⚠️', '👥', '📚', '🌙', '💧', '🕌',
+  '📝', '🎯', '⚡', '🔑', '💡', '🌟', '📊', '📈', '🎓', '🤝',
+  '🙏', '❤️', '👨', '👩', '👶', '👴', '👵', '🧑', '🤵', '💼',
+  '🏠', '🏡', '🏢', '🏛️', '🕌', '⛪', '🕍', '🛕', '✡️', '☪️',
+  '⚖️', '⚔️', '🛡️', '🔱', '🔰', '🆔', '🆕', '🆙', '🆒', '🆓',
+  '🅰️', '🅱️', '🅾️', '💠', '🔶', '🔹', '🔸', '🔺', '🔻', '💎',
+  '🌍', '🌎', '🌏', '🌐', '🌑', '🌒', '🌓', '🌔', '🌕', '🌖',
+  '🌗', '🌘', '🌚', '🌝', '🌞', '⭐', '🌟', '✨', '⚡', '☄️',
+  '🔥', '💥', '🌪️', '🌈', '☀️', '🌤️', '⛅', '🌥️', '☁️', '🌦️',
+  '🍎', '🍊', '🍋', '🍌', '🍉', '🍇', '🥒', '🥬', '🥦', '🌽',
+];
+
 const BLANK_VERSE: Omit<VerseRow, 'id'> = {
   verse_number: 1,
   chapter_number: 1,
@@ -486,18 +500,27 @@ const FiqhAdminTab = () => {
                         return (
                           <div key={num} className="flex items-center gap-2">
                             <span className="text-xs text-muted-foreground w-5 shrink-0 text-center">{num}</span>
-                            <Input
-                              className="w-14 text-center px-1"
-                              placeholder="📖"
-                              value={ch.icon}
-                              onChange={e => setEditableChapters(p => ({ ...p, [key]: { ...ch, icon: e.target.value } }))}
-                            />
+                            {/* Icon Select Dropdown */}
+                            <Select value={ch.icon} onValueChange={(icon) => setEditableChapters(p => ({ ...p, [key]: { ...ch, icon } }))}>
+                              <SelectTrigger className="w-14 px-1.5">
+                                <SelectValue placeholder="📖" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-64">
+                                {CHAPTER_ICONS.map((icon) => (
+                                  <SelectItem key={icon} value={icon}>
+                                    <span className="text-lg">{icon}</span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {/* Chapter name */}
                             <Input
                               placeholder={`Chapitre ${num}`}
                               value={ch.name}
                               onChange={e => setEditableChapters(p => ({ ...p, [key]: { ...ch, name: e.target.value } }))}
                               className="flex-1"
                             />
+                            {/* Arabic name */}
                             <Input
                               placeholder="اسم عربي"
                               value={ch.arabic}
@@ -513,18 +536,26 @@ const FiqhAdminTab = () => {
                       size="sm"
                       className="w-full"
                       disabled={saveChaptersMutation.isPending}
-                      onClick={() => saveChaptersMutation.mutate(editableChapters)}
+                      onClick={() => {
+                        // Validate before saving
+                        const hasEmptyName = Object.values(editableChapters).some(ch => !ch.name.trim());
+                        if (hasEmptyName) {
+                          alert('Tous les chapitres doivent avoir un nom');
+                          return;
+                        }
+                        saveChaptersMutation.mutate(editableChapters);
+                      }}
                     >
                       {saveChaptersMutation.isPending
                         ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
                         : <Save className="w-4 h-4 mr-1.5" />}
-                      Sauvegarder les noms
+                      Sauvegarder les noms et icônes
                     </Button>
                     {saveChaptersMutation.isSuccess && (
-                      <p className="text-xs text-green-600 text-center">✓ Noms sauvegardés</p>
+                      <p className="text-xs text-green-600 text-center">✓ Noms et icônes sauvegardés</p>
                     )}
                     {saveChaptersMutation.isError && (
-                      <p className="text-xs text-destructive text-center">{(saveChaptersMutation.error as Error).message}</p>
+                      <p className="text-xs text-destructive text-center">Erreur: {(saveChaptersMutation.error as Error).message}</p>
                     )}
                   </CardContent>
                 </motion.div>
