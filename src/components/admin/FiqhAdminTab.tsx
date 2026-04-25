@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL as API_URL } from '@/lib/apiUrl';
 
+interface ChapterMeta { name: string; icon: string; arabic?: string; }
+
 interface FiqhBook {
   id: string;
   title: string;
@@ -23,6 +25,8 @@ interface FiqhBook {
   actual_verse_count: number;
   author_id: string;
   author_name: string;
+  categorie?: string;
+  chapters_json?: Record<string, ChapterMeta>;
 }
 
 interface Author { id: string; name: string; }
@@ -86,6 +90,8 @@ const FiqhAdminTab = () => {
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [isJsonLoading, setIsJsonLoading] = useState(false);
   const [createForm, setCreateForm] = useState({ title: '', arabic_name: '', author_id: '', description: '' });
+  const [editableChapters, setEditableChapters] = useState<Record<string, { name: string; icon: string; arabic: string }>>({});
+  const [showChapterNamesPanel, setShowChapterNamesPanel] = useState(false);
 
   // ── Queries ───────────────────────────────────────────────────────────────
   const { data: books = [], isLoading } = useQuery<FiqhBook[]>({
@@ -236,6 +242,34 @@ const FiqhAdminTab = () => {
       setPdfExtracted([]); setView('chapters');
     },
   });
+
+  const saveChaptersMutation = useMutation({
+    mutationFn: async (chaptersJson: Record<string, ChapterMeta>) => {
+      const res = await fetch(`${API_URL}/xassidas/${selectedBook!.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ chapters_json: chaptersJson }),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Erreur sauvegarde'); }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fiqh-books-admin'] });
+    },
+  });
+
+  // Populate editableChapters from chapterGroups once loaded
+  useEffect(() => {
+    if (view !== 'chapters' || chapterGroups.length === 0) return;
+    setEditableChapters(prev => {
+      const next = { ...prev };
+      chapterGroups.forEach(([num]) => {
+        const key = String(num);
+        if (!next[key]) next[key] = { name: `Chapitre ${num}`, icon: '📖', arabic: '' };
+      });
+      return next;
+    });
+  }, [chapterGroups, view]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const openAddVerse = (chapterNumber: number) => {
@@ -420,6 +454,85 @@ const FiqhAdminTab = () => {
           </label>
         </div>
 
+        {/* Chapter names editor */}
+        {chapterGroups.length > 0 && (
+          <Card>
+            <CardHeader
+              className="cursor-pointer select-none py-3 px-4"
+              onClick={() => setShowChapterNamesPanel(p => !p)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Pencil className="w-4 h-4 text-primary" />
+                  <p className="font-semibold text-sm">Noms des chapitres</p>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showChapterNamesPanel ? 'rotate-180' : ''}`} />
+              </div>
+            </CardHeader>
+            <AnimatePresence initial={false}>
+              {showChapterNamesPanel && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <CardContent className="pt-0 space-y-3 px-4 pb-4">
+                    <div className="border-t border-border pt-3 space-y-2">
+                      {chapterGroups.map(([num]) => {
+                        const key = String(num);
+                        const ch = editableChapters[key] ?? { name: `Chapitre ${num}`, icon: '📖', arabic: '' };
+                        return (
+                          <div key={num} className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground w-5 shrink-0 text-center">{num}</span>
+                            <Input
+                              className="w-14 text-center px-1"
+                              placeholder="📖"
+                              value={ch.icon}
+                              onChange={e => setEditableChapters(p => ({ ...p, [key]: { ...ch, icon: e.target.value } }))}
+                            />
+                            <Input
+                              placeholder={`Chapitre ${num}`}
+                              value={ch.name}
+                              onChange={e => setEditableChapters(p => ({ ...p, [key]: { ...ch, name: e.target.value } }))}
+                              className="flex-1"
+                            />
+                            <Input
+                              placeholder="اسم عربي"
+                              value={ch.arabic}
+                              onChange={e => setEditableChapters(p => ({ ...p, [key]: { ...ch, arabic: e.target.value } }))}
+                              className="w-28 text-right font-arabic"
+                              dir="rtl"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      disabled={saveChaptersMutation.isPending}
+                      onClick={() => saveChaptersMutation.mutate(editableChapters)}
+                    >
+                      {saveChaptersMutation.isPending
+                        ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                        : <Save className="w-4 h-4 mr-1.5" />}
+                      Sauvegarder les noms
+                    </Button>
+                    {saveChaptersMutation.isSuccess && (
+                      <p className="text-xs text-green-600 text-center">✓ Noms sauvegardés</p>
+                    )}
+                    {saveChaptersMutation.isError && (
+                      <p className="text-xs text-destructive text-center">{(saveChaptersMutation.error as Error).message}</p>
+                    )}
+                  </CardContent>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </Card>
+        )}
+
         {/* Chapter cards */}
         {versesLoading ? (
           <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
@@ -450,7 +563,12 @@ const FiqhAdminTab = () => {
                           <span className="text-xs font-bold text-primary">{chapterNum}</span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm text-foreground">Chapitre {chapterNum}</p>
+                          <p className="font-semibold text-sm text-foreground">
+                            {editableChapters[String(chapterNum)]?.icon && (
+                              <span className="mr-1">{editableChapters[String(chapterNum)].icon}</span>
+                            )}
+                            {editableChapters[String(chapterNum)]?.name || `Chapitre ${chapterNum}`}
+                          </p>
                           <p className="text-xs text-muted-foreground">{verses.length} règle{verses.length !== 1 ? 's' : ''}</p>
                         </div>
                         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
@@ -709,7 +827,19 @@ const FiqhAdminTab = () => {
                 </CardHeader>
                 <CardContent className="pt-0 flex gap-2 flex-wrap">
                   <Button variant="outline" size="sm"
-                    onClick={() => { setSelectedBook(book); setExpandedChapters(new Set()); setView('chapters'); }}>
+                    onClick={() => {
+                      setSelectedBook(book);
+                      setExpandedChapters(new Set());
+                      setShowChapterNamesPanel(false);
+                      const initial: Record<string, { name: string; icon: string; arabic: string }> = {};
+                      if (book.chapters_json) {
+                        Object.entries(book.chapters_json).forEach(([k, v]) => {
+                          initial[k] = { name: v.name ?? '', icon: v.icon ?? '📖', arabic: v.arabic ?? '' };
+                        });
+                      }
+                      setEditableChapters(initial);
+                      setView('chapters');
+                    }}>
                     <Eye className="w-4 h-4 mr-1.5" /> Gérer les chapitres
                   </Button>
                   <Button variant="ghost" size="sm"
