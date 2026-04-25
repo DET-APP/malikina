@@ -170,12 +170,12 @@ const ChapterListView = ({
 // ── Level 1 — Book / category grid ──────────────────────────────────────────
 
 const STATIC_BOOKS: FiqhBook[] = [
-  { id: "purification", title: "Purification", arabic_name: "الطهارة", description: "Règles de purification", categorie: "💧", actual_verse_count: 25, author_name: "", chapters_json: {} },
-  { id: "priere",       title: "Prière",        arabic_name: "الصلاة", description: "Pilier de l'Islam",    categorie: "🕌", actual_verse_count: 45, author_name: "", chapters_json: {} },
-  { id: "jeune",        title: "Jeûne",          arabic_name: "الصيام", description: "Ramadan et jeûne",     categorie: "🌙", actual_verse_count: 20, author_name: "", chapters_json: {} },
-  { id: "zakat",        title: "Zakat",          arabic_name: "الزكاة", description: "Aumône légale",        categorie: "💰", actual_verse_count: 15, author_name: "", chapters_json: {} },
-  { id: "hajj",         title: "Pèlerinage",     arabic_name: "الحج",  description: "Le cinquième pilier",   categorie: "🕋", actual_verse_count: 30, author_name: "", chapters_json: {} },
-  { id: "transactions", title: "Transactions",   arabic_name: "المعاملات", description: "Commerce licite",   categorie: "🤝", actual_verse_count: 35, author_name: "", chapters_json: {} },
+  { id: "purification", title: "Purification", arabic_name: "الطهارة", description: "Règles de purification", categorie: "💧", actual_verse_count: 0, author_name: "", chapters_json: {} },
+  { id: "priere",       title: "Prière",        arabic_name: "الصلاة", description: "Pilier de l'Islam",    categorie: "🕌", actual_verse_count: 0, author_name: "", chapters_json: {} },
+  { id: "jeune",        title: "Jeûne",          arabic_name: "الصيام", description: "Ramadan et jeûne",     categorie: "🌙", actual_verse_count: 0, author_name: "", chapters_json: {} },
+  { id: "zakat",        title: "Zakat",          arabic_name: "الزكاة", description: "Aumône légale",        categorie: "💰", actual_verse_count: 0, author_name: "", chapters_json: {} },
+  { id: "hajj",         title: "Pèlerinage",     arabic_name: "الحج",  description: "Le cinquième pilier",   categorie: "🕋", actual_verse_count: 0, author_name: "", chapters_json: {} },
+  { id: "transactions", title: "Transactions",   arabic_name: "المعاملات", description: "Commerce licite",   categorie: "🤝", actual_verse_count: 0, author_name: "", chapters_json: {} },
 ];
 
 // ── Main FiqhScreen ─────────────────────────────────────────────────────────
@@ -205,7 +205,7 @@ const FiqhScreen = () => {
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
-    enabled: !!selectedBook && apiBooks.length > 0,
+    enabled: !!selectedBook,
   });
 
   // ── Build chapters from verses ──────────────────────────────────────────
@@ -320,31 +320,32 @@ const FiqhScreen = () => {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">
-            {filteredBooks.map((book, index) => (
-              <motion.button
-                key={book.id}
-                className="bg-card rounded-2xl p-5 shadow-soft text-left"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.4 + index * 0.05 }}
-                whileHover={{ scale: 1.03, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  if (apiBooks.length > 0) setSelectedBook(book);
-                }}
-              >
-                <div className="flex items-start justify-between">
-                  <span className="text-3xl">{book.categorie || "📚"}</span>
-                  <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                    {book.actual_verse_count} règles
-                  </span>
-                </div>
-                <h4 className="font-bold text-foreground mt-3">{book.title}</h4>
-                {book.arabic_name && (
-                  <p className="text-xl font-arabic text-muted-foreground mt-1">{book.arabic_name}</p>
-                )}
-              </motion.button>
-            ))}
+            {filteredBooks.map((book, index) => {
+              const hasContent = book.actual_verse_count > 0;
+              return (
+                <motion.button
+                  key={book.id}
+                  className={`bg-card rounded-2xl p-5 shadow-soft text-left transition-opacity ${hasContent ? "" : "opacity-50 cursor-not-allowed"}`}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: hasContent ? 1 : 0.5, scale: 1 }}
+                  transition={{ delay: 0.4 + index * 0.05 }}
+                  whileHover={hasContent ? { scale: 1.03, y: -2 } : {}}
+                  whileTap={hasContent ? { scale: 0.98 } : {}}
+                  onClick={() => { if (hasContent) setSelectedBook(book); }}
+                >
+                  <div className="flex items-start justify-between">
+                    <span className="text-3xl">{book.categorie || "📚"}</span>
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                      {hasContent ? `${book.actual_verse_count} règles` : "Bientôt"}
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-foreground mt-3">{book.title}</h4>
+                  {book.arabic_name && (
+                    <p className="text-xl font-arabic text-muted-foreground mt-1">{book.arabic_name}</p>
+                  )}
+                </motion.button>
+              );
+            })}
           </div>
         )}
       </div>
