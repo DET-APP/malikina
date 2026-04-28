@@ -106,9 +106,14 @@ const HomeHeader = ({
                         <img src={logo} alt="Logo" className="w-full h-full object-contain" />
                     </div>
                     <div className="flex-1 text-center">
-                        <h2 className="font-bold text-foreground text-lg">Al Moutahabbina Fillahi</h2>
-                        <p className="text-xl font-arabic text-secondary mt-1">الْمُتَحَابِّينَ فِي اللَّهِ</p>
-                        <p className="text-xs text-muted-foreground mt-1">{t("dahira")}</p>
+                        <h2 className="font-bold text-foreground text-base leading-tight">Al Moutahabbina Fillahi</h2>
+                        <p className="text-lg font-arabic text-secondary mt-0.5">الْمُتَحَابِّينَ فِي اللَّهِ</p>
+                        <p className="text-[10px] text-muted-foreground mt-1 italic leading-tight">
+                          «&nbsp;ألاَ ياَ بَنِي هَذَا الزَّمَانُ دَعَوْتُكُمْ&nbsp;»
+                        </p>
+                        <p className="text-[9px] text-muted-foreground/70 mt-0.5 leading-tight">
+                          — Seydi El Hadji Malick Sy
+                        </p>
                     </div>
                 </div>
             </motion.div>

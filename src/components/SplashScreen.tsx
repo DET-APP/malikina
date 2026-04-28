@@ -70,10 +70,19 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
             Al Moutahabbina Fillahi
           </h1>
           <p className="mt-2 text-3xl font-arabic text-secondary">
-            المتحابين في الله
+            الْمُتَحَابِّينَ فِي اللَّهِ
           </p>
-          <p className="mt-3 text-sm text-primary-foreground/80 tracking-widest uppercase">
-            Dahira des Étudiants Tidianes
+          <p className="mt-4 text-base font-arabic text-secondary/90 leading-relaxed px-4 text-center">
+            ألاَ ياَ بَنِي هَذَا الزَّمَانُ دَعَوْتُكُمْ
+          </p>
+          <p className="mt-1 text-base font-arabic text-secondary/90 leading-relaxed px-4 text-center">
+            لِإحْيَاءِ دِينٍ بِالعُلُومِ أَجِيبُوا
+          </p>
+          <p className="mt-2 text-xs text-primary-foreground/60 italic text-center px-6 leading-relaxed">
+            «&nbsp;Ô jeunes de mon époque, je vous exhorte à revivifier la religion par les sciences, répondez.&nbsp;»
+          </p>
+          <p className="mt-1 text-xs text-secondary/80 font-medium text-center">
+            — Seydi El Hadji Malick Sy
           </p>
         </motion.div>
       </motion.div>

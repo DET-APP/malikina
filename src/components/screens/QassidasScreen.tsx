@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Wifi, X } from "lucide-react";
+import { Search, Wifi, X, Info } from "lucide-react";
 import { useXassidas } from "@/hooks/useXassidas";
 import { useQassidasHistory } from "@/hooks/useQassidasHistory";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -11,7 +11,7 @@ import XassidasList from "@/components/qassidas/XassidasList";
 import XassidasDetail from "@/components/qassidas/XassidasDetail";
 import FavoritesList from "@/components/qassidas/FavoritesList";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import type { Qassida } from "@/data/qassidasData";
+import type { Qassida, Author } from "@/data/qassidasData";
 
 interface QassidasScreenProps {
   initialQassidaId?: number;
@@ -25,6 +25,7 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
   const [selectedQassida, setSelectedQassida] = useState<Qassida | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [selectedAuthorBio, setSelectedAuthorBio] = useState<Author | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
   const { addToHistory } = useQassidasHistory();
@@ -343,35 +344,45 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
               if (count === 0 && !selectedCategory) return null;
               const isActive = selectedAuthorId === author.id;
               return (
-                <motion.button
-                  key={author.id}
-                  onClick={() => setSelectedAuthorId(isActive ? null : author.id)}
-                  whileTap={{ scale: 0.95 }}
-                  className={`flex-shrink-0 flex items-center gap-2.5 pl-2 pr-4 py-2 rounded-full text-sm font-medium transition-all ${
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
-                >
-                  <div className={`w-8 h-8 rounded-full overflow-hidden flex-shrink-0 ${isActive ? "ring-2 ring-white/40" : ""}`}>
-                    {author.imageUrl ? (
-                      <img
-                        src={author.imageUrl}
-                        alt={author.shortName}
-                        className="w-full h-full object-cover"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                      />
-                    ) : (
-                      <div className={`w-full h-full flex items-center justify-center text-sm font-bold ${isActive ? "bg-white/20" : "bg-primary/20 text-primary"}`}>
-                        {author.shortName[0]}
-                      </div>
-                    )}
-                  </div>
-                  <span className="truncate max-w-[100px] text-sm">{author.shortName}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${isActive ? "bg-white/20" : "bg-muted-foreground/20"}`}>
-                    {count}
-                  </span>
-                </motion.button>
+                <div key={author.id} className="flex-shrink-0 flex items-center gap-1">
+                  <motion.button
+                    onClick={() => setSelectedAuthorId(isActive ? null : author.id)}
+                    whileTap={{ scale: 0.95 }}
+                    className={`flex items-center gap-2.5 pl-2 pr-3 py-2 rounded-full text-sm font-medium transition-all ${
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-full overflow-hidden flex-shrink-0 ${isActive ? "ring-2 ring-white/40" : ""}`}>
+                      {author.imageUrl ? (
+                        <img
+                          src={author.imageUrl}
+                          alt={author.shortName}
+                          className="w-full h-full object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                      ) : (
+                        <div className={`w-full h-full flex items-center justify-center text-sm font-bold ${isActive ? "bg-white/20" : "bg-primary/20 text-primary"}`}>
+                          {author.shortName[0]}
+                        </div>
+                      )}
+                    </div>
+                    <span className="truncate max-w-[100px] text-sm">{author.shortName}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${isActive ? "bg-white/20" : "bg-muted-foreground/20"}`}>
+                      {count}
+                    </span>
+                  </motion.button>
+                  {author.bio && (
+                    <button
+                      onClick={() => setSelectedAuthorBio(author)}
+                      className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
+                      aria-label={`Biographie de ${author.shortName}`}
+                    >
+                      <Info className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -405,6 +416,70 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
           onQassidasSelect={handleQassidasClick}
         />
       )}
+
+      {/* ── Author Bio Modal ─────────────────────────────────── */}
+      <AnimatePresence>
+        {selectedAuthorBio && (
+          <>
+            <motion.div
+              className="fixed inset-0 bg-black/50 z-40"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedAuthorBio(null)}
+            />
+            <motion.div
+              className="fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-3xl shadow-2xl max-w-lg mx-auto overflow-hidden"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            >
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 rounded-full bg-muted-foreground/20" />
+              </div>
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border/30">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center text-xl font-bold text-primary">
+                    {selectedAuthorBio.shortName[0]}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-foreground text-base leading-tight">{selectedAuthorBio.fullName}</h3>
+                    <p className="text-lg font-arabic text-secondary mt-0.5">{selectedAuthorBio.arabic}</p>
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full mt-1 inline-block">
+                      {selectedAuthorBio.confraternity}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedAuthorBio(null)}
+                  className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Bio */}
+              <div className="px-6 py-5 max-h-72 overflow-y-auto">
+                <p className="text-sm text-foreground/80 leading-relaxed">{selectedAuthorBio.bio}</p>
+              </div>
+
+              {/* Filter shortcut */}
+              <div className="px-6 pb-6">
+                <button
+                  onClick={() => { setSelectedAuthorId(selectedAuthorBio.id); setSelectedAuthorBio(null); }}
+                  className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold"
+                >
+                  Voir ses xassidas
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

@@ -32,7 +32,7 @@ export const authorsData: Author[] = [
     arabic: "سَيِّدِي الْحَاجُّ مَالِكْ سِي",
     imageUrl: "",
     confraternity: "Tidjane",
-    bio: "Fondateur de la Tidjaniyya au Sénégal"
+    bio: "Né en 1855 à Dagana (Saint-Louis), Seydi El Hadji Malick Sy est le grand réformateur de l'Islam au Sénégal. Érudit accompli en Coran, Hadith, Fiqh et littérature arabe, il s'établit à Tivaouane en 1902, qui devint le cœur rayonnant de la Tijaniyya au Sénégal. Poète exceptionnel, il est l'auteur de xassidas majeures : Khilâssou Dhahab, Abada, Kifayatou Raghibina... Il consacra sa vie à l'éducation et à l'unité des musulmans. Il rejoignit la miséricorde divine en 1922 à Tivaouane."
   },
   {
     id: 2,
@@ -41,7 +41,7 @@ export const authorsData: Author[] = [
     arabic: "سِرِينْ الشَّيْخُ أَنْتَا",
     imageUrl: "",
     confraternity: "Tidjane",
-    bio: "Disciple et successeur"
+    bio: "Grand érudit et disciple dévoué de la voie Tijaniyya, Serigne Cheikh Anta Diop a marqué son époque par sa profonde maîtrise des sciences islamiques. Auteur de xassidas comme Djawarihoul Maarifah et Tanwîrou Soukouk, il a contribué à la transmission du patrimoine spirituel Tidjane au Sénégal et en Afrique de l'Ouest."
   },
   {
     id: 3,
@@ -50,7 +50,7 @@ export const authorsData: Author[] = [
     arabic: "سِرِينْ الشَّيْخُ تِيْجَانِي سِي",
     imageUrl: "",
     confraternity: "Tidjane",
-    bio: "Héritier de la tradition"
+    bio: "Né à Tivaouane, Serigne Cheikh Tidiane Sy est l'un des grands héritiers de la tradition spirituelle fondée par Seydi El Hadji Malick Sy. Grand érudit et poète, il est l'auteur de la célèbre xassida Abuna. Il a consacré sa vie à consolider l'enseignement islamique et l'organisation de la confrérie Tijaniyya, perpétuant le message de paix, de savoir et de dévotion."
   },
   {
     id: 4,
@@ -59,7 +59,7 @@ export const authorsData: Author[] = [
     arabic: "سِرِينْ عَبْدُو الْعَزِيزِ سِي دَبَّاخْ",
     imageUrl: "",
     confraternity: "Tidjane",
-    bio: "Grand savant et poète"
+    bio: "Né à Tivaouane en 1904, Serigne Abdou Aziz Sy Dabakh est un fils de Seydi El Hadji Malick Sy et l'un des plus grands savants de la Tijaniyya sénégalaise. Khalife général, auteur des xassidas Bushrakum et Miftahoul Janna, il fut un ardent défenseur de la paix, du dialogue interreligieux et de l'unité nationale. Il est décédé en 1997, laissant un héritage spirituel et littéraire inestimable."
   },
   {
     id: 5,
@@ -68,7 +68,7 @@ export const authorsData: Author[] = [
     arabic: "سِرِينْ بَابَاكَرْ سِي",
     imageUrl: "",
     confraternity: "Tidjane",
-    bio: "Compilateur et conservateur"
+    bio: "Né en 1867 à Tivaouane, Serigne Babacar Sy est le fils aîné de Seydi El Hadji Malick Sy et le premier Khalife Général de la Tijaniyya au Sénégal. Il a porté l'héritage de son père avec une sagesse et une dévotion exemplaires, compilant et préservant les œuvres spirituelles et littéraires de la confrérie. Il est décédé en 1957, ayant guidé la communauté pendant plus de trois décennies."
   },
   {
     id: 6,
@@ -77,7 +77,7 @@ export const authorsData: Author[] = [
     arabic: "مَنْصُورْ سِي مَالِكْ",
     imageUrl: "",
     confraternity: "Tidjane",
-    bio: "Poète spirituel"
+    bio: "Mansour Sy Malick est un illustre poète spirituel de la lignée Tijaniyya, héritier de la tradition poétique fondée par Seydi El Hadji Malick Sy. Ses xassidas, dont Araftu Li Salma et Chakwa, témoignent d'une sensibilité artistique profonde et d'un attachement sincère à la voie soufie. Son œuvre continue d'inspirer les fidèles par sa beauté littéraire et sa profondeur spirituelle."
   },
   {
     id: 7,
@@ -86,7 +86,7 @@ export const authorsData: Author[] = [
     arabic: "شَيْخُ إِبْرَاهِيمُ نِيَاسْ",
     imageUrl: "",
     confraternity: "Tidjane",
-    bio: "Maître spirituel et enseignant du Coran"
+    bio: "Né en 1900 à Kaolack, Shaykh Ibrahim Niasse est l'un des plus grands maîtres spirituels du XXe siècle. Surnommé porteur de la 'Fayda' (inondation de grâce divine), il a propagé la Tijaniyya dans toute l'Afrique de l'Ouest et au-delà. Fondateur de la Médina Baye à Kaolack, il a mémorisé le Coran en entier et est l'auteur de nombreux traités spirituels. Il rejoignit la miséricorde divine en 1975, laissant des millions de disciples à travers le monde."
   },
 ];
 
