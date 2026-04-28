@@ -27,6 +27,7 @@ const translations = {
     navHome: "Accueil",
     navXassidas: "Xassidas",
     navQuran: "Coran",
+    navFiqh: "Fiqh",
     navPrayer: "Prières",
     navCommunity: "Communauté",
 
@@ -69,6 +70,7 @@ const translations = {
     navHome: "الرئيسية",
     navXassidas: "القصائد",
     navQuran: "القرآن",
+    navFiqh: "الفقه",
     navPrayer: "الصلوات",
     navCommunity: "المجتمع",
 
@@ -111,6 +113,7 @@ const translations = {
     navHome: "Home",
     navXassidas: "Xassidas",
     navQuran: "Quran",
+    navFiqh: "Fiqh",
     navPrayer: "Prayer",
     navCommunity: "Community",
 
@@ -153,6 +156,7 @@ const translations = {
     navHome: "Kër gi",
     navXassidas: "Kasid yi",
     navQuran: "Koran wi",
+    navFiqh: "Fiqh",
     navPrayer: "Jukël yi",
     navCommunity: "Ñi ñëw ci kaw",
 

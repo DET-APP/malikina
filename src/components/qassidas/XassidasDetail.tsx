@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, Play, Pause, Headphones, Share2,
   Loader2, Languages, AlignLeft, Volume2, Search,
-  Copy, Check, X
+  Copy, Check, X, ZoomIn, ZoomOut
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -767,10 +767,32 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
 
         {/* Reading controls */}
         <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border mb-3 flex-wrap ${ctrl}`}>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setFontSize((f) => Math.max(14, f - 2))} className={`w-7 h-7 rounded-lg text-sm font-bold flex items-center justify-center ${ctrlBtn}`}>A‑</button>
-            <span className={`text-xs w-6 text-center tabular-nums ${ctrlBtn}`}>{fontSize}</span>
-            <button onClick={() => setFontSize((f) => Math.min(32, f + 2))} className={`w-7 h-7 rounded-lg text-sm font-bold flex items-center justify-center ${ctrlBtn}`}>A+</button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setFontSize((f) => Math.max(14, f - 2))}
+              disabled={fontSize <= 14}
+              className={`w-7 h-7 rounded-lg flex items-center justify-center transition-opacity ${fontSize <= 14 ? 'opacity-30 cursor-not-allowed' : ''} ${ctrlBtn}`}
+              aria-label="Réduire le texte"
+            >
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            <div className="flex items-center gap-0.5">
+              {[14, 17, 20, 24, 28, 32].map((step) => (
+                <div
+                  key={step}
+                  className={`rounded-full transition-all duration-200 ${fontSize >= step ? 'bg-primary' : 'bg-border'}`}
+                  style={{ width: step <= 20 ? 5 : step <= 28 ? 6 : 7, height: step <= 20 ? 5 : step <= 28 ? 6 : 7 }}
+                />
+              ))}
+            </div>
+            <button
+              onClick={() => setFontSize((f) => Math.min(32, f + 2))}
+              disabled={fontSize >= 32}
+              className={`w-7 h-7 rounded-lg flex items-center justify-center transition-opacity ${fontSize >= 32 ? 'opacity-30 cursor-not-allowed' : ''} ${ctrlBtn}`}
+              aria-label="Agrandir le texte"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
           </div>
           <div className="w-px h-5 bg-border/40 mx-1" />
           {hasTranscription && (

@@ -1,7 +1,7 @@
-import { Home, Clock, BookOpen, BookMarked, Users } from "lucide-react";
+import { Home, Clock, Scale, BookMarked, Users } from "lucide-react";
 import { useLanguage, TranslationKey } from "@/contexts/LanguageContext";
 
-type Screen = "home" | "prayer" | "quran" | "qassidas" | "community";
+type Screen = "home" | "prayer" | "fiqh" | "qassidas" | "community";
 
 interface BottomNavigationProps {
   activeScreen: Screen;
@@ -11,7 +11,7 @@ interface BottomNavigationProps {
 const navItems: { id: Screen; icon: typeof Home; labelKey: TranslationKey }[] = [
   { id: "home", icon: Home, labelKey: "navHome" },
   { id: "qassidas", icon: BookMarked, labelKey: "navXassidas" },
-  { id: "quran", icon: BookOpen, labelKey: "navQuran" },
+  { id: "fiqh", icon: Scale, labelKey: "navFiqh" },
   { id: "prayer", icon: Clock, labelKey: "navPrayer" },
   { id: "community", icon: Users, labelKey: "navCommunity" },
 ];

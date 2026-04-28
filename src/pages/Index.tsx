@@ -38,8 +38,12 @@ const Index = () => {
   const [navigationParams, setNavigationParams] = useState<AppNavigationParams>({});
 
   useEffect(() => {
-    // Meta tags for SEO
     document.title = "Al Moutahabbina Fillahi - Dahira des Étudiants Tidianes";
+    // Accès admin via URL secrète : ?admin=malikina
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("admin") === "malikina") {
+      setActiveScreen("admin-xassidas");
+    }
   }, []);
 
   // Fonction de navigation pour les écrans simples (BottomNavigation et FloatingMenu)
@@ -130,7 +134,7 @@ const Index = () => {
           />
 
           <BottomNavigation
-            activeScreen={["calendar", "fiqh"].includes(activeScreen) ? "home" : activeScreen as any}
+            activeScreen={["calendar", "quran", "news", "admin-xassidas"].includes(activeScreen) ? "home" : activeScreen as any}
             onNavigate={handleSimpleNavigate}
           />
         </>
