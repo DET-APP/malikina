@@ -13,7 +13,7 @@ export const languages: LanguageFlag[] = [
   { code: "fr", label: "Français",  flag: "🇫🇷", nativeName: "Français" },
   { code: "ar", label: "العربية",   flag: "🇸🇦", nativeName: "العربية" },
   { code: "en", label: "English",   flag: "🇬🇧", nativeName: "English" },
-  { code: "wo", label: "Wolof",     flag: "🇸🇳", nativeName: "Wolof" },
+  // { code: "wo", label: "Wolof",     flag: "🇸🇳", nativeName: "Wolof" },
 ];
 
 const translations = {
@@ -149,50 +149,50 @@ const translations = {
     searchResults: "Results",
     seeAll: "See all",
   },
-  wo: {
-    // Home
-    welcome: "Dalal ak jaama",
-    greeting: "As-salamu alaykum",
-    dahira: "Dahira yi ak Talibé Tijaane yi - UAD",
+  // wo: {
+  //   // Home
+  //   welcome: "Dalal ak jaama",
+  //   greeting: "As-salamu alaykum",
+  //   dahira: "Dahira yi ak Talibé Tijaane yi - UAD",
 
-    // Navigation
-    appName: "Keeparu Maodo Malick Sy",
-    navHome: "Kër gi",
-    navXassidas: "Kasid yi",
-    navQuran: "Koran wi",
-    navFiqh: "Fiqh",
-    navPrayer: "Jukël yi",
-    navCommunity: "Ñi ñëw ci kaw",
+  //   // Navigation
+  //   appName: "Keeparu Maodo Malick Sy",
+  //   navHome: "Kër gi",
+  //   navXassidas: "Kasid yi",
+  //   navQuran: "Koran wi",
+  //   navFiqh: "Fiqh",
+  //   navPrayer: "Jukël yi",
+  //   navCommunity: "Ñi ñëw ci kaw",
 
-    // Xassidas screen
-    xassidasTitle: "Kasid yi",
-    xassidasCount: "kasid",
-    loading: "Dafa xëj…",
-    searchPlaceholder: "Seet kasid bi…",
-    gridView: "Laas",
-    listView: "Liist",
-    byAuthor: "Ci njariñ",
-    byCategory: "Ci wàll",
-    all: "Yépp",
-    allFem: "Yépp",
-    serverUnavailable: "Sërvër bi dafa nelaw",
-    serverError: "Amul njariñ ci kasid yi. Jëf ci kanam.",
-    noXassida: "Amul kasid",
-    dbPopulating: "Base bi dafay jël ci sërvër bi.",
-    noXassidaFound: "Amul kasid bu nekk",
-    noResults: "Amul dëkk",
+  //   // Xassidas screen
+  //   xassidasTitle: "Kasid yi",
+  //   xassidasCount: "kasid",
+  //   loading: "Dafa xëj…",
+  //   searchPlaceholder: "Seet kasid bi…",
+  //   gridView: "Laas",
+  //   listView: "Liist",
+  //   byAuthor: "Ci njariñ",
+  //   byCategory: "Ci wàll",
+  //   all: "Yépp",
+  //   allFem: "Yépp",
+  //   serverUnavailable: "Sërvër bi dafa nelaw",
+  //   serverError: "Amul njariñ ci kasid yi. Jëf ci kanam.",
+  //   noXassida: "Amul kasid",
+  //   dbPopulating: "Base bi dafay jël ci sërvër bi.",
+  //   noXassidaFound: "Amul kasid bu nekk",
+  //   noResults: "Amul dëkk",
 
-    // Favorites
-    favorites: "Ci xol",
-    noFavorites: "Amul ci xol",
-    noFavoritesDesc: "Yokk kasid yi ci xol ngir gis leen fëkk fii",
-    favoriteCount_one: "1 ci xol",
-    favoriteCount_other: "ci xol",
+  //   // Favorites
+  //   favorites: "Ci xol",
+  //   noFavorites: "Amul ci xol",
+  //   noFavoritesDesc: "Yokk kasid yi ci xol ngir gis leen fëkk fii",
+  //   favoriteCount_one: "1 ci xol",
+  //   favoriteCount_other: "ci xol",
 
-    // Search
-    searchResults: "Dëkk yi",
-    seeAll: "Gis yépp",
-  },
+  //   // Search
+  //   searchResults: "Dëkk yi",
+  //   seeAll: "Gis yépp",
+  // },
 } as const;
 
 export type TranslationKey = keyof typeof translations.fr;
