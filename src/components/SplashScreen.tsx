@@ -15,105 +15,56 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-primary via-primary to-green-dark"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-primary to-green-dark"
       initial={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.5 }}
+      exit={{ opacity: 0, scale: 0.97 }}
+      transition={{ duration: 0.45 }}
     >
-      {/* Islamic Pattern Background */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }} />
-      </div>
+      {/* Subtle pattern */}
+      <div className="absolute inset-0 opacity-[0.06]" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")`,
+      }} />
 
-      {/* Logo Container */}
-      <motion.div
-        className="relative z-10 flex flex-col items-center"
-        initial={{ scale: 0.8, opacity: 0 }}
+      {/* Logo — pas de cercle, pas de clip */}
+      <motion.img
+        src={logo}
+        alt="Univers Maodo Malick Sy"
+        className="w-44 h-44 object-contain relative z-10"
+        initial={{ scale: 0.75, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
+        transition={{ duration: 0.7, ease: "easeOut" }}
+      />
+
+      {/* Titre */}
+      <motion.div
+        className="relative z-10 mt-6 text-center px-8"
+        initial={{ y: 16, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.5, duration: 0.55 }}
       >
-        {/* Decorative Circle */}
-        <motion.div
-          className="absolute -inset-8 rounded-full border-2 border-secondary/30"
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.8 }}
-        />
-        
-        <motion.div
-          className="absolute -inset-16 rounded-full border border-secondary/20"
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.5, duration: 0.8 }}
-        />
-
-        {/* Main Logo */}
-        <motion.div
-          className="w-36 h-36 rounded-full bg-card shadow-glow flex items-center justify-center animate-pulse-glow overflow-hidden"
-          initial={{ y: 20 }}
-          animate={{ y: 0 }}
-          transition={{ delay: 0.2, duration: 0.6 }}
-        >
-          <img src={logo} alt="Logo Al Moutahabbina Fillahi" className="w-full h-full object-contain p-2" />
-        </motion.div>
-
-        {/* Text Content */}
-        <motion.div
-          className="mt-8 text-center"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.6, duration: 0.6 }}
-        >
-          <h1 className="text-2xl font-bold text-primary-foreground tracking-wide">
-            Univers Maodo Malick Sy
-          </h1>
-          <p className="mt-1 text-sm text-primary-foreground/70">
-            Keeparu Maodo Malick Sy
-          </p>
-          <p className="mt-2 text-2xl font-arabic text-secondary">
-            الْمُتَحَابِّينَ فِي اللَّهِ
-          </p>
-          <p className="mt-4 text-base font-arabic text-secondary/90 leading-relaxed px-4 text-center">
-            ألاَ ياَ بَنِي هَذَا الزَّمَانُ دَعَوْتُكُمْ
-          </p>
-          <p className="mt-1 text-base font-arabic text-secondary/90 leading-relaxed px-4 text-center">
-            لِإحْيَاءِ دِينٍ بِالعُلُومِ أَجِيبُوا
-          </p>
-          <p className="mt-2 text-xs text-primary-foreground/60 italic text-center px-6 leading-relaxed">
-            «&nbsp;Ô jeunes de mon époque, je vous exhorte à revivifier la religion par les sciences, répondez.&nbsp;»
-          </p>
-          <p className="mt-1 text-xs text-secondary/80 font-medium text-center">
-            — Seydi El Hadji Malick Sy
-          </p>
-        </motion.div>
+        <h1 className="text-xl font-bold text-white tracking-wide">
+          Univers Maodo Malick Sy
+        </h1>
+        <p className="mt-2 text-2xl font-arabic text-secondary">
+          الْمُتَحَابِّينَ فِي اللَّهِ
+        </p>
       </motion.div>
 
-      {/* Loading Indicator */}
+      {/* Dots */}
       <motion.div
-        className="absolute bottom-20 flex flex-col items-center"
+        className="absolute bottom-16 flex gap-2"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 1.2, duration: 0.5 }}
+        transition={{ delay: 1, duration: 0.4 }}
       >
-        <div className="flex space-x-2">
-          {[0, 1, 2].map((i) => (
-            <motion.div
-              key={i}
-              className="w-2 h-2 rounded-full bg-secondary"
-              animate={{
-                scale: [1, 1.5, 1],
-                opacity: [0.5, 1, 0.5],
-              }}
-              transition={{
-                duration: 1,
-                repeat: Infinity,
-                delay: i * 0.2,
-              }}
-            />
-          ))}
-        </div>
+        {[0, 1, 2].map((i) => (
+          <motion.div
+            key={i}
+            className="w-2 h-2 rounded-full bg-secondary"
+            animate={{ scale: [1, 1.5, 1], opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+          />
+        ))}
       </motion.div>
     </motion.div>
   );

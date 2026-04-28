@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Calendar, Info, HelpCircle, Heart } from "lucide-react";
+import { Menu, X, Calendar, Info, HelpCircle } from "lucide-react";
 
 interface FloatingMenuProps {
   onNavigate: (screen: "calendar" | "about" | "faq" | "contribution" | "admin-xassidas") => void;
@@ -13,7 +13,6 @@ const FloatingMenu = ({ onNavigate }: FloatingMenuProps) => {
     { id: "calendar" as const, icon: Calendar, label: "Calendrier", color: "bg-primary" },
     { id: "about" as const, icon: Info, label: "Qui sommes-nous", color: "bg-primary" },
     { id: "faq" as const, icon: HelpCircle, label: "FAQ", color: "bg-primary" },
-    { id: "contribution" as const, icon: Heart, label: "Contribuer", color: "bg-secondary" },
   ];
 
   return (

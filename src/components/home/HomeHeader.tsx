@@ -107,7 +107,6 @@ const HomeHeader = ({
                         <h2 className="font-bold text-foreground text-base leading-tight">Univers Maodo Malick Sy</h2>
                         <p className="text-xs text-muted-foreground mt-0.5">Keeparu Maodo Malick Sy</p>
                         <p className="text-lg font-arabic text-secondary mt-1">الْمُتَحَابِّينَ فِي اللَّهِ</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">Al Moutahabbina Fillahi</p>
                     </div>
                 </div>
             </motion.div>
