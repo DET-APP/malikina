@@ -13,9 +13,12 @@ import CommunityScreen from "@/components/screens/CommunityScreen";
 import AdminXassidaScreen from "@/components/screens/AdminXassidaScreen";
 import AdminLoginScreen from "@/components/screens/AdminLoginScreen";
 import NewsScreen from "@/components/screens/NewsScreen";
+import AboutScreen from "@/components/screens/AboutScreen";
+import FAQScreen from "@/components/screens/FAQScreen";
+import ContributionScreen from "@/components/screens/ContributionScreen";
 import { useAuth } from "@/contexts/AuthContext";
 
-type Screen = "home" | "prayer" | "quran" | "calendar" | "qassidas" | "fiqh" | "community" | "admin-xassidas" | "news";
+type Screen = "home" | "prayer" | "quran" | "calendar" | "qassidas" | "fiqh" | "community" | "admin-xassidas" | "news" | "about" | "faq" | "contribution";
 
 // Interface pour les paramètres de navigation du Coran
 interface QuranNavigationParams {
@@ -38,7 +41,7 @@ const Index = () => {
   const [navigationParams, setNavigationParams] = useState<AppNavigationParams>({});
 
   useEffect(() => {
-    document.title = "Al Moutahabbina Fillahi - Dahira des Étudiants Tidianes";
+    document.title = "Univers Maodo Malick Sy";
     // Accès admin via URL secrète : ?admin=malikina
     const params = new URLSearchParams(window.location.search);
     if (params.get("admin") === "malikina") {
@@ -104,6 +107,12 @@ const Index = () => {
         return <NewsScreen />;
       case "community":
         return <CommunityScreen />;
+      case "about":
+        return <AboutScreen onBack={() => setActiveScreen("home")} />;
+      case "faq":
+        return <FAQScreen onBack={() => setActiveScreen("home")} />;
+      case "contribution":
+        return <ContributionScreen onBack={() => setActiveScreen("home")} />;
       case "admin-xassidas":
         if (authLoading) return null;
         if (!user) return <AdminLoginScreen onSuccess={() => setActiveScreen('admin-xassidas')} />;
@@ -134,7 +143,7 @@ const Index = () => {
           />
 
           <BottomNavigation
-            activeScreen={["calendar", "quran", "news", "admin-xassidas"].includes(activeScreen) ? "home" : activeScreen as any}
+            activeScreen={["calendar", "quran", "news", "admin-xassidas", "about", "faq", "contribution"].includes(activeScreen) ? "home" : activeScreen as any}
             onNavigate={handleSimpleNavigate}
           />
         </>

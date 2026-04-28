@@ -24,6 +24,7 @@ const translations = {
     dahira: "Dahira des Étudiants Tidianes - UAD",
 
     // Navigation
+    appName: "Univers Maodo Malick Sy",
     navHome: "Accueil",
     navXassidas: "Xassidas",
     navQuran: "Coran",
@@ -67,6 +68,7 @@ const translations = {
     dahira: "جمعية الطلاب التجانيين",
 
     // Navigation
+    appName: "عالم ماودو مالك سي",
     navHome: "الرئيسية",
     navXassidas: "القصائد",
     navQuran: "القرآن",
@@ -110,6 +112,7 @@ const translations = {
     dahira: "Tidiane Students Association - UAD",
 
     // Navigation
+    appName: "Univers Maodo Malick Sy",
     navHome: "Home",
     navXassidas: "Xassidas",
     navQuran: "Quran",
@@ -153,6 +156,7 @@ const translations = {
     dahira: "Dahira yi ak Talibé Tijaane yi - UAD",
 
     // Navigation
+    appName: "Keeparu Maodo Malick Sy",
     navHome: "Kër gi",
     navXassidas: "Kasid yi",
     navQuran: "Koran wi",

@@ -67,9 +67,12 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           transition={{ delay: 0.6, duration: 0.6 }}
         >
           <h1 className="text-2xl font-bold text-primary-foreground tracking-wide">
-            Al Moutahabbina Fillahi
+            Univers Maodo Malick Sy
           </h1>
-          <p className="mt-2 text-3xl font-arabic text-secondary">
+          <p className="mt-1 text-sm text-primary-foreground/70">
+            Keeparu Maodo Malick Sy
+          </p>
+          <p className="mt-2 text-2xl font-arabic text-secondary">
             الْمُتَحَابِّينَ فِي اللَّهِ
           </p>
           <p className="mt-4 text-base font-arabic text-secondary/90 leading-relaxed px-4 text-center">

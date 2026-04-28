@@ -102,18 +102,12 @@ const HomeHeader = ({
                 transition={{ delay: 0.2 }}
             >
                 <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-full bg-card flex items-center justify-center shadow-soft overflow-hidden">
-                        <img src={logo} alt="Logo" className="w-full h-full object-contain" />
-                    </div>
-                    <div className="flex-1 text-center">
-                        <h2 className="font-bold text-foreground text-base leading-tight">Al Moutahabbina Fillahi</h2>
-                        <p className="text-lg font-arabic text-secondary mt-0.5">الْمُتَحَابِّينَ فِي اللَّهِ</p>
-                        <p className="text-[10px] text-muted-foreground mt-1 italic leading-tight">
-                          «&nbsp;ألاَ ياَ بَنِي هَذَا الزَّمَانُ دَعَوْتُكُمْ&nbsp;»
-                        </p>
-                        <p className="text-[9px] text-muted-foreground/70 mt-0.5 leading-tight">
-                          — Seydi El Hadji Malick Sy
-                        </p>
+                    <img src={logo} alt="Logo Univers Maodo Malick Sy" className="w-20 h-20 object-contain flex-shrink-0" />
+                    <div className="flex-1">
+                        <h2 className="font-bold text-foreground text-base leading-tight">Univers Maodo Malick Sy</h2>
+                        <p className="text-xs text-muted-foreground mt-0.5">Keeparu Maodo Malick Sy</p>
+                        <p className="text-lg font-arabic text-secondary mt-1">الْمُتَحَابِّينَ فِي اللَّهِ</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Al Moutahabbina Fillahi</p>
                     </div>
                 </div>
             </motion.div>
