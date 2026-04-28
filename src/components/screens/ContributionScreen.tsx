@@ -6,8 +6,8 @@ interface ContributionScreenProps {
   onBack: () => void;
 }
 
-const WAVE_NUMBER = "+221 77 XXX XX XX";
-const ORANGE_NUMBER = "+221 76 XXX XX XX";
+const WAVE_NUMBER = import.meta.env.VITE_WAVE_NUMBER ?? "";
+const ORANGE_NUMBER = import.meta.env.VITE_ORANGE_NUMBER ?? "";
 
 const CopyButton = ({ text }: { text: string }) => {
   const [copied, setCopied] = useState(false);
