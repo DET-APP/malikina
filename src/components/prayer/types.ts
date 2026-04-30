@@ -12,6 +12,8 @@ export interface City {
   name: string;
   lat: number;
   lon: number;
+  school?: number;  // 0 = Shafi'i (défaut), 1 = Hanafi (Asr tardif)
+  tune?: string;    // offsets en minutes: Imsak,Fajr,Sunrise,Dhuhr,Asr,Maghrib,Sunset,Isha,Midnight
 }
 
 export interface NextPrayer {

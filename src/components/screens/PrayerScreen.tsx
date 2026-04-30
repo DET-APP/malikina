@@ -21,8 +21,9 @@ import { ErrorState } from "@/components/shared/ErrorState";
 import { City, Prayer, NextPrayer, prayerNamesArabic } from "@/components/prayer/types";
 
 const cities: City[] = [
-  { name: "Dakar", lat: 14.7167, lon: -17.4677 },
-  { name: "Bambey", lat: 14.7000, lon: -16.4500 }
+  // Méthode locale Tijaniyya : école Hanafi (Asr tardif) + décalage Dhuhr/Maghrib pour correspondre aux mosquées
+  { name: "Bambey", lat: 14.7000, lon: -16.4500, school: 1, tune: "0,0,0,68,0,6,0,0,0" },
+  { name: "Dakar",  lat: 14.7167, lon: -17.4677, school: 1, tune: "0,0,0,68,0,0,0,0,0"  },
 ];
 
 const PrayerScreen = () => {
@@ -42,11 +43,13 @@ const PrayerScreen = () => {
       setError(null);
       
       const method = 3;
+      const school = selectedCity.school ?? 0;
+      const tune  = selectedCity.tune  ?? "0,0,0,0,0,0,0,0,0";
       const today = new Date();
       const dateStr = `${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`;
-      
+
       const response = await fetch(
-        `https://api.aladhan.com/v1/timings/${dateStr}?latitude=${lat}&longitude=${lon}&method=${method}`
+        `https://api.aladhan.com/v1/timings/${dateStr}?latitude=${lat}&longitude=${lon}&method=${method}&school=${school}&tune=${tune}&timezonestring=Africa%2FDakar`
       );
       
       if (!response.ok) throw new Error("Erreur lors du chargement");

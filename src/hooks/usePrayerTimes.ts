@@ -11,9 +11,11 @@ export const usePrayerTimes = (toast: any) => {
     const [nextPrayer, setNextPrayer] = useState<NextPrayer | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Coordonnées par défaut (Dakar)
-    const defaultLat = 14.7167;
-    const defaultLon = -17.4677;
+    // Bambey (UAD) — méthode locale Tijaniyya par défaut
+    const defaultLat = 14.7000;
+    const defaultLon = -16.4500;
+    const defaultSchool = 1;       // Hanafi → Asr tardif
+    const defaultTune = "0,0,0,68,0,6,0,0,0"; // +68 min Dhuhr, +6 min Maghrib
 
     const fetchPrayerTimes = async (lat: number, lon: number) => {
         try {
@@ -23,7 +25,7 @@ export const usePrayerTimes = (toast: any) => {
             const dateStr = `${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`;
 
             const response = await fetch(
-                `https://api.aladhan.com/v1/timings/${dateStr}?latitude=${lat}&longitude=${lon}&method=${method}`
+                `https://api.aladhan.com/v1/timings/${dateStr}?latitude=${lat}&longitude=${lon}&method=${method}&school=${defaultSchool}&tune=${defaultTune}&timezonestring=Africa%2FDakar`
             );
 
             if (!response.ok) throw new Error("Erreur lors du chargement");
