@@ -11,7 +11,7 @@ const FloatingMenu = ({ onNavigate }: FloatingMenuProps) => {
 
   const menuItems = [
     { id: "calendar" as const, icon: Calendar, label: "Calendrier", color: "bg-primary" },
-    { id: "about" as const, icon: Info, label: "Qui sommes-nous", color: "bg-primary" },
+    { id: "about" as const, icon: Info, label: "À propos", color: "bg-primary" },
     { id: "faq" as const, icon: HelpCircle, label: "FAQ", color: "bg-primary" },
   ];
 

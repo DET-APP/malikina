@@ -58,59 +58,8 @@ export const useNotifications = (onNavigate: (screen: string) => void): UseNotif
     }, []);
 
     const loadNotifications = async () => {
-        try {
-            const mockNotifications: Notification[] = [
-                {
-                    id: 1,
-                    type: "event",
-                    title: "Réunion hebdomadaire du dahira",
-                    description: "Salle 12 - Bâtiment A",
-                    time: "Demain 15h",
-                    timestamp: new Date(Date.now() + 24 * 60 * 60 * 1000),
-                    read: false,
-                    screen: "calendar",
-                },
-                {
-                    id: 2,
-                    type: "news",
-                    title: "Nouvelle lecture du Coran disponible",
-                    description: "Sourate Al-Kahf - Version Warsh",
-                    time: "Il y a 2h",
-                    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-                    read: false,
-                    screen: "news",
-                },
-                {
-                    id: 3,
-                    type: "prayer",
-                    title: "Rappel: Prière de Dhuhr",
-                    description: "Dans 30 minutes",
-                    time: "Dans 30 min",
-                    timestamp: new Date(Date.now() + 30 * 60 * 1000),
-                    read: true,
-                    screen: "prayer",
-                },
-                {
-                    id: 4,
-                    type: "community",
-                    title: "Nouveau membre dans la communauté",
-                    description: "Omar Diallo a rejoint le groupe",
-                    time: "Il y a 5h",
-                    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-                    read: false,
-                    screen: "community",
-                },
-            ];
-
-            const sorted = mockNotifications.sort((a, b) =>
-                b.timestamp.getTime() - a.timestamp.getTime()
-            );
-
-            setNotifications(sorted);
-            updateUnreadCount(sorted);
-        } catch (error) {
-            console.error("Erreur chargement notifications:", error);
-        }
+        setNotifications([]);
+        setUnreadCount(0);
     };
 
     const updateUnreadCount = (notifs: Notification[]) => {
