@@ -158,7 +158,7 @@ const VerseOfTheDay = ({ verse, loading, onNavigate, itemVariants }: VerseOfTheD
             }}>
               {verse.verse_number > 0 ? `Vers ${verse.verse_number}` : ""}
               {verse.chapter_number > 1 ? ` · Chapitre ${verse.chapter_number}` : ""}
-              {" — Khilâss Zahab"}
+              {` — ${verse.xassidaTitle}`}
             </span>
           </div>
 
@@ -244,7 +244,7 @@ const VerseOfTheDay = ({ verse, loading, onNavigate, itemVariants }: VerseOfTheD
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Vers du Jour</h3>
-                <p className="text-xs text-muted-foreground">Khilâss Zahab</p>
+                <p className="text-xs text-muted-foreground">{verse.xassidaTitle}</p>
               </div>
             </div>
 
@@ -303,7 +303,7 @@ const VerseOfTheDay = ({ verse, loading, onNavigate, itemVariants }: VerseOfTheD
             whileTap={{ scale: 0.98 }}
           >
             <BookOpen className="w-4 h-4" />
-            Lire Khilâss Zahab
+            Lire {verse.xassidaTitle}
             <ChevronRight className="w-4 h-4" />
           </motion.button>
         </div>
