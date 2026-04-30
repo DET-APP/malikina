@@ -21,9 +21,10 @@ import { ErrorState } from "@/components/shared/ErrorState";
 import { City, Prayer, NextPrayer, prayerNamesArabic } from "@/components/prayer/types";
 
 const cities: City[] = [
-  // Méthode locale Tijaniyya : école Hanafi (Asr tardif) + décalage Dhuhr/Maghrib pour correspondre aux mosquées
-  { name: "Bambey", lat: 14.7000, lon: -16.4500, school: 1, tune: "0,0,0,68,0,6,0,0,0" },
-  { name: "Dakar",  lat: 14.7167, lon: -17.4677, school: 1, tune: "0,0,0,68,0,0,0,0,0"  },
+  // Offsets calés sur les horaires des mosquées locales Tijaniyya (Bambey/UAD)
+  // tune: Imsak,Fajr,Sunrise,Dhuhr,Asr,Maghrib,Sunset,Isha,Midnight
+  { name: "Bambey", lat: 14.7000, lon: -16.4500, school: 0, tune: "0,5,0,72,46,10,0,0,0" },
+  { name: "Dakar",  lat: 14.7167, lon: -17.4677, school: 0, tune: "0,5,0,72,46,6,0,0,0"  },
 ];
 
 const PrayerScreen = () => {

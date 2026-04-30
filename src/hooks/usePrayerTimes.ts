@@ -14,8 +14,8 @@ export const usePrayerTimes = (toast: any) => {
     // Bambey (UAD) — méthode locale Tijaniyya par défaut
     const defaultLat = 14.7000;
     const defaultLon = -16.4500;
-    const defaultSchool = 1;       // Hanafi → Asr tardif
-    const defaultTune = "0,0,0,68,0,6,0,0,0"; // +68 min Dhuhr, +6 min Maghrib
+    const defaultSchool = 0;
+    const defaultTune = "0,5,0,72,46,10,0,0,0"; // calé sur mosquées locales Tijaniyya
 
     const fetchPrayerTimes = async (lat: number, lon: number) => {
         try {
