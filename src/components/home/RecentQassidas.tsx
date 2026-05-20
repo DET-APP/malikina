@@ -42,34 +42,39 @@ const RecentQassidas = ({ onNavigate, itemVariants, allQassidas }: RecentQassida
         <div className="flex gap-3 pb-2">
           {displayed.slice(0, 8).map((qassida, index) => (
             <motion.button
-              key={`${qassida.id}-${index}`}
-              onClick={() => onNavigate("qassidas", undefined, undefined, qassida.id)}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              whileHover={{ scale: 1.03, y: -3 }}
-              whileTap={{ scale: 0.97 }}
-              className="group flex-shrink-0 w-44 bg-gradient-to-br from-primary/10 via-primary/5 to-secondary/10 rounded-2xl p-4 border border-primary/20 hover:border-primary/50 hover:shadow-md transition-all duration-300 cursor-pointer text-left"
-            >
-              {/* Initials circle */}
-              <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center mb-3">
-                <span className="text-xs font-bold text-primary">
-                  {qassida.title.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("")}
-                </span>
-              </div>
+  key={`${qassida.id}-${index}`}
+  onClick={() => onNavigate("qassidas", undefined, undefined, qassida.id)}
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ delay: index * 0.05 }}
+  whileHover={{ scale: 1.03, y: -3 }}
+  whileTap={{ scale: 0.97 }}
+  className="group flex-shrink-0 w-44 bg-gradient-to-br from-primary/10 via-primary/5 to-secondary/10 rounded-2xl p-4 border border-primary/20 hover:border-primary/50 hover:shadow-md transition-all duration-300 cursor-pointer text-left flex flex-col"
+>
+  {/* Initials circle */}
+  <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center mb-3">
+    <span className="text-xs font-bold text-primary">
+      {qassida.title.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("")}
+    </span>
+  </div>
 
-              <h3 className="font-bold text-foreground text-sm line-clamp-2 leading-tight mb-1">
-                {qassida.title}
-              </h3>
-              <p className="text-xs text-muted-foreground line-clamp-1 mb-3">
-                {qassida.author}
-              </p>
+  {/* Titre sur une ligne avec troncature */}
+  <h3 className="font-bold text-foreground text-sm truncate leading-tight mb-1">
+    {qassida.title}
+  </h3>
+  
+  <p className="text-xs text-muted-foreground line-clamp-1 mb-3">
+    {qassida.author}
+  </p>
 
-              <div className="flex items-center gap-1.5 bg-primary/20 group-hover:bg-primary group-hover:text-primary-foreground text-primary rounded-lg px-2 py-1.5 transition-all">
-                <Play className="w-3 h-3 fill-current flex-shrink-0" />
-                <span className="text-xs font-medium">Lire</span>
-              </div>
-            </motion.button>
+  {/* Bouton Lire - pousse vers le bas avec mt-auto */}
+  <div className="mt-auto">
+    <div className="flex items-center justify-center gap-1.5 bg-primary/20 group-hover:bg-primary group-hover:text-primary-foreground text-primary rounded-lg px-3 py-1.5 transition-all w-full">
+      <Play className="w-3.5 h-3.5 fill-current" />
+      <span className="text-xs font-medium">Lire</span>
+    </div>
+  </div>
+</motion.button>
           ))}
         </div>
       </div>
