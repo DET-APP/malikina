@@ -16,20 +16,22 @@ const RecentQassidas = ({ onNavigate, itemVariants, allQassidas }: RecentQassida
 
   return (
     <motion.div variants={itemVariants} className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between px-0">
-        <div>
-          <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+      {/* Header - Titre et bouton parfaitement alignés */}
+      <div className="flex items-start justify-between px-0">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
             {hasHistory ? <Clock className="w-4 h-4 text-primary" /> : <span>🎵</span>}
-            {hasHistory ? "Récemment consultées" : "À découvrir"}
-          </h2>
+            <h2 className="text-lg font-bold text-foreground">
+              {hasHistory ? "Récemment consultées" : "À découvrir"}
+            </h2>
+          </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             {hasHistory ? "Reprends où tu t'es arrêté" : "Xassidas populaires"}
           </p>
         </div>
         <button
           onClick={() => onNavigate("qassidas")}
-          className="flex items-center gap-1 text-primary hover:text-primary/80 font-medium text-sm transition-colors"
+          className="flex items-center gap-1 text-primary hover:text-primary/80 font-medium text-sm transition-colors whitespace-nowrap mt-1"
         >
           Voir tout <ChevronRight className="w-4 h-4" />
         </button>
