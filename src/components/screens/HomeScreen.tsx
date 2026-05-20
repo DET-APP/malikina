@@ -11,6 +11,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import { useVerseOfTheDay } from "@/hooks/useVerseOfTheDay";
 import { qassidasData } from "@/data/qassidasData";
+import type { QassidasHistoryItem } from "@/hooks/useQassidasHistory";
 
 interface HomeScreenProps {
   onNavigate: (screen: string, surahId?: number, verseNumber?: number, qassidaId?: number) => void;
@@ -31,7 +32,8 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
   } = useNotifications(onNavigate);
 
   const { nextPrayer, loading: prayerLoading } = usePrayerTimes(toast);
-  const { verse, loading: verseLoading, refreshVerse } = useVerseOfTheDay();
+  // Hook du verset du jour temporairement désactivé (Coran masqué)
+  // const { verse, loading: verseLoading, refreshVerse } = useVerseOfTheDay();
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -45,6 +47,12 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 },
   };
+
+  // Convertir les données Qassida en QassidasHistoryItem
+  const qassidasWithHistory: QassidasHistoryItem[] = qassidasData.map(qassida => ({
+    ...qassida,
+    lastViewed: 0 // Valeur par défaut pour les qassidas sans historique
+  }));
 
   return (
     <motion.div
@@ -63,7 +71,7 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
         onNotificationClick={handleNotificationClick}
         onMarkAllAsRead={markAllAsRead}
         onDeleteNotification={deleteNotification}
-        onViewAll={() => {}}
+        onViewAll={() => { }}
         getNotificationIcon={getNotificationIcon}
         getNotificationColor={getNotificationColor}
       />
@@ -73,17 +81,17 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
         <RecentQassidas
           onNavigate={onNavigate}
           itemVariants={itemVariants}
-          allQassidas={qassidasData}
+          allQassidas={qassidasWithHistory}
         />
 
-        {/* Verset du Jour */}
-        <VerseOfTheDay
+        {/* Verset du Jour - TEMPORAIREMENT MASQUÉ (Coran désactivé) */}
+        {/* <VerseOfTheDay
           verse={verse}
           loading={verseLoading}
           onRefresh={refreshVerse}
           onNavigate={onNavigate}
           itemVariants={itemVariants}
-        />
+        /> */}
 
         <PrayerPreview
           nextPrayer={nextPrayer}

@@ -95,21 +95,29 @@ const HomeHeader = ({
             </div>
 
             {/* Logo Card */}
-            <motion.div
-                className="absolute -bottom-16 left-6 right-6 bg-card rounded-2xl p-6 shadow-card"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-            >
-                <div className="flex items-center gap-4">
-                    <img src={logo} alt="Logo Univers Maodo Malick Sy" className="w-20 h-20 object-contain flex-shrink-0" />
-                    <div className="flex-1">
-                        <h2 className="font-bold text-foreground text-base leading-tight">Univers Maodo Malick Sy</h2>
-                        <p className="text-xs text-muted-foreground mt-0.5">Keeparu Maodo Malick Sy</p>
-                        <p className="text-lg font-arabic text-secondary mt-1">الْمُتَحَابِّينَ فِي اللَّهِ</p>
-                    </div>
-                </div>
-            </motion.div>
+<motion.div
+    className="absolute -bottom-16 left-6 right-6 bg-gradient-to-br from-card via-card to-primary/5 rounded-xl shadow-lg border border-primary/20 backdrop-blur-sm"
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: 0.2 }}
+>
+    <div className="flex items-center gap-3 p-2">
+        <div className="relative">
+            <div className="absolute inset-0 bg-primary/20 rounded-full blur-md"></div>
+            <img
+                src={logo}
+                alt="Logo Univers Maodo Malick Sy"
+                className="w-24 h-24 object-contain flex-shrink-0 relative z-10"
+            />
+        </div>
+        <div className="flex-1">
+            <h2 className="font-bold text-foreground text-base leading-tight">
+                Univers <span className="text-primary">Maodo Malick Sy</span>
+            </h2>
+            <div className="h-0.5 w-10 bg-primary/30 rounded-full mt-1.5"></div>
+        </div>
+    </div>
+</motion.div>
         </motion.header>
     );
 };
