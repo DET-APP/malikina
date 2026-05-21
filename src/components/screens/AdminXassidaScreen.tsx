@@ -11,10 +11,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useForm } from 'react-hook-form';
 import { cn } from '@/lib/utils';
-import { Plus, Edit2, Trash2, Upload, Save, ChevronLeft, ChevronRight, Loader2, Lock, Users, BookOpen, FileText, Music, Link, Youtube, FolderOpen, Pencil, Globe, BarChart3, Settings, X, Search, LayoutDashboard, Filter, Eye, EyeOff, ShieldCheck, LogOut, GraduationCap, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, Upload, Save, ChevronLeft, ChevronRight, Loader2, Lock, Users, BookOpen, FileText, Music, Link, Youtube, FolderOpen, Pencil, Globe, BarChart3, Settings, X, Search, LayoutDashboard, Filter, Eye, EyeOff, ShieldCheck, LogOut, GraduationCap, Download, Brain } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL as API_URL } from '@/lib/apiUrl';
 import FiqhAdminTab from '@/components/admin/FiqhAdminTab';
+import KnowledgeManager from '@/components/screens/admin/KnowledgeManager';
 
 interface Author {
   id: string;
@@ -1072,8 +1073,9 @@ export function XassidasAdmin() {
               { value: 'xassidas',   icon: <BookOpen className="w-4 h-4" />,        label: 'Xassidas',     show: can('manage_xassidas') },
               { value: 'authors',    icon: <Users className="w-4 h-4" />,           label: 'Auteurs',      show: can('manage_authors') },
               { value: 'categories', icon: <FolderOpen className="w-4 h-4" />,      label: 'Catégories',   show: can('manage_xassidas') },
-              { value: 'fiqh',       icon: <GraduationCap className="w-4 h-4" />,   label: 'Fiqh',         show: can('manage_xassidas') },
-              { value: 'users',      icon: <ShieldCheck className="w-4 h-4" />,     label: 'Utilisateurs', show: can('manage_users') },
+              { value: 'fiqh',       icon: <GraduationCap className="w-4 h-4" />,   label: 'Fiqh',          show: can('manage_xassidas') },
+              { value: 'knowledge',  icon: <Brain className="w-4 h-4" />,           label: 'Connaissances', show: can('manage_xassidas') },
+              { value: 'users',      icon: <ShieldCheck className="w-4 h-4" />,     label: 'Utilisateurs',  show: can('manage_users') },
             ].filter(tab => tab.show).map(tab => (
               <button
                 key={tab.value}
@@ -1798,6 +1800,11 @@ export function XassidasAdmin() {
             {/* Tab: Fiqh — livres de Fiqh (Fakihatou Tullab, etc.) */}
             <TabsContent value="fiqh" className="space-y-4 mt-0">
               <FiqhAdminTab />
+            </TabsContent>
+
+            {/* Tab: Connaissances — base de connaissances du chatbot RAG */}
+            <TabsContent value="knowledge" className="space-y-4 mt-0">
+              <KnowledgeManager />
             </TabsContent>
           </Tabs>
         )}
