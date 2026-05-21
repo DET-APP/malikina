@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, BookOpen, FileDown, Loader2, ChevronRight, X, ThumbsDown, Check } from 'lucide-react';
+import { Send, Bot, User, BookOpen, FileDown, Loader2, ChevronRight, X, ThumbsDown, Check, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { API_BASE_URL } from '@/lib/apiUrl';
 
@@ -28,18 +28,18 @@ interface Reference {
 type PdfLanguage = 'fr' | 'ar' | 'wo';
 
 const SUGGESTIONS = [
-  "Montre-moi les xassidas de Seydi El Hadji Malick Sy",
   "Qu'est-ce que le Wird Tidiaan ?",
   "Explique-moi la Salat al-Fatihi",
   "Qui est Cheikh Ahmad Tijani ?",
-  "Quelles sont les règles de la Tariqa Tijaniyya ?",
+  "Montre-moi les xassidas de Seydi Malick Sy",
+  "Quelles sont les règles de la Tariqa ?",
 ];
 
 export default function ChatbotScreen({ onNavigateToXassida }: { onNavigateToXassida?: (id: string) => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
-      content: 'Assalamu Alaikum ! Je suis l\'assistant de la Tariqa Tijaniyya. Je peux répondre à vos questions sur les œuvres tidianes, l\'histoire de la voie, sa jurisprudence, et vous aider à trouver des xassidas. Comment puis-je vous aider ?',
+      content: 'Assalamu Alaikum ! Je suis l\'assistant de la Tariqa Tijaniyya. Posez-moi vos questions sur les œuvres tidianes, l\'histoire de la voie, sa jurisprudence ou les xassidas.',
       type: 'knowledge_answer',
     },
   ]);
@@ -48,11 +48,19 @@ export default function ChatbotScreen({ onNavigateToXassida }: { onNavigateToXas
   const [pdfModal, setPdfModal] = useState<XassidaResult | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 96) + 'px';
+  }, [input]);
 
   const getHistory = () =>
     messages
@@ -62,8 +70,7 @@ export default function ChatbotScreen({ onNavigateToXassida }: { onNavigateToXas
 
   async function sendMessage(text: string) {
     if (!text.trim() || loading) return;
-    const userMsg: ChatMessage = { role: 'user', content: text };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages(prev => [...prev, { role: 'user', content: text }]);
     setInput('');
     setLoading(true);
 
@@ -100,7 +107,6 @@ export default function ChatbotScreen({ onNavigateToXassida }: { onNavigateToXas
 
   async function reportMessage(msgIndex: number) {
     const botMsg = messages[msgIndex];
-    // Trouve le message user qui précède cette réponse
     const userMsg = [...messages].slice(0, msgIndex).reverse().find(m => m.role === 'user');
     if (!userMsg) return;
 
@@ -110,13 +116,9 @@ export default function ChatbotScreen({ onNavigateToXassida }: { onNavigateToXas
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userMsg.content, bot_answer: botMsg.content }),
       });
-    } catch {
-      // fire-and-forget, pas bloquant
-    }
+    } catch { /* fire-and-forget */ }
 
-    setMessages(prev =>
-      prev.map((m, i) => (i === msgIndex ? { ...m, reported: true } : m))
-    );
+    setMessages(prev => prev.map((m, i) => (i === msgIndex ? { ...m, reported: true } : m)));
   }
 
   async function downloadPdf(xassida: XassidaResult, language: PdfLanguage) {
@@ -127,7 +129,7 @@ export default function ChatbotScreen({ onNavigateToXassida }: { onNavigateToXas
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ language }),
       });
-      if (!res.ok) throw new Error('Erreur génération PDF');
+      if (!res.ok) throw new Error();
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -151,20 +153,46 @@ export default function ChatbotScreen({ onNavigateToXassida }: { onNavigateToXas
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background pb-16">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-green-900 to-green-700 text-white px-4 py-3 flex items-center gap-3 shadow-md">
-        <div className="w-9 h-9 bg-gold-500/20 rounded-full flex items-center justify-center border border-gold-400/40">
-          <Bot className="w-5 h-5 text-gold-300" />
+    // Le conteneur prend toute la hauteur dispo. pb-16 = espace pour la bottom nav
+    <div className="flex flex-col bg-[#f5f0e8] dark:bg-gray-950" style={{ height: '100dvh', paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
+
+      {/* ── Header ───────────────────────────────────────────────── */}
+      <div className="shrink-0 bg-gradient-to-r from-green-900 to-green-700 text-white px-4 pt-3 pb-3 flex items-center gap-3 shadow-lg">
+        <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center border border-white/20 shrink-0">
+          <Sparkles className="w-5 h-5 text-yellow-300" />
         </div>
-        <div>
-          <h1 className="font-bold text-sm">Assistant Tidiaan</h1>
-          <p className="text-green-200 text-[10px]">Tariqa Tijaniyya • Œuvres & Jurisprudence</p>
+        <div className="flex-1 min-w-0">
+          <h1 className="font-bold text-sm leading-tight">Assistant Tidiaan</h1>
+          <p className="text-green-200 text-[10px] truncate">Tariqa Tijaniyya • Œuvres & Jurisprudence</p>
+        </div>
+        <div className="flex items-center gap-1.5 bg-green-800/50 rounded-full px-2.5 py-1">
+          <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+          <span className="text-[10px] text-green-200">En ligne</span>
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
+      {/* ── Messages ─────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4 overscroll-contain">
+
+        {/* Suggestions initiales */}
+        {messages.length === 1 && !loading && (
+          <div className="space-y-2 pb-2">
+            <p className="text-[11px] text-center text-muted-foreground font-medium">Suggestions</p>
+            <div className="grid grid-cols-1 gap-2">
+              {SUGGESTIONS.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => sendMessage(s)}
+                  className="w-full text-left text-xs bg-white dark:bg-gray-900 border border-green-200 dark:border-green-800 rounded-2xl px-4 py-2.5 text-green-900 dark:text-green-100 hover:bg-green-50 dark:hover:bg-green-900/40 active:scale-[0.98] transition-all flex items-center justify-between gap-2 shadow-sm"
+                >
+                  <span>{s}</span>
+                  <ChevronRight className="w-3.5 h-3.5 shrink-0 text-green-500" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {messages.map((msg, i) => (
           <MessageBubble
             key={i}
@@ -176,98 +204,89 @@ export default function ChatbotScreen({ onNavigateToXassida }: { onNavigateToXas
           />
         ))}
 
+        {/* Indicateur de frappe */}
         {loading && (
-          <div className="flex items-start gap-2">
-            <div className="w-7 h-7 bg-green-800 rounded-full flex items-center justify-center shrink-0">
-              <Bot className="w-4 h-4 text-gold-300" />
+          <div className="flex items-end gap-2">
+            <div className="w-8 h-8 bg-green-800 rounded-full flex items-center justify-center shrink-0">
+              <Bot className="w-4 h-4 text-yellow-300" />
             </div>
-            <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3">
-              <div className="flex gap-1 items-center">
-                <span className="w-2 h-2 bg-green-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 bg-green-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 bg-green-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            <div className="bg-white dark:bg-gray-800 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+              <div className="flex gap-1 items-center h-4">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '160ms' }} />
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '320ms' }} />
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Suggestions initiales */}
-        {messages.length === 1 && !loading && (
-          <div className="space-y-2 pt-2">
-            <p className="text-xs text-muted-foreground text-center">Suggestions :</p>
-            {SUGGESTIONS.map((s, i) => (
-              <button
-                key={i}
-                onClick={() => sendMessage(s)}
-                className="w-full text-left text-xs bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-3 py-2 text-green-800 dark:text-green-200 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors flex items-center justify-between gap-2"
-              >
-                <span>{s}</span>
-                <ChevronRight className="w-3 h-3 shrink-0 text-green-500" />
-              </button>
-            ))}
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="px-3 py-2 border-t border-border bg-background">
-        <div className="flex items-end gap-2 bg-muted rounded-2xl px-3 py-2">
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Posez votre question..."
-            rows={1}
-            className="flex-1 bg-transparent text-sm resize-none outline-none placeholder:text-muted-foreground max-h-24 leading-5"
-            style={{ minHeight: '20px' }}
-          />
-          <Button
-            size="icon"
-            className="w-8 h-8 bg-green-700 hover:bg-green-800 rounded-xl shrink-0"
+      {/* ── Zone de saisie ───────────────────────────────────────── */}
+      <div className="shrink-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 px-3 py-2.5">
+        <div className="flex items-end gap-2">
+          <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-2xl px-3.5 py-2.5 flex items-end gap-2">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Posez votre question..."
+              rows={1}
+              className="flex-1 bg-transparent text-sm resize-none outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500 leading-5 max-h-24"
+              style={{ minHeight: '20px' }}
+            />
+          </div>
+          <button
             onClick={() => sendMessage(input)}
             disabled={loading || !input.trim()}
+            className="w-10 h-10 bg-green-700 hover:bg-green-800 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed rounded-2xl flex items-center justify-center shrink-0 transition-all shadow-sm"
           >
-            <Send className="w-4 h-4" />
-          </Button>
+            {loading
+              ? <Loader2 className="w-4 h-4 text-white animate-spin" />
+              : <Send className="w-4 h-4 text-white" />
+            }
+          </button>
         </div>
-        <p className="text-[9px] text-muted-foreground text-center mt-1">
-          Basé sur les œuvres de la Tariqa Tijaniyya • Les réponses peuvent nécessiter vérification
+        <p className="text-[9px] text-gray-400 text-center mt-1.5">
+          Basé sur les œuvres de la Tariqa Tijaniyya • Vérifiez auprès d'un Cheikh pour les questions de jurisprudence
         </p>
       </div>
 
-      {/* Modal PDF */}
+      {/* ── Modal PDF ────────────────────────────────────────────── */}
       {pdfModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center p-4">
-          <div className="bg-background rounded-2xl w-full max-w-sm p-5 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="font-bold text-sm">{pdfModal.title}</h3>
                 {pdfModal.author_name && (
-                  <p className="text-xs text-muted-foreground">{pdfModal.author_name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{pdfModal.author_name}</p>
                 )}
               </div>
-              <button onClick={() => setPdfModal(null)} className="text-muted-foreground">
-                <X className="w-5 h-5" />
+              <button onClick={() => setPdfModal(null)} className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center">
+                <X className="w-4 h-4 text-gray-500" />
               </button>
             </div>
             <p className="text-sm text-muted-foreground">Choisissez la langue du PDF :</p>
             <div className="grid grid-cols-3 gap-2">
-              {[
-                { lang: 'fr' as PdfLanguage, label: '🇫🇷 Français' },
-                { lang: 'ar' as PdfLanguage, label: '🇸🇦 Arabe' },
-                { lang: 'wo' as PdfLanguage, label: '🇸🇳 Wolof' },
-              ].map(({ lang, label }) => (
+              {([
+                { lang: 'fr' as PdfLanguage, flag: '🇫🇷', label: 'Français' },
+                { lang: 'ar' as PdfLanguage, flag: '🇸🇦', label: 'Arabe' },
+                { lang: 'wo' as PdfLanguage, flag: '🇸🇳', label: 'Wolof' },
+              ]).map(({ lang, flag, label }) => (
                 <button
                   key={lang}
                   onClick={() => downloadPdf(pdfModal, lang)}
                   disabled={generatingPdf}
-                  className="flex flex-col items-center gap-1 border border-border rounded-xl py-3 px-2 text-xs hover:bg-muted transition-colors disabled:opacity-50"
+                  className="flex flex-col items-center gap-1.5 border border-gray-200 dark:border-gray-700 rounded-2xl py-3 px-2 text-xs hover:bg-green-50 dark:hover:bg-green-900/20 active:scale-95 transition-all disabled:opacity-50"
                 >
-                  {generatingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4 text-green-700" />}
-                  {label}
+                  {generatingPdf
+                    ? <Loader2 className="w-5 h-5 animate-spin text-green-700" />
+                    : <span className="text-xl">{flag}</span>
+                  }
+                  <span className="text-[11px] font-medium">{label}</span>
                 </button>
               ))}
             </div>
@@ -277,6 +296,8 @@ export default function ChatbotScreen({ onNavigateToXassida }: { onNavigateToXas
     </div>
   );
 }
+
+// ── MessageBubble ─────────────────────────────────────────────────────────────
 
 function MessageBubble({
   msg,
@@ -295,49 +316,54 @@ function MessageBubble({
 
   if (isUser) {
     return (
-      <div className="flex justify-end">
-        <div className="flex items-start gap-2 max-w-[85%]">
-          <div className="bg-green-700 text-white rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm leading-relaxed">
-            {msg.content}
-          </div>
-          <div className="w-7 h-7 bg-green-700 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-            <User className="w-4 h-4 text-white" />
-          </div>
+      <div className="flex justify-end items-end gap-2">
+        <div className="max-w-[80%] bg-green-700 text-white rounded-2xl rounded-br-sm px-4 py-2.5 text-sm leading-relaxed shadow-sm">
+          {msg.content}
+        </div>
+        <div className="w-7 h-7 bg-green-700 rounded-full flex items-center justify-center shrink-0">
+          <User className="w-3.5 h-3.5 text-white" />
         </div>
       </div>
     );
   }
 
+  const isError = msg.type === 'error';
+
   return (
-    <div className="flex items-start gap-2">
-      <div className="w-7 h-7 bg-green-900 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-        <Bot className="w-4 h-4 text-gold-300" />
+    <div className="flex items-end gap-2">
+      <div className="w-8 h-8 bg-green-900 rounded-full flex items-center justify-center shrink-0">
+        <Bot className="w-4 h-4 text-yellow-300" />
       </div>
-      <div className="flex-1 space-y-2 max-w-[88%]">
-        {/* Texte de réponse */}
-        <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap">
+      <div className="flex-1 space-y-2 max-w-[84%]">
+
+        {/* Bulle de texte */}
+        <div className={`rounded-2xl rounded-bl-sm px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap shadow-sm ${
+          isError
+            ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
+            : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100'
+        }`}>
           {msg.content}
         </div>
 
         {/* Liste de xassidas */}
         {msg.type === 'xassida_list' && msg.xassidas && msg.xassidas.length > 0 && (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {msg.xassidas.map(x => (
               <div
                 key={x.id}
-                className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-3 py-2.5 flex items-center justify-between gap-2"
+                className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-3 py-2.5 flex items-center justify-between gap-2 shadow-sm"
               >
                 <div className="min-w-0">
-                  <p className="font-medium text-xs text-green-900 dark:text-green-100 truncate">{x.title}</p>
+                  <p className="font-semibold text-xs text-green-900 dark:text-green-100 truncate">{x.title}</p>
                   {x.author_name && (
-                    <p className="text-[10px] text-green-600 dark:text-green-400">{x.author_name}</p>
+                    <p className="text-[10px] text-green-600 dark:text-green-400 mt-0.5">{x.author_name}</p>
                   )}
                 </div>
                 <div className="flex gap-1 shrink-0">
                   {onNavigateToXassida && (
                     <button
                       onClick={() => onNavigateToXassida(x.id)}
-                      className="w-7 h-7 bg-green-700 rounded-lg flex items-center justify-center"
+                      className="w-7 h-7 bg-green-700 rounded-lg flex items-center justify-center active:scale-95 transition-transform"
                       title="Voir le xassida"
                     >
                       <BookOpen className="w-3.5 h-3.5 text-white" />
@@ -345,7 +371,7 @@ function MessageBubble({
                   )}
                   <button
                     onClick={() => onPdfRequest(x)}
-                    className="w-7 h-7 bg-gold-500 rounded-lg flex items-center justify-center"
+                    className="w-7 h-7 bg-amber-500 rounded-lg flex items-center justify-center active:scale-95 transition-transform"
                     title="Générer PDF"
                   >
                     <FileDown className="w-3.5 h-3.5 text-white" />
@@ -371,17 +397,17 @@ function MessageBubble({
         )}
 
         {/* Bouton signalement */}
-        {msg.type === 'knowledge_answer' && (
-          <div className="flex justify-end">
+        {msg.type === 'knowledge_answer' && !isError && (
+          <div className="flex justify-end pt-0.5">
             {msg.reported ? (
-              <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                <Check className="w-3 h-3 text-green-600" />
-                Signalement envoyé
+              <span className="flex items-center gap-1 text-[10px] text-emerald-600">
+                <Check className="w-3 h-3" />
+                Signalé
               </span>
             ) : (
               <button
                 onClick={() => onReport(msgIndex)}
-                className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-destructive transition-colors py-0.5 px-1.5 rounded"
+                className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-red-500 active:scale-95 transition-all py-0.5 px-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
                 title="Signaler une mauvaise réponse"
               >
                 <ThumbsDown className="w-3 h-3" />
