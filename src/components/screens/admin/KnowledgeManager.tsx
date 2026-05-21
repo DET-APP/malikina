@@ -10,8 +10,10 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Plus, Search, Globe, Edit2, Trash2, Loader2, Brain,
-  ChevronLeft, ChevronRight, Database, Link, Languages,
+  ChevronLeft, ChevronRight, Database, Link, MessageCircleQuestion,
+  CheckCircle2, XCircle, BookOpen,
 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL as API_URL } from '@/lib/apiUrl';
 
@@ -56,7 +58,23 @@ interface ChunkForm {
   content: string;
 }
 
+interface UnansweredQuestion {
+  id: number;
+  question: string;
+  asked_at: string;
+  answered: boolean;
+  answered_at: string | null;
+  chunk_id: number | null;
+}
+
+interface AnswerForm {
+  title: string;
+  content: string;
+  source: string;
+}
+
 const EMPTY_FORM: ChunkForm = { source: '', title: '', language: 'fr', content: '' };
+const EMPTY_ANSWER: AnswerForm = { title: '', content: '', source: '' };
 
 const LANG_LABELS: Record<string, string> = { fr: 'Français', ar: 'Arabe', wo: 'Wolof' };
 const LANG_COLORS: Record<string, string> = {
@@ -203,7 +221,66 @@ export default function KnowledgeManager() {
     },
   });
 
+  // ── Unanswered questions state ─────────────────────────────────────────────
+  const [showAnswerDialog, setShowAnswerDialog] = useState(false);
+  const [answeringQuestion, setAnsweringQuestion] = useState<UnansweredQuestion | null>(null);
+  const [answerForm, setAnswerForm] = useState<AnswerForm>(EMPTY_ANSWER);
+  const [showDeleteUnansweredConfirm, setShowDeleteUnansweredConfirm] = useState(false);
+  const [deletingUnansweredId, setDeletingUnansweredId] = useState<number | null>(null);
+
+  const { data: unansweredList, isLoading: unansweredLoading } = useQuery<UnansweredQuestion[]>({
+    queryKey: ['unanswered-questions'],
+    queryFn: async () => {
+      const res = await fetch(`${API_URL}/knowledge/unanswered?answered=false`, { headers: authHeaders });
+      if (!res.ok) throw new Error('Erreur');
+      return res.json();
+    },
+    staleTime: 15_000,
+  });
+
+  const answerMutation = useMutation({
+    mutationFn: async ({ id, form }: { id: number; form: AnswerForm }) => {
+      const res = await fetch(`${API_URL}/knowledge/unanswered/${id}/answer`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Erreur'); }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unanswered-questions'] });
+      queryClient.invalidateQueries({ queryKey: ['knowledge-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
+      setShowAnswerDialog(false);
+      setAnsweringQuestion(null);
+      setAnswerForm(EMPTY_ANSWER);
+    },
+  });
+
+  const deleteUnansweredMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`${API_URL}/knowledge/unanswered/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Erreur'); }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unanswered-questions'] });
+      setShowDeleteUnansweredConfirm(false);
+      setDeletingUnansweredId(null);
+    },
+  });
+
   // ── Handlers ───────────────────────────────────────────────────────────────
+
+  const openAnswer = (q: UnansweredQuestion) => {
+    setAnsweringQuestion(q);
+    setAnswerForm({ title: q.question.slice(0, 80), content: '', source: 'Admin — Réponse manuelle' });
+    setShowAnswerDialog(true);
+  };
 
   const openEdit = async (id: string) => {
     try {
@@ -239,6 +316,8 @@ export default function KnowledgeManager() {
   const chunks = listData?.data || [];
   const pagination = listData?.pagination;
 
+  const unanswered = unansweredList || [];
+
   return (
     <div className="space-y-6">
 
@@ -266,6 +345,26 @@ export default function KnowledgeManager() {
           </CardContent>
         </Card>
       </div>
+
+      <Tabs defaultValue="chunks">
+        <TabsList className="w-full">
+          <TabsTrigger value="chunks" className="flex-1">
+            <Database className="w-4 h-4 mr-1.5" />
+            Base de connaissances
+          </TabsTrigger>
+          <TabsTrigger value="unanswered" className="flex-1 relative">
+            <MessageCircleQuestion className="w-4 h-4 mr-1.5" />
+            Questions sans réponse
+            {unanswered.length > 0 && (
+              <span className="ml-1.5 bg-destructive text-destructive-foreground text-xs rounded-full px-1.5 py-0.5 leading-none">
+                {unanswered.length}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ── Onglet : Base de connaissances ───────────────────────── */}
+        <TabsContent value="chunks" className="mt-4 space-y-4">
 
       {/* Toolbar */}
       <div className="flex gap-2 flex-wrap">
@@ -411,6 +510,62 @@ export default function KnowledgeManager() {
           </div>
         </div>
       )}
+
+        </TabsContent>
+
+        {/* ── Onglet : Questions sans réponse ─────────────────────── */}
+        <TabsContent value="unanswered" className="mt-4 space-y-3">
+          {unansweredLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : unanswered.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <CheckCircle2 className="w-10 h-10 mx-auto mb-3 opacity-30" />
+              <p className="font-medium">Aucune question en attente</p>
+              <p className="text-xs mt-1">Le chatbot a répondu à toutes les questions.</p>
+            </div>
+          ) : (
+            unanswered.map(q => (
+              <Card key={q.id} className="border-amber-200 bg-amber-50/50">
+                <CardContent className="pt-4 pb-3">
+                  <div className="flex items-start gap-3">
+                    <MessageCircleQuestion className="w-4 h-4 mt-0.5 text-amber-600 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">{q.question}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Posée le {formatDate(q.asked_at)}
+                      </p>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <Button
+                        size="sm"
+                        className="h-7 gap-1 text-xs"
+                        onClick={() => openAnswer(q)}
+                      >
+                        <BookOpen className="w-3.5 h-3.5" />
+                        Répondre
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => {
+                          setDeletingUnansweredId(q.id);
+                          setShowDeleteUnansweredConfirm(true);
+                        }}
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </TabsContent>
+
+      </Tabs>
 
       {/* ── Dialog : Ajouter un chunk ─────────────────────────────────────── */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
@@ -571,6 +726,94 @@ export default function KnowledgeManager() {
             <p className="text-xs text-muted-foreground text-center">
               Nécessite BRAVE_API_KEY configuré sur le serveur.
             </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog : Répondre à une question ─────────────────────────────── */}
+      <Dialog open={showAnswerDialog} onOpenChange={setShowAnswerDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-primary" />
+              Répondre à la question
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+              <p className="text-sm font-medium text-amber-900">{answeringQuestion?.question}</p>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Titre du chunk *</label>
+              <Input
+                placeholder="Ex: La Salat al-Fatihi — Texte et vertus"
+                value={answerForm.title}
+                onChange={e => setAnswerForm(f => ({ ...f, title: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Source (optionnel)</label>
+              <Input
+                placeholder="Ex: Jawahir al-Maani, tidjaniya.com..."
+                value={answerForm.source}
+                onChange={e => setAnswerForm(f => ({ ...f, source: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Réponse complète *</label>
+              <Textarea
+                placeholder="Rédigez la réponse qui sera ajoutée à la base de connaissances..."
+                rows={7}
+                value={answerForm.content}
+                onChange={e => setAnswerForm(f => ({ ...f, content: e.target.value }))}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Cette réponse sera ajoutée à la base de connaissances et utilisée par le chatbot pour les prochaines questions similaires.
+            </p>
+            <Button
+              className="w-full"
+              onClick={() => answeringQuestion && answerMutation.mutate({ id: answeringQuestion.id, form: answerForm })}
+              disabled={answerMutation.isPending || !answerForm.content.trim()}
+            >
+              {answerMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enregistrement...</>
+              ) : (
+                <><CheckCircle2 className="w-4 h-4 mr-2" /> Enregistrer et enrichir la base</>
+              )}
+            </Button>
+            {answerMutation.isError && (
+              <p className="text-xs text-destructive text-center">{(answerMutation.error as any)?.message}</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog : Supprimer question sans réponse ──────────────────────── */}
+      <Dialog open={showDeleteUnansweredConfirm} onOpenChange={setShowDeleteUnansweredConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Ignorer cette question ?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              La question sera supprimée de la liste. Elle ne sera pas ajoutée à la base de connaissances.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setShowDeleteUnansweredConfirm(false)}>
+                Annuler
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={() => deletingUnansweredId && deleteUnansweredMutation.mutate(deletingUnansweredId)}
+                disabled={deleteUnansweredMutation.isPending}
+              >
+                {deleteUnansweredMutation.isPending ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Suppression...</>
+                ) : 'Ignorer'}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
