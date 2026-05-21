@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import {
   Plus, Search, Globe, Edit2, Trash2, Loader2, Brain,
   ChevronLeft, ChevronRight, Database, Link, MessageCircleQuestion,
-  CheckCircle2, XCircle, BookOpen,
+  CheckCircle2, XCircle, BookOpen, Flag, CheckCheck,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
@@ -71,6 +71,16 @@ interface AnswerForm {
   title: string;
   content: string;
   source: string;
+}
+
+interface FeedbackReport {
+  id: number;
+  message: string;
+  bot_answer: string;
+  reported_at: string;
+  reviewed: boolean;
+  reviewed_at: string | null;
+  note: string | null;
 }
 
 const EMPTY_FORM: ChunkForm = { source: '', title: '', language: 'fr', content: '' };
@@ -258,6 +268,42 @@ export default function KnowledgeManager() {
     },
   });
 
+  // ── Signalements ───────────────────────────────────────────────────────────
+  const { data: reportsList, isLoading: reportsLoading } = useQuery<FeedbackReport[]>({
+    queryKey: ['feedback-reports'],
+    queryFn: async () => {
+      const res = await fetch(`${API_URL}/knowledge/reports?reviewed=false`, { headers: authHeaders });
+      if (!res.ok) throw new Error('Erreur');
+      return res.json();
+    },
+    staleTime: 15_000,
+  });
+
+  const reviewReportMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`${API_URL}/knowledge/reports/${id}/review`, {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Erreur'); }
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['feedback-reports'] }),
+  });
+
+  const deleteReportMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`${API_URL}/knowledge/reports/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Erreur'); }
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['feedback-reports'] }),
+  });
+
   const deleteUnansweredMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await fetch(`${API_URL}/knowledge/unanswered/${id}`, {
@@ -317,6 +363,7 @@ export default function KnowledgeManager() {
   const pagination = listData?.pagination;
 
   const unanswered = unansweredList || [];
+  const reports = reportsList || [];
 
   return (
     <div className="space-y-6">
@@ -350,14 +397,23 @@ export default function KnowledgeManager() {
         <TabsList className="w-full">
           <TabsTrigger value="chunks" className="flex-1">
             <Database className="w-4 h-4 mr-1.5" />
-            Base de connaissances
+            Base
           </TabsTrigger>
           <TabsTrigger value="unanswered" className="flex-1 relative">
             <MessageCircleQuestion className="w-4 h-4 mr-1.5" />
-            Questions sans réponse
+            Questions
             {unanswered.length > 0 && (
               <span className="ml-1.5 bg-destructive text-destructive-foreground text-xs rounded-full px-1.5 py-0.5 leading-none">
                 {unanswered.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="reports" className="flex-1 relative">
+            <Flag className="w-4 h-4 mr-1.5" />
+            Signalements
+            {reports.length > 0 && (
+              <span className="ml-1.5 bg-destructive text-destructive-foreground text-xs rounded-full px-1.5 py-0.5 leading-none">
+                {reports.length}
               </span>
             )}
           </TabsTrigger>
@@ -558,6 +614,66 @@ export default function KnowledgeManager() {
                         <XCircle className="w-3.5 h-3.5" />
                       </Button>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </TabsContent>
+
+        {/* ── Onglet : Signalements ────────────────────────────────── */}
+        <TabsContent value="reports" className="mt-4 space-y-3">
+          {reportsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : reports.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <CheckCircle2 className="w-10 h-10 mx-auto mb-3 opacity-30" />
+              <p className="font-medium">Aucun signalement en attente</p>
+              <p className="text-xs mt-1">Aucune réponse signalée par les utilisateurs.</p>
+            </div>
+          ) : (
+            reports.map(r => (
+              <Card key={r.id} className="border-red-200 bg-red-50/40">
+                <CardContent className="pt-4 pb-3 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <Flag className="w-4 h-4 mt-0.5 text-red-500 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] text-muted-foreground mb-1">
+                        Signalé le {formatDate(r.reported_at)}
+                      </p>
+                      <p className="text-xs font-medium text-foreground mb-1">
+                        Question : <span className="font-normal">{r.message}</span>
+                      </p>
+                      <p className="text-xs font-medium text-foreground">
+                        Réponse signalée :
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-3 bg-white/70 rounded p-2 border border-red-100">
+                        {r.bot_answer}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 gap-1 text-xs"
+                      onClick={() => reviewReportMutation.mutate(r.id)}
+                      disabled={reviewReportMutation.isPending}
+                    >
+                      <CheckCheck className="w-3.5 h-3.5" />
+                      Traité
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      onClick={() => deleteReportMutation.mutate(r.id)}
+                      disabled={deleteReportMutation.isPending}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

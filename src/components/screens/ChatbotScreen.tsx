@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, BookOpen, FileDown, Loader2, ChevronRight, X } from 'lucide-react';
+import { Send, Bot, User, BookOpen, FileDown, Loader2, ChevronRight, X, ThumbsDown, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { API_BASE_URL } from '@/lib/apiUrl';
 
@@ -9,6 +9,7 @@ interface ChatMessage {
   type?: 'xassida_list' | 'pdf_request' | 'knowledge_answer' | 'error';
   xassidas?: XassidaResult[];
   references?: Reference[];
+  reported?: boolean;
 }
 
 interface XassidaResult {
@@ -84,6 +85,7 @@ export default function ChatbotScreen({ onNavigateToXassida }: { onNavigateToXas
           type: data.type,
           xassidas: data.xassidas,
           references: data.references,
+          reported: false,
         },
       ]);
     } catch {
@@ -94,6 +96,27 @@ export default function ChatbotScreen({ onNavigateToXassida }: { onNavigateToXas
     } finally {
       setLoading(false);
     }
+  }
+
+  async function reportMessage(msgIndex: number) {
+    const botMsg = messages[msgIndex];
+    // Trouve le message user qui précède cette réponse
+    const userMsg = [...messages].slice(0, msgIndex).reverse().find(m => m.role === 'user');
+    if (!userMsg) return;
+
+    try {
+      await fetch(`${API_BASE_URL}/chat/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMsg.content, bot_answer: botMsg.content }),
+      });
+    } catch {
+      // fire-and-forget, pas bloquant
+    }
+
+    setMessages(prev =>
+      prev.map((m, i) => (i === msgIndex ? { ...m, reported: true } : m))
+    );
   }
 
   async function downloadPdf(xassida: XassidaResult, language: PdfLanguage) {
@@ -146,8 +169,10 @@ export default function ChatbotScreen({ onNavigateToXassida }: { onNavigateToXas
           <MessageBubble
             key={i}
             msg={msg}
+            msgIndex={i}
             onPdfRequest={xassida => setPdfModal(xassida)}
             onNavigateToXassida={onNavigateToXassida}
+            onReport={reportMessage}
           />
         ))}
 
@@ -255,12 +280,16 @@ export default function ChatbotScreen({ onNavigateToXassida }: { onNavigateToXas
 
 function MessageBubble({
   msg,
+  msgIndex,
   onPdfRequest,
   onNavigateToXassida,
+  onReport,
 }: {
   msg: ChatMessage;
+  msgIndex: number;
   onPdfRequest: (x: XassidaResult) => void;
   onNavigateToXassida?: (id: string) => void;
+  onReport: (index: number) => void;
 }) {
   const isUser = msg.role === 'user';
 
@@ -338,6 +367,27 @@ function MessageBubble({
                 📖 {ref.source}
               </span>
             ))}
+          </div>
+        )}
+
+        {/* Bouton signalement */}
+        {msg.type === 'knowledge_answer' && (
+          <div className="flex justify-end">
+            {msg.reported ? (
+              <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                <Check className="w-3 h-3 text-green-600" />
+                Signalement envoyé
+              </span>
+            ) : (
+              <button
+                onClick={() => onReport(msgIndex)}
+                className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-destructive transition-colors py-0.5 px-1.5 rounded"
+                title="Signaler une mauvaise réponse"
+              >
+                <ThumbsDown className="w-3 h-3" />
+                Signaler
+              </button>
+            )}
           </div>
         )}
       </div>
