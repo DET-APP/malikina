@@ -51,7 +51,7 @@ export default function AdminLoginScreen({ onSuccess }: AdminLoginScreenProps) {
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="admin@malikina.app"
+                placeholder="Adresse email"
                 className="bg-white/10 border-white/20 text-white placeholder:text-green-300 focus:border-gold-400"
                 autoComplete="email"
                 required
