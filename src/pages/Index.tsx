@@ -145,9 +145,11 @@ const Index = () => {
             </AnimatePresence>
           </main>
 
-          <FloatingMenu
-            onNavigate={handleSimpleNavigate}
-          />
+          {activeScreen !== 'chatbot' && (
+            <FloatingMenu
+              onNavigate={handleSimpleNavigate}
+            />
+          )}
 
           <BottomNavigation
             activeScreen={["calendar", "quran", "news", "admin-xassidas", "about", "faq", "contribution"].includes(activeScreen) ? "home" : activeScreen as any}
