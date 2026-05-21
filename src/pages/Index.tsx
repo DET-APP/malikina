@@ -16,9 +16,10 @@ import NewsScreen from "@/components/screens/NewsScreen";
 import AboutScreen from "@/components/screens/AboutScreen";
 import FAQScreen from "@/components/screens/FAQScreen";
 import ContributionScreen from "@/components/screens/ContributionScreen";
+import ChatbotScreen from "@/components/screens/ChatbotScreen";
 import { useAuth } from "@/contexts/AuthContext";
 
-type Screen = "home" | "prayer" | "quran" | "calendar" | "qassidas" | "fiqh" | "community" | "admin-xassidas" | "news" | "about" | "faq" | "contribution";
+type Screen = "home" | "prayer" | "quran" | "calendar" | "qassidas" | "fiqh" | "community" | "chatbot" | "admin-xassidas" | "news" | "about" | "faq" | "contribution";
 
 // Interface pour les paramètres de navigation du Coran
 interface QuranNavigationParams {
@@ -113,6 +114,12 @@ const Index = () => {
         return <FAQScreen onBack={() => setActiveScreen("home")} />;
       case "contribution":
         return <ContributionScreen onBack={() => setActiveScreen("home")} />;
+      case "chatbot":
+        return (
+          <ChatbotScreen
+            onNavigateToXassida={(id) => handleNavigateWithParams("qassidas", undefined, undefined, parseInt(id))}
+          />
+        );
       case "admin-xassidas":
         if (authLoading) return null;
         if (!user) return <AdminLoginScreen onSuccess={() => setActiveScreen('admin-xassidas')} />;
