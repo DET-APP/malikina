@@ -1,10 +1,20 @@
 // src/hooks/usePrayerTimes.ts
 import { useState, useEffect } from "react";
 
+export interface PrayerStatus {
+    name: string;
+    time: string;
+    status: "moukhtar" | "darouri" | "qada";
+    statusText: string;
+}
+
 export interface NextPrayer {
     name: string;
     time: string;
     remaining: string;
+    remainingInSeconds?: number;
+    upcomingPrayers?: PrayerStatus[];
+    currentPrayerStatus?: string;
 }
 
 export const usePrayerTimes = (toast: any) => {
@@ -15,7 +25,16 @@ export const usePrayerTimes = (toast: any) => {
     const defaultLat = 14.7000;
     const defaultLon = -16.4500;
     const defaultSchool = 0;
-    const defaultTune = "0,5,0,72,46,10,0,0,0"; // calé sur mosquées locales Tijaniyya
+    const defaultTune = "0,5,0,72,46,10,0,0,0";
+
+    // Durées en minutes pour chaque période
+    const prayerDurations = {
+        Fajr: { moukhtar: 30, darouri: 60 },     // Fajr: moukhtar 30min, darouri jusqu'à 60min
+        Dhuhr: { moukhtar: 45, darouri: 90 },    // Dhuhr: moukhtar 45min, darouri jusqu'à 90min
+        Asr: { moukhtar: 45, darouri: 90 },      // Asr: moukhtar 45min, darouri jusqu'à 90min
+        Maghrib: { moukhtar: 30, darouri: 60 },  // Maghrib: moukhtar 30min, darouri jusqu'à 60min
+        Isha: { moukhtar: 60, darouri: 120 }     // Isha: moukhtar 60min, darouri jusqu'à 120min
+    };
 
     const fetchPrayerTimes = async (lat: number, lon: number) => {
         try {
@@ -47,6 +66,29 @@ export const usePrayerTimes = (toast: any) => {
         }
     };
 
+    const getPrayerStatus = (prayerName: string, prayerTimeMinutes: number, currentTime: number, nextPrayerTimeMinutes: number): PrayerStatus => {
+        const duration = prayerDurations[prayerName as keyof typeof prayerDurations];
+        if (!duration) {
+            return { name: prayerName, time: "", status: "qada", statusText: "" };
+        }
+
+        const moukhtarEnd = prayerTimeMinutes + duration.moukhtar;
+        const darouriEnd = prayerTimeMinutes + duration.darouri;
+
+        if (currentTime < prayerTimeMinutes) {
+            // Pas encore l'heure - pas de texte affiché
+            return { name: prayerName, time: "", status: "moukhtar", statusText: "" };
+        } else if (currentTime >= prayerTimeMinutes && currentTime <= moukhtarEnd) {
+            return { name: prayerName, time: "", status: "moukhtar", statusText: "Moukhtar" };
+        } else if (currentTime > moukhtarEnd && currentTime <= darouriEnd) {
+            return { name: prayerName, time: "", status: "darouri", statusText: "Darouri" };
+        } else if (currentTime > darouriEnd) {
+            return { name: prayerName, time: "", status: "qada", statusText: "Qada" };
+        }
+
+        return { name: prayerName, time: "", status: "qada", statusText: "" };
+    };
+
     const calculateNextPrayer = (timings: any) => {
         const now = new Date();
         const currentTime = now.getHours() * 60 + now.getMinutes();
@@ -64,28 +106,62 @@ export const usePrayerTimes = (toast: any) => {
             return { ...p, totalMinutes: hours * 60 + minutes };
         });
 
-        let next = prayerTimesInMinutes.find(p => p.totalMinutes > currentTime);
+        // Trouver la prière en cours
+        let currentPrayer = null;
+        let currentIndex = -1;
 
-        if (!next) {
-            next = prayerTimesInMinutes[0];
-            const remaining = (24 * 60 - currentTime) + next.totalMinutes;
-            const hours = Math.floor(remaining / 60);
-            const mins = remaining % 60;
-            setNextPrayer({
-                name: next.name === "Maghrib" ? "Maghreb" : next.name,
-                time: next.time,
-                remaining: `${hours}h ${mins}`
-            });
-        } else {
-            const remaining = next.totalMinutes - currentTime;
-            const hours = Math.floor(remaining / 60);
-            const mins = remaining % 60;
-            setNextPrayer({
-                name: next.name === "Maghrib" ? "Maghreb" : next.name,
-                time: next.time,
-                remaining: `${hours}h ${mins}`
+        for (let i = 0; i < prayerTimesInMinutes.length; i++) {
+            if (currentTime >= prayerTimesInMinutes[i].totalMinutes) {
+                currentPrayer = prayerTimesInMinutes[i];
+                currentIndex = i;
+            }
+        }
+
+        // Si on est avant Fajr, la prière actuelle est Isha de la veille
+        if (!currentPrayer) {
+            currentPrayer = prayerTimesInMinutes[prayerTimesInMinutes.length - 1];
+            currentIndex = prayerTimesInMinutes.length - 1;
+        }
+
+        // Préparer toutes les prières avec leur statut
+        const allPrayersWithStatus: PrayerStatus[] = [];
+        for (let i = 0; i < prayerTimesInMinutes.length; i++) {
+            const prayer = prayerTimesInMinutes[i];
+            const nextPrayerTime = prayerTimesInMinutes[(i + 1) % prayerTimesInMinutes.length].totalMinutes;
+            const status = getPrayerStatus(prayer.name, prayer.totalMinutes, currentTime, nextPrayerTime);
+            allPrayersWithStatus.push({
+                name: prayer.name,
+                time: prayer.time,
+                status: status.status,
+                statusText: status.statusText
             });
         }
+
+        // Les prochaines prières à afficher (exclure la prière en cours)
+        const upcomingPrayers = [];
+        for (let i = 1; i <= 3; i++) {
+            const nextIndex = (currentIndex + i) % prayerTimesInMinutes.length;
+            upcomingPrayers.push(allPrayersWithStatus[nextIndex]);
+        }
+
+        // Déterminer le statut de la prière en cours
+        let currentPrayerStatus = "";
+        let currentStatusText = "";
+
+        if (currentPrayer) {
+            const nextPrayerTime = prayerTimesInMinutes[(currentIndex + 1) % prayerTimesInMinutes.length].totalMinutes;
+            const status = getPrayerStatus(currentPrayer.name, currentPrayer.totalMinutes, currentTime, nextPrayerTime);
+            currentPrayerStatus = status.status;
+            currentStatusText = status.statusText;
+        }
+
+        setNextPrayer({
+            name: currentPrayer.name === "Maghrib" ? "Maghreb" : currentPrayer.name,
+            time: currentPrayer.time,
+            remaining: "",
+            upcomingPrayers: upcomingPrayers,
+            currentPrayerStatus: currentStatusText
+        });
     };
 
     useEffect(() => {
@@ -94,13 +170,11 @@ export const usePrayerTimes = (toast: any) => {
 
     useEffect(() => {
         const interval = setInterval(() => {
-            if (nextPrayer) {
-                fetchPrayerTimes(defaultLat, defaultLon);
-            }
+            fetchPrayerTimes(defaultLat, defaultLon);
         }, 60000);
 
         return () => clearInterval(interval);
-    }, [nextPrayer]);
+    }, []);
 
     return { nextPrayer, loading };
 };
