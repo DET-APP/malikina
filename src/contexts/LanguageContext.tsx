@@ -31,6 +31,7 @@ const translations = {
     navFiqh: "Fiqh",
     navPrayer: "Prières",
     navCommunity: "Communauté",
+    navChatbot: "Assistant",
 
     // Xassidas screen
     xassidasTitle: "Xassidas",
@@ -75,6 +76,7 @@ const translations = {
     navFiqh: "الفقه",
     navPrayer: "الصلوات",
     navCommunity: "المجتمع",
+    navChatbot: "المساعد",
 
     // Xassidas screen
     xassidasTitle: "القصائد",
@@ -119,6 +121,7 @@ const translations = {
     navFiqh: "Fiqh",
     navPrayer: "Prayer",
     navCommunity: "Community",
+    navChatbot: "Assistant",
 
     // Xassidas screen
     xassidasTitle: "Xassidas",
