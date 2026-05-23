@@ -11,8 +11,8 @@ const LanguageSwitcher = ({ variant = "dark" }: LanguageSwitcherProps) => {
   const { language, setLanguage } = useLanguage();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
   const current = languages.find((l) => l.code === language)!;
+  const isLight = variant === "light";
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -24,8 +24,10 @@ const LanguageSwitcher = ({ variant = "dark" }: LanguageSwitcherProps) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const isLight = variant === "light";
+  // Disabled until translations are ready
+  return null;
 
+  /*
   return (
     <div ref={ref} className="relative z-50">
       <motion.button
@@ -72,6 +74,7 @@ const LanguageSwitcher = ({ variant = "dark" }: LanguageSwitcherProps) => {
       </AnimatePresence>
     </div>
   );
+  */
 };
 
 export default LanguageSwitcher;

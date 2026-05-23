@@ -1,18 +1,53 @@
-// src/components/shared/LoadingSpinner.tsx
-import { Loader2 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { motion } from "framer-motion";
 
 interface LoadingSpinnerProps {
   message?: string;
+  size?: "sm" | "md" | "lg";
 }
 
-export const LoadingSpinner = ({ message = "Chargement des horaires..." }: LoadingSpinnerProps) => {
+export const LoadingSpinner = ({ message, size = "md" }: LoadingSpinnerProps) => {
+  const dotSizes = {
+    sm: "w-1.5 h-1.5",
+    md: "w-2 h-2",
+    lg: "w-3 h-3",
+  };
+
+  const dotGaps = {
+    sm: "gap-1.5",
+    md: "gap-2",
+    lg: "gap-3",
+  };
+
   return (
-    <Card className="mx-6 mt-6">
-      <CardContent className="flex flex-col items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 text-primary animate-spin mb-2" />
-        <p className="text-muted-foreground">{message}</p>
-      </CardContent>
-    </Card>
+    <div className="flex flex-col items-center justify-center gap-4 py-8">
+      <div className={`flex ${dotGaps[size]}`}>
+        {[0, 1, 2].map((i) => (
+          <motion.div
+            key={i}
+            className={`${dotSizes[size]} rounded-full bg-primary/50`}
+            animate={{
+              scale: [1, 1.5, 1],
+              opacity: [0.4, 1, 0.4],
+            }}
+            transition={{
+              duration: 1,
+              repeat: Infinity,
+              delay: i * 0.2,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+      </div>
+
+      {message && (
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-sm text-muted-foreground"
+        >
+          {message}
+        </motion.p>
+      )}
+    </div>
   );
 };

@@ -1,4 +1,3 @@
-// src/components/screens/HomeScreen.tsx
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
@@ -32,8 +31,7 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
   } = useNotifications(onNavigate);
 
   const { nextPrayer, loading: prayerLoading } = usePrayerTimes(toast);
-  // Hook du verset du jour temporairement désactivé (Coran masqué)
-  // const { verse, loading: verseLoading, refreshVerse } = useVerseOfTheDay();
+  const { verse, loading: verseLoading, refreshVerse, error: verseError } = useVerseOfTheDay();
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -48,10 +46,9 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
     visible: { opacity: 1, y: 0 },
   };
 
-  // Convertir les données Qassida en QassidasHistoryItem
   const qassidasWithHistory: QassidasHistoryItem[] = qassidasData.map(qassida => ({
     ...qassida,
-    lastViewed: 0 // Valeur par défaut pour les qassidas sans historique
+    lastViewed: 0
   }));
 
   return (
@@ -77,21 +74,20 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
       />
 
       <div className="mt-20 px-6 space-y-6">
-        {/* Xassidas récemment écoutées */}
         <RecentQassidas
           onNavigate={onNavigate}
           itemVariants={itemVariants}
           allQassidas={qassidasWithHistory}
         />
 
-        {/* Verset du Jour - TEMPORAIREMENT MASQUÉ (Coran désactivé) */}
-        {/* <VerseOfTheDay
+        <VerseOfTheDay
           verse={verse}
           loading={verseLoading}
           onRefresh={refreshVerse}
           onNavigate={onNavigate}
           itemVariants={itemVariants}
-        /> */}
+          error={verseError}
+        />
 
         <PrayerPreview
           nextPrayer={nextPrayer}
