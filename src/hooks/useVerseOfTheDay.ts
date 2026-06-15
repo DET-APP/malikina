@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { API_BASE_URL } from "@/lib/apiUrl";
+import { getCachedData, cacheData } from "@/lib/offlineDb";
 
 const MAX_VERSES_TO_CACHE = 500;
 const CACHE_DURATION = 1000 * 60 * 60; // 1 heure
@@ -28,7 +29,7 @@ export interface VerseOfTheDay {
 interface XassidaMeta {
   id: number;
   title: string;
-  actual_verse_count: number;
+  verse_count: number;
 }
 
 const getDayIndex = () => {
@@ -48,19 +49,26 @@ const daySeededOrder = <T>(items: T[], seed: number): T[] => {
 
 const fetchVersesWithTranslation = async (xassidaId: number, title: string): Promise<VerseOfTheDay[]> => {
   try {
+    const cacheKey = `verses-${xassidaId}`;
+    const cachedVerses = await getCachedData('verses', cacheKey);
+    if (cachedVerses && Array.isArray(cachedVerses) && cachedVerses.length > 0) {
+      return cachedVerses;
+    }
+
     const res = await fetch(`${API_BASE_URL}/xassidas/${xassidaId}/verses`);
     if (!res.ok) return [];
 
     const verses = await res.json();
 
+    // 🔥 Seuls les versets avec une VRAIE traduction sont gardés
     const validVerses = verses
-      .filter((v: any) =>
-        v.text_arabic &&
-        v.text_arabic.trim().length > 0 &&
-        v.translation_fr &&
-        v.translation_fr.trim() !== "" &&
-        v.translation_fr !== "Traduction non disponible"
-      )
+      .filter((v: any) => {
+        const hasTranslation = v.translation_fr &&
+          typeof v.translation_fr === 'string' &&
+          v.translation_fr.trim().length > 0 &&
+          v.translation_fr !== "Traduction non disponible";
+        return hasTranslation;
+      })
       .slice(0, MAX_VERSES_TO_CACHE)
       .map((v: any) => ({
         id: v.id,
@@ -73,6 +81,10 @@ const fetchVersesWithTranslation = async (xassidaId: number, title: string): Pro
         xassidaId: xassidaId,
         apiId: String(xassidaId),
       }));
+
+    if (validVerses.length > 0) {
+      await cacheData('verses', cacheKey, validVerses, 24 * 60 * 60 * 1000);
+    }
 
     return validVerses;
   } catch {
@@ -104,34 +116,23 @@ export const useVerseOfTheDay = () => {
 
   const fetchVerseOfDay = async () => {
     if (loadVerseFromCache()) return;
-
-    if (isFetchingInProgress) {
-      const waitForFetch = setInterval(() => {
-        if (!isFetchingInProgress) {
-          clearInterval(waitForFetch);
-          loadVerseFromCache();
-        }
-      }, 100);
-      return;
-    }
+    if (isFetchingInProgress) return;
 
     try {
       isFetchingInProgress = true;
-      if (isMounted.current) {
-        setLoading(true);
-        setError(null);
-      }
+      setLoading(true);
+      setError(null);
 
       const xassidasRes = await fetch(`${API_BASE_URL}/xassidas`);
-      if (!xassidasRes.ok) {
-        throw new Error(`xassidas list unavailable: ${xassidasRes.status}`);
-      }
+      if (!xassidasRes.ok) throw new Error(`xassidas list unavailable: ${xassidasRes.status}`);
 
       const xassidas: XassidaMeta[] = await xassidasRes.json();
 
+      // 🔥 On ne garde que les xassidas qui ont AU MOINS UN verset avec traduction
       const xassidasWithTranslations = await Promise.all(
         xassidas
-          .filter(x => x.actual_verse_count > 0)
+          .filter(x => x.verse_count > 0)
+          .slice(0, 20)
           .map(async (x) => {
             const verses = await fetchVersesWithTranslation(x.id, x.title);
             return { ...x, versesWithTranslation: verses };
@@ -141,16 +142,12 @@ export const useVerseOfTheDay = () => {
       const validXassidas = xassidasWithTranslations.filter(x => x.versesWithTranslation.length > 0);
 
       if (validXassidas.length === 0) {
-        throw new Error("No xassidas with translations found");
+        throw new Error("Aucune xassida avec traduction trouvée");
       }
 
       const ordered = daySeededOrder(validXassidas, currentDayIndex);
       const selectedXassida = ordered[0];
       const translatedVerses = selectedXassida.versesWithTranslation;
-
-      if (translatedVerses.length === 0) {
-        throw new Error("No translated verses in selected xassida");
-      }
 
       const verseIndex = currentDayIndex % translatedVerses.length;
       const selectedVerse = translatedVerses[verseIndex];
@@ -167,17 +164,13 @@ export const useVerseOfTheDay = () => {
         setVerse(selectedVerse);
         setOffset(0);
       }
-
-    } catch {
-      if (isMounted.current) {
-        setError("Impossible de charger le vers du jour");
-        setVerse(null);
-      }
+    } catch (err) {
+      console.error("Erreur dans le vers du jour :", err);
+      setError("Impossible de charger le vers du jour");
+      setVerse(null);
     } finally {
       isFetchingInProgress = false;
-      if (isMounted.current) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
 
@@ -195,7 +188,6 @@ export const useVerseOfTheDay = () => {
   useEffect(() => {
     isMounted.current = true;
     fetchVerseOfDay();
-
     return () => {
       isMounted.current = false;
     };
