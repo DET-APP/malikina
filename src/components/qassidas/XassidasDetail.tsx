@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, Play, Pause, Headphones, Share2,
   Loader2, Languages, AlignLeft, Volume2, Search,
-  Copy, Check, X, ZoomIn, ZoomOut
+  Copy, Check, X, ZoomIn, ZoomOut, Sun, Moon, Library, BookOpen
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -15,6 +15,7 @@ import { authorsData } from "@/data/qassidasData";
 import { enrichedQassidasData } from "@/data/enrichedQassidasData";
 import { searchMatch, extractYouTubeId } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
 const XASSIDA_API_URL =
   import.meta.env.VITE_API_URL ||
@@ -29,8 +30,8 @@ interface XassidaAudio {
   audio_url: string | null;
   label: string | null;
   order_index: number;
-  start_time?: number; // In seconds
-  end_time?: number | null; // In seconds, null = use full duration
+  start_time?: number;
+  end_time?: number | null;
 }
 
 interface XassidasDetailProps {
@@ -54,9 +55,7 @@ interface XassidaVerse {
 
 const PAGE_SIZE = 20;
 
-// ── Audio player ─────────────────────────────────────────────────────────────
-
-// ── YouTube IFrame API loader (singleton) ────────────────────────────────────
+// ── YouTube IFrame API loader ────────────────────────────────────────────────
 
 declare global {
   interface Window { YT: any; onYouTubeIframeAPIReady: (() => void) | null; }
@@ -85,11 +84,11 @@ function onYTReady(cb: () => void) {
   _ytCallbacks.push(cb);
 }
 
-// ── YouTube audio player (hidden iframe + custom controls) ───────────────────
-
-// ── Shared player UI ─────────────────────────────────────────────────────────
+// ── Format time ──────────────────────────────────────────────────────────────
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+// ── Player shell ─────────────────────────────────────────────────────────────
 
 interface PlayerShellProps {
   playing: boolean;
@@ -130,7 +129,6 @@ const PlayerShell = ({ playing, loading, error, progress, effectiveDuration, dar
   return (
     <div className={`rounded-2xl border p-4 ${wrap}`}>
       <div className="flex items-center gap-4">
-        {/* Play/Pause */}
         <button
           onClick={onToggle}
           disabled={loading}
@@ -143,22 +141,13 @@ const PlayerShell = ({ playing, loading, error, progress, effectiveDuration, dar
               : <Play className="w-5 h-5 fill-current ml-0.5" />}
         </button>
 
-        {/* Info + scrubber */}
         <div className="flex-1 min-w-0">
-          {/* Title row */}
           <div className="flex items-start justify-between gap-2 mb-2">
             <div className="min-w-0">
-              {reciterName && (
-                <p className={`text-sm font-semibold truncate leading-tight ${nameC}`}>{reciterName}</p>
-              )}
-              {chapterLabel && (
-                <p className={`text-xs truncate leading-tight ${subC}`}>{chapterLabel}</p>
-              )}
-              {!reciterName && !chapterLabel && (
-                <p className={`text-xs ${subC}`}>Récitation</p>
-              )}
+              {reciterName && <p className={`text-sm font-semibold truncate leading-tight ${nameC}`}>{reciterName}</p>}
+              {chapterLabel && <p className={`text-xs truncate leading-tight ${subC}`}>{chapterLabel}</p>}
+              {!reciterName && !chapterLabel && <p className={`text-xs ${subC}`}>Récitation</p>}
             </div>
-            {/* Playing indicator */}
             {playing && (
               <div className="flex items-end gap-[2px] h-4 flex-shrink-0">
                 {[1, 2, 3, 4].map(i => (
@@ -172,14 +161,9 @@ const PlayerShell = ({ playing, loading, error, progress, effectiveDuration, dar
             )}
           </div>
 
-          {/* Progress bar */}
           <div className="relative h-5 flex items-center">
             <div className={`absolute w-full h-1.5 rounded-full ${track}`}>
-              <div
-                className={`h-full rounded-full transition-none ${fill}`}
-                style={{ width: `${progress}%` }}
-              />
-              {/* Thumb */}
+              <div className={`h-full rounded-full transition-none ${fill}`} style={{ width: `${progress}%` }} />
               <div
                 className={`absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full shadow-md border-2 border-white ${thumb}`}
                 style={{ left: `clamp(0px, calc(${progress}% - 7px), calc(100% - 14px))` }}
@@ -192,7 +176,6 @@ const PlayerShell = ({ playing, loading, error, progress, effectiveDuration, dar
             />
           </div>
 
-          {/* Time */}
           <div className={`flex justify-between text-xs mt-1 tabular-nums ${timeC}`}>
             <span>{fmt(elapsed)}</span>
             <span>{effectiveDuration > 0 ? fmt(effectiveDuration) : '--:--'}</span>
@@ -364,7 +347,7 @@ const AudioPlayer = ({ url, dark, reciterName, chapterLabel, startTime = 0, endT
   );
 };
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Fallback copy ─────────────────────────────────────────────────────────────
 
 const fallbackCopy = (text: string, onSuccess: () => void) => {
   const ta = document.createElement("textarea");
@@ -377,7 +360,7 @@ const fallbackCopy = (text: string, onSuccess: () => void) => {
   document.body.removeChild(ta);
 };
 
-// ── Main ─────────────────────────────────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────────────────
 
 const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigateToXassida }: XassidasDetailProps) => {
   const { language } = useLanguage();
@@ -419,13 +402,12 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
   const chapterKeys = Object.keys(byChapter).map(Number).sort((a, b) => a - b);
   const multipleChapters = chapterKeys.length > 1;
 
-  // Filtered flat list — always sorted by chapter then verse_number
+  // Filtered flat list
   const filtered = apiVerses
     .filter((v) => {
       const ch = v.chapter_number ?? 1;
       if (selectedChapter !== null && ch !== selectedChapter) return false;
       if (verseSearch) {
-        // Search with accent-insensitive matching
         return searchMatch(v.text_arabic, verseSearch) ||
           searchMatch(v.transcription, verseSearch) ||
           searchMatch(v.translation_fr, verseSearch) ||
@@ -452,14 +434,14 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
     return () => observer.disconnect();
   }, [filtered.length]);
 
-  // Reset pagination when filter/search/xassida changes (skip during chapter navigation)
+  // Reset pagination when filter/search/xassida changes
   useEffect(() => {
     if (pendingScrollKey.current) return;
     setVisibleCount(PAGE_SIZE);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedQassida.id]);
 
-  // Fetch all audios for this xassida (new multi-reciter system)
+  // Fetch all audios
   const { data: xassidaAudios = [] } = useQuery<XassidaAudio[]>({
     queryKey: ['xassida-audios', selectedQassida.apiId],
     queryFn: async () => {
@@ -467,7 +449,6 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
       const res = await fetch(`${XASSIDA_API_URL}/xassidas/${selectedQassida.apiId}/audios`);
       if (!res.ok) return [];
       const audios = await res.json() as XassidaAudio[];
-      // Enrich audios: extract YouTube ID from audio_url if youtube_id is null
       return audios.map(audio => ({
         ...audio,
         youtube_id: audio.youtube_id || extractYouTubeId(audio.audio_url) || null
@@ -477,19 +458,17 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
     staleTime: 10_000,
   });
 
-  // Pre-cache YouTube URLs when audios are loaded
+  // Pre-cache YouTube URLs
   useEffect(() => {
     if (xassidaAudios.length > 0 && 'serviceWorker' in navigator) {
       const youtubeUrls = xassidaAudios
         .filter(a => a.youtube_id)
         .map(a => `https://www.youtube.com/watch?v=${a.youtube_id}`);
-
       if (youtubeUrls.length > 0) {
         navigator.serviceWorker.controller?.postMessage({
           type: 'CACHE_URLS',
           urls: youtubeUrls
         });
-        console.log(`[Offline] Pre-caching ${youtubeUrls.length} YouTube URLs`);
       }
     }
   }, [xassidaAudios]);
@@ -499,20 +478,22 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
     setSelectedAudioId(null);
   }, [selectedQassida.id, selectedChapter]);
 
-  // Audios relevant to the current chapter:
-  //   1. chapter-specific audios for selectedChapter
-  //   2. fallback: global audios (chapter_number === null)
+  // Audios relevant to the current chapter
   const relevantAudios = useMemo(() => {
     const chapterSpecific = xassidaAudios.filter(a => a.chapter_number === selectedChapter);
     if (chapterSpecific.length > 0) return chapterSpecific;
     return xassidaAudios.filter(a => a.chapter_number === null);
   }, [xassidaAudios, selectedChapter]);
 
-  // Currently playing audio (selected by user or auto first)
   const activeAudio = relevantAudios.find(a => a.id === selectedAudioId) ?? relevantAudios[0] ?? null;
 
-  // Legacy fallback: old youtube_id / audio_url on the xassida itself
-  const legacyAudio = useMemo(() => {
+  // Legacy fallback with correct type
+  const legacyAudio = useMemo<{
+    youtube_id: string | null;
+    audio_url: string | null;
+    start_time?: number;
+    end_time?: number | null;
+  } | null>(() => {
     if (xassidaAudios.length > 0) return null;
     if (apiDetail?.youtube_id) return { youtube_id: apiDetail.youtube_id, audio_url: null };
     if (apiDetail?.audio_url) return { youtube_id: null, audio_url: apiDetail.audio_url };
@@ -520,7 +501,7 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
     return null;
   }, [xassidaAudios, apiDetail, selectedQassida.audioUrl]);
 
-  // Copy verse — fallback for mobile / non-HTTPS
+  // Copy verse
   const copyVerse = useCallback((verse: XassidaVerse) => {
     const lines: string[] = [verse.text_arabic];
     if (showTranscription && verse.transcription) lines.push(verse.transcription);
@@ -537,11 +518,10 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
     }
   }, [showTranscription, showTranslation]);
 
-  // Verse refs for scrolling to search results
+  // Verse refs map
   const verseRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
   const pendingScrollKey = useRef<string | null>(null);
 
-  // Scroll to verse and highlight it (same-chapter, verse already rendered)
   const scrollToVerse = useCallback((verse: XassidaVerse) => {
     const key = verse.id || `${verse.chapter_number}-${verse.verse_number}`;
     const ref = verseRefsMap.current.get(key);
@@ -552,20 +532,17 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
     }
   }, []);
 
-  // Navigate to a verse's chapter then scroll to it (cross-chapter navigation)
   const navigateToChapterAndVerse = useCallback((verse: XassidaVerse) => {
     const key = verse.id || `${verse.chapter_number}-${verse.verse_number}`;
     const ch = verse.chapter_number ?? 1;
     const chapterSize = byChapter[ch]?.length ?? apiVerses.length;
     pendingScrollKey.current = key;
-    // Show all verses of the target chapter so the target is guaranteed visible
     setVisibleCount(Math.max(chapterSize + PAGE_SIZE, PAGE_SIZE));
     setChapter(ch);
     setVerseSearch("");
     setShowSearch(false);
   }, [byChapter, apiVerses.length]);
 
-  // After chapter navigation re-render, scroll to pending verse
   useEffect(() => {
     if (!pendingScrollKey.current) return;
     const key = pendingScrollKey.current;
@@ -580,14 +557,12 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
     });
   }, [selectedChapter, visibleCount]);
 
-  // Search in other xassidas when local search returns no results
+  // Search in other xassidas
   useEffect(() => {
     if (!verseSearch || filtered.length > 0 || !allXassidas) {
       setGlobalSearchResults([]);
       return;
     }
-
-    // Search for matching xassidas in other records
     const matchingXassidas = allXassidas.filter(
       (xassida) =>
         xassida.id !== selectedQassida.id && (
@@ -595,7 +570,6 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
           searchMatch(xassida.author, verseSearch)
         )
     );
-
     setGlobalSearchResults(matchingXassidas);
   }, [verseSearch, filtered.length, selectedQassida.id, allXassidas]);
 
@@ -605,7 +579,6 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
   const d = darkMode;
   const bg = d ? "bg-slate-900" : "bg-background";
   const card = d ? "bg-slate-800/60 border-slate-700" : "bg-card border-border/30";
-  const header = d ? "from-amber-950 via-orange-950 to-amber-900" : "from-secondary via-secondary to-secondary/80";
   const headSub = d ? "text-amber-200/70" : "text-white/75";
   const headMut = d ? "text-amber-200/50" : "text-white/55";
   const ctrl = d ? "bg-slate-800/80 border-slate-700" : "bg-muted/60 border-border/20";
@@ -624,89 +597,97 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
   return (
     <motion.div className={`min-h-screen transition-colors ${bg}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
 
-      {/* ── Header ────────────────────────────────────────────── */}
-      <div className={`relative pt-12 pb-28 px-6 bg-gradient-to-b ${header}`}>
-        <button onClick={onBack} className="absolute top-12 left-6 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors">
-          <ChevronLeft className="w-6 h-6 text-white" />
-        </button>
-        <button onClick={() => setDarkMode(!d)} className="absolute top-12 right-6 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors text-lg">
-          {d ? "☀️" : "🌙"}
-        </button>
-
-        <div className="text-center mt-10">
-          {selectedQassida.arabic && (
-            <p className="text-3xl font-arabic text-white mb-2 leading-relaxed">{selectedQassida.arabic}</p>
-          )}
-          <h1 className="text-xl font-bold text-white">{selectedQassida.title}</h1>
-          {author && <p className={`text-sm ${headSub} mt-1`}>{author.fullName} · {author.confraternity}</p>}
-          {apiVerses.length > 0 && (
-            <p className={`text-xs ${headMut} mt-1`}>
-              {filtered.length !== apiVerses.length
-                ? `${filtered.length} / ${apiVerses.length} vers`
-                : `${apiVerses.length} vers`}
-              {multipleChapters && ` · ${chapterKeys.length} chapitres`}
-            </p>
-          )}
+      {/* ── Header avec le même fond que HomeHeader ── légère réduction ── */}
+      <div className="relative bg-gradient-to-br from-primary via-primary to-green-dark pt-10 pb-24 px-6">
+        {/* Pattern Overlay */}
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M0 20L20 0h20v20L20 40H0V20z'/%3E%3C/g%3E%3C/svg%3E")`,
+          }} />
         </div>
 
-        {/* Action bar */}
-        <div className="absolute -bottom-14 left-6 right-6">
-          <div className="bg-card rounded-2xl px-2 py-3 shadow-xl flex justify-around">
-            {[
-              {
-                icon: <Heart className={`w-5 h-5 ${favorite ? "fill-secondary text-secondary" : "text-secondary"}`} />,
-                label: "Favori",
-                bg: favorite ? "bg-secondary/20" : "bg-secondary/10 hover:bg-secondary/20",
-                action: () => toggleFavorite({ id: selectedQassida.id, title: selectedQassida.title, arabic: selectedQassida.arabic, author: selectedQassida.author, addedAt: Date.now() })
-              },
-              {
-                icon: <Headphones className={`w-5 h-5 ${(relevantAudios.length > 0 || legacyAudio) ? "text-secondary" : "text-muted-foreground/40"}`} />,
-                label: "Audio",
-                bg: (relevantAudios.length > 0 || legacyAudio) ? "bg-secondary/10 hover:bg-secondary/20" : "bg-muted/40 cursor-not-allowed",
-                action: () => {
-                  if (relevantAudios.length > 0 || legacyAudio) {
-                    audioSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }
-                }
-              },
-              {
-                icon: <Share2 className={`w-5 h-5 ${shared ? "text-green-500" : "text-primary"}`} />,
-                label: shared ? "Copié !" : "Partager",
-                bg: "bg-primary/10 hover:bg-primary/20",
-                action: async () => {
-                  const title = selectedQassida.title;
-                  const text = selectedQassida.arabic ? `${selectedQassida.arabic}\n${title}` : title;
-                  if (navigator.share) {
-                    try { await navigator.share({ title, text, url: window.location.href }); } catch { }
-                  } else {
-                    const toCopy = `${text}\nhttps://malikina.vercel.app`;
-                    if (navigator.clipboard && window.isSecureContext) {
-                      await navigator.clipboard.writeText(toCopy).catch(() => fallbackCopy(toCopy, () => { }));
-                    } else {
-                      fallbackCopy(toCopy, () => { });
+        <div className="relative z-10">
+          <button onClick={onBack} className="absolute top-0 left-0 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors">
+            <ChevronLeft className="w-6 h-6 text-white" />
+          </button>
+          <button onClick={() => setDarkMode(!d)} className="absolute top-0 right-0 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors">
+            {d ? <Sun className="w-5 h-5 text-white" /> : <Moon className="w-5 h-5 text-white" />}
+          </button>
+
+          <div className="text-center mt-10">
+            {selectedQassida.arabic && (
+              <p className="text-3xl font-arabic text-primary-foreground mb-2 leading-relaxed">{selectedQassida.arabic}</p>
+            )}
+            <h1 className="text-xl font-bold text-primary-foreground">{selectedQassida.title}</h1>
+            {author && <p className={`text-sm ${headSub} mt-1`}>{author.fullName} · {author.confraternity}</p>}
+            {apiVerses.length > 0 && (
+              <p className={`text-xs ${headMut} mt-1`}>
+                {filtered.length !== apiVerses.length
+                  ? `${filtered.length} / ${apiVerses.length} vers`
+                  : `${apiVerses.length} vers`}
+                {multipleChapters && ` · ${chapterKeys.length} chapitres`}
+              </p>
+            )}
+          </div>
+
+          {/* Action bar – descendue à -bottom-28 */}
+          <div className="absolute -bottom-28 left-0 right-0">
+            <div className="bg-card rounded-2xl px-2 py-3 shadow-xl flex justify-around">
+              {[
+                {
+                  icon: <Heart className={`w-5 h-5 ${favorite ? "fill-secondary text-secondary" : "text-secondary"}`} />,
+                  label: "Favori",
+                  bg: favorite ? "bg-secondary/20" : "bg-secondary/10 hover:bg-secondary/20",
+                  action: () => toggleFavorite({ id: selectedQassida.id, title: selectedQassida.title, arabic: selectedQassida.arabic, author: selectedQassida.author, addedAt: Date.now() })
+                },
+                {
+                  icon: <Headphones className={`w-5 h-5 ${(relevantAudios.length > 0 || legacyAudio) ? "text-secondary" : "text-muted-foreground/40"}`} />,
+                  label: "Audio",
+                  bg: (relevantAudios.length > 0 || legacyAudio) ? "bg-secondary/10 hover:bg-secondary/20" : "bg-muted/40 cursor-not-allowed",
+                  action: () => {
+                    if (relevantAudios.length > 0 || legacyAudio) {
+                      audioSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
                     }
-                    setShared(true);
-                    setTimeout(() => setShared(false), 2000);
                   }
-                }
-              },
-            ].map(({ icon, label, bg: btnBg, action }) => (
-              <button key={label} onClick={action} className="flex flex-col items-center gap-1">
-                <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${btnBg}`}>{icon}</div>
-                <span className="text-xs text-muted-foreground">{label}</span>
-              </button>
-            ))}
+                },
+                {
+                  icon: <Share2 className={`w-5 h-5 ${shared ? "text-green-500" : "text-primary"}`} />,
+                  label: shared ? "Copié !" : "Partager",
+                  bg: "bg-primary/10 hover:bg-primary/20",
+                  action: async () => {
+                    const title = selectedQassida.title;
+                    const text = selectedQassida.arabic ? `${selectedQassida.arabic}\n${title}` : title;
+                    if (navigator.share) {
+                      try { await navigator.share({ title, text, url: window.location.href }); } catch { }
+                    } else {
+                      const toCopy = `${text}\nhttps://malikina.vercel.app`;
+                      if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(toCopy).catch(() => fallbackCopy(toCopy, () => { }));
+                      } else {
+                        fallbackCopy(toCopy, () => { });
+                      }
+                      setShared(true);
+                      setTimeout(() => setShared(false), 2000);
+                    }
+                  }
+                },
+              ].map(({ icon, label, bg: btnBg, action }) => (
+                <button key={label} onClick={action} className="flex flex-col items-center gap-1">
+                  <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${btnBg}`}>{icon}</div>
+                  <span className="text-xs text-muted-foreground">{label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
       {/* ── Content ───────────────────────────────────────────── */}
-      <div className="pt-20 px-4 pb-28">
+      <div className="pt-6 px-4 pb-28">
 
-        {/* ── Audio section ─────────────────────────────────── */}
+        {/* Audio section */}
         {(relevantAudios.length > 0 || legacyAudio) && (
           <div className="mb-4" ref={audioSectionRef}>
-            {/* Reciter selector — only shown when multiple options */}
             {relevantAudios.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2 mb-3 scrollbar-hide">
                 {relevantAudios.map((a) => (
@@ -724,7 +705,6 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
               </div>
             )}
 
-            {/* Player — reciterName & chapterLabel intégrés dans le player */}
             {activeAudio?.youtube_id ? (
               <YouTubeAudioPlayer
                 key={activeAudio.id}
@@ -837,14 +817,12 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                   </button>
                 )}
               </div>
-              {/* Search results dropdown */}
               {verseSearch && (filtered.length > 0 || globalSearchResults.length > 0) && (
                 <motion.div
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   className={`mt-2 rounded-xl border overflow-hidden max-h-80 overflow-y-auto ${ctrl}`}
                 >
-                  {/* Local results */}
                   {filtered.length > 0 && (
                     <>
                       {filtered.slice(0, 8).map((verse, idx) => (
@@ -880,13 +858,11 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                       )}
                     </>
                   )}
-
-                  {/* Global results from other xassidas */}
                   {globalSearchResults.length > 0 && (
                     <>
                       {filtered.length > 0 && <div className="h-px bg-border/30" />}
                       <div className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider ${d ? "text-amber-300/70 bg-amber-900/20" : "text-primary/70 bg-primary/5"}`}>
-                        📚 Autres xassidas
+                        <Library className="w-4 h-4 inline mr-1" /> Autres xassidas
                       </div>
                       {globalSearchResults.slice(0, 5).map((qassida) => (
                         <button
@@ -900,15 +876,11 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                         >
                           <div className="flex items-start gap-3">
                             <span className={`text-xs font-bold flex-shrink-0 mt-0.5 rounded-full w-6 h-6 flex items-center justify-center ${d ? "bg-amber-700/40 text-amber-300" : "bg-primary/10 text-primary"}`}>
-                              📖
+                              <BookOpen className="w-4 h-4" />
                             </span>
                             <div className="min-w-0 flex-1">
-                              <p className={`text-sm font-semibold ${arabicTxt}`}>
-                                {qassida.title}
-                              </p>
-                              <p className={`text-xs mt-1 ${translit}`}>
-                                {qassida.author}
-                              </p>
+                              <p className={`text-sm font-semibold ${arabicTxt}`}>{qassida.title}</p>
+                              <p className={`text-xs mt-1 ${translit}`}>{qassida.author}</p>
                             </div>
                           </div>
                         </button>
@@ -922,7 +894,6 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                   )}
                 </motion.div>
               )}
-
               {verseSearch && (
                 <p className={`text-xs mt-1.5 px-1 ${d ? "text-amber-300/50" : "text-muted-foreground/60"}`}>
                   {filtered.length > 0 ? `${filtered.length} résultat${filtered.length !== 1 ? "s" : ""}` :
@@ -957,8 +928,9 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
 
         {/* Verses */}
         {loadingVerses ? (
-          <div className="flex justify-center py-16"><Loader2 className="w-7 h-7 animate-spin text-primary" /></div>
-
+          <div className="flex justify-center py-16">
+            <LoadingSpinner />
+          </div>
         ) : apiVerses.length > 0 ? (
           <>
             {filtered.length === 0 ? (
@@ -992,7 +964,6 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: Math.min(vi, 8) * 0.02 }}
                     >
-                      {/* Header row: number + copy */}
                       <div className="flex items-center justify-between mb-3">
                         <button
                           onClick={() => copyVerse(verse)}
@@ -1010,7 +981,6 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                         </span>
                       </div>
 
-                      {/* Arabic */}
                       <p className={`text-right font-arabic leading-loose ${arabicTxt}`} style={{ fontSize: `${fontSize}px` }} dir="rtl">
                         {verse.text_arabic.includes('|')
                           ? verse.text_arabic.split('|').map((part, i, arr) => (
@@ -1030,7 +1000,6 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                           : verse.text_arabic}
                       </p>
 
-                      {/* Transliteration */}
                       <AnimatePresence>
                         {showTranscription && verse.transcription && (
                           <motion.p
@@ -1042,7 +1011,6 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                         )}
                       </AnimatePresence>
 
-                      {/* Translation FR/EN */}
                       <AnimatePresence>
                         {showTranslation && (verse.translation_fr || verse.translation_en) && (() => {
                           const tr = language === 'en'
@@ -1059,7 +1027,6 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                         })()}
                       </AnimatePresence>
 
-                      {/* Translation Wolof */}
                       <AnimatePresence>
                         {showWolof && verse.translation_wo && (
                           <motion.div
@@ -1077,8 +1044,6 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                 );
               })
             )}
-
-            {/* Infinite scroll sentinel */}
             {visibleCount < filtered.length && (
               <div ref={sentinelRef} className="flex justify-center py-6">
                 <Loader2 className="w-5 h-5 animate-spin text-muted-foreground/50" />
@@ -1090,7 +1055,6 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
               </p>
             )}
           </>
-
         ) : enriched?.fullText ? (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`rounded-2xl border overflow-hidden ${card}`}>
             <div className="p-5 max-h-[60vh] overflow-y-auto">
@@ -1102,22 +1066,6 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
         ) : (
           <div className="text-center py-16">
             <p className={`text-sm ${d ? "text-amber-300/50" : "text-muted-foreground/60"}`}>Aucun verset disponible.</p>
-          </div>
-        )}
-
-        {/* Prev / Next */}
-        {(onNext || onPrevious) && (
-          <div className="flex gap-3 mt-8">
-            {onPrevious && (
-              <button onClick={onPrevious} className="flex-1 py-3 rounded-xl bg-muted hover:bg-muted/80 transition-colors font-medium text-sm">
-                ← Précédente
-              </button>
-            )}
-            {onNext && (
-              <button onClick={onNext} className="flex-1 py-3 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground transition-colors font-medium text-sm">
-                Suivante →
-              </button>
-            )}
           </div>
         )}
       </div>

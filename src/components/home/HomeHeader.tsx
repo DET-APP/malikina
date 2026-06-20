@@ -57,7 +57,7 @@ const HomeHeader = ({
 
                 {/* Language switcher + notifications */}
                 <div className="flex items-center gap-2">
-                    <LanguageSwitcher variant="light" />
+                    {/* <LanguageSwitcher variant="light" /> */}  {/* ← Bouton de traduction masqué */}
                     <div className="relative">
                         <motion.button
                             onClick={onToggleNotifications}

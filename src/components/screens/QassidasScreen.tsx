@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Wifi, X, Info } from "lucide-react";
+import { Search, Wifi, X, Info, Heart, LayoutGrid, List } from "lucide-react";
 import { useXassidas } from "@/hooks/useXassidas";
 import { useQassidasHistory } from "@/hooks/useQassidasHistory";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -172,114 +172,143 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
 
   return (
     <motion.div className="min-h-screen pb-24 bg-background" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <header className="bg-gradient-to-br from-secondary via-secondary to-gold-light pt-12 pb-8 px-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-secondary-foreground">{t("xassidasTitle")}</h1>
-            <p className="text-sm text-secondary-foreground/70 mt-2">
-              {isLoading ? t("loading") : `${filteredQassidas.length} ${t("xassidasCount")}`}
-            </p>
+      {/* Header avec le même fond que HomeHeader et même padding (pb-20) */}
+      <header className="relative bg-gradient-to-br from-primary via-primary to-green-dark pt-8 pb-8 px-6">
+        {/* Pattern Overlay */}
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M0 20L20 0h20v20L20 40H0V20z'/%3E%3C/g%3E%3C/svg%3E")`,
+          }} />
+        </div>
+
+        {/* Contenu principal avec z-index */}
+        <div className="relative z-10">
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-primary-foreground">{t("xassidasTitle")}</h1>
+              <p className="text-sm text-primary-foreground/70 mt-1">
+                {isLoading ? t("loading") : `${filteredQassidas.length} ${t("xassidasCount")}`}
+              </p>
+            </div>
+            {/* <LanguageSwitcher variant="light" /> */}  {/* Bouton de traduction masqué */}
           </div>
-          <LanguageSwitcher variant="light" />
-        </div>
 
-        <div ref={searchRef} className="mt-6 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder={t("searchPlaceholder")}
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setShowSearchDropdown(e.target.value.trim().length > 0);
-            }}
-            onFocus={() => {
-              if (searchQuery.trim().length > 0) setShowSearchDropdown(true);
-            }}
-            className="w-full bg-card rounded-xl pl-12 pr-10 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => { setSearchQuery(""); setShowSearchDropdown(false); }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-muted/50"
-            >
-              <X className="w-4 h-4 text-muted-foreground" />
-            </button>
-          )}
-
-          <AnimatePresence>
-            {showSearchDropdown && searchQuery.trim().length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl shadow-lg border border-border/50 overflow-hidden z-50 max-h-[320px] overflow-y-auto"
+          <div ref={searchRef} className="mt-4 relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder={t("searchPlaceholder")}
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSearchDropdown(e.target.value.trim().length > 0);
+              }}
+              onFocus={() => {
+                if (searchQuery.trim().length > 0) setShowSearchDropdown(true);
+              }}
+              className="w-full bg-card rounded-xl pl-12 pr-10 py-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => { setSearchQuery(""); setShowSearchDropdown(false); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-muted/50"
               >
-                {searchResults.length > 0 ? (
-                  <>
-                    <p className="text-xs text-muted-foreground px-4 pt-3 pb-1 font-semibold uppercase tracking-wider">
-                      {t("searchResults")} ({searchResults.length}{filteredQassidas.length > 6 ? "+" : ""})
-                    </p>
-                    {searchResults.map((qassida) => (
-                      <button
-                        key={qassida.id}
-                        onClick={() => handleQassidasClick(qassida)}
-                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left border-b border-border/10 last:border-b-0"
-                      >
-                        <div className="w-9 h-9 rounded-full bg-secondary/10 flex items-center justify-center flex-shrink-0">
-                          <span className="text-xs font-bold text-secondary">
-                            {qassida.title.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("")}
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-foreground text-sm truncate">{qassida.title}</p>
-                          {qassida.arabic && (
-                            <p className="text-sm font-arabic text-primary truncate">{qassida.arabic}</p>
-                          )}
-                          <p className="text-xs text-muted-foreground truncate">{qassida.author}</p>
-                        </div>
-                      </button>
-                    ))}
-                    {filteredQassidas.length > 6 && (
-                      <button
-                        onClick={() => setShowSearchDropdown(false)}
-                        className="w-full text-center text-sm text-primary font-medium py-2.5 hover:bg-muted/30 transition-colors"
-                      >
-                        {t("seeAll")} ({filteredQassidas.length})
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <div className="px-4 py-6 text-center">
-                    <p className="text-sm text-muted-foreground">{t("noResults")}</p>
-                  </div>
-                )}
-              </motion.div>
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
             )}
-          </AnimatePresence>
-        </div>
 
-        <div className="mt-4 flex gap-2">
-          {(["grid", "list"] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => { setViewMode(mode); setShowFavorites(false); }}
-              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${viewMode === mode && !showFavorites ? "bg-card text-foreground" : "bg-card/30 text-secondary-foreground/70"
+            <AnimatePresence>
+              {showSearchDropdown && searchQuery.trim().length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl shadow-lg border border-border/50 overflow-hidden z-50 max-h-[320px] overflow-y-auto"
+                >
+                  {searchResults.length > 0 ? (
+                    <>
+                      <p className="text-xs text-muted-foreground px-4 pt-3 pb-1 font-semibold uppercase tracking-wider">
+                        {t("searchResults")} ({searchResults.length}{filteredQassidas.length > 6 ? "+" : ""})
+                      </p>
+                      {searchResults.map((qassida) => (
+                        <button
+                          key={qassida.id}
+                          onClick={() => handleQassidasClick(qassida)}
+                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left border-b border-border/10 last:border-b-0"
+                        >
+                          <div className="w-9 h-9 rounded-full bg-secondary/10 flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs font-bold text-secondary">
+                              {qassida.title.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("")}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-foreground text-sm truncate">{qassida.title}</p>
+                            {qassida.arabic && (
+                              <p className="text-sm font-arabic text-primary truncate">{qassida.arabic}</p>
+                            )}
+                            <p className="text-xs text-muted-foreground truncate">{qassida.author}</p>
+                          </div>
+                        </button>
+                      ))}
+                      {filteredQassidas.length > 6 && (
+                        <button
+                          onClick={() => setShowSearchDropdown(false)}
+                          className="w-full text-center text-sm text-primary font-medium py-2.5 hover:bg-muted/30 transition-colors"
+                        >
+                          {t("seeAll")} ({filteredQassidas.length})
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <div className="px-4 py-6 text-center">
+                      <p className="text-sm text-muted-foreground">{t("noResults")}</p>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Boutons grid/list/favoris avec icônes Lucide */}
+          <div className="mt-3 flex gap-2">
+            {(["grid", "list"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => { setViewMode(mode); setShowFavorites(false); }}
+                className={`flex-1 px-4 py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                  viewMode === mode && !showFavorites
+                    ? "bg-card text-foreground"
+                    : "bg-card/30 text-primary-foreground/70"
                 }`}
-            >
-              {mode === "grid" ? `⊞ ${t("gridView")}` : `☰ ${t("listView")}`}
-            </button>
-          ))}
-          <button
-            onClick={() => setShowFavorites(!showFavorites)}
-            className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-1.5 ${showFavorites ? "bg-card text-foreground" : "bg-card/30 text-secondary-foreground/70"
+              >
+                {mode === "grid" ? (
+                  <LayoutGrid className="w-5 h-5" />
+                ) : (
+                  <List className="w-5 h-5" />
+                )}
+                {t(mode === "grid" ? "gridView" : "listView")}
+              </button>
+            ))}
+            <button
+              onClick={() => setShowFavorites(!showFavorites)}
+              className={`px-4 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
+                showFavorites
+                  ? "bg-card text-foreground"
+                  : "bg-card/30 text-primary-foreground/70"
               }`}
-          >
-            {showFavorites ? "❤️" : "♡"}
-            {favCount > 0 && (
-              <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded-full">{favCount}</span>
-            )}
-          </button>
+            >
+              <Heart
+                className={`w-5 h-5 transition-colors ${
+                  showFavorites ? "fill-current" : ""
+                }`}
+              />
+              {favCount > 0 && (
+                <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded-full">
+                  {favCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -297,13 +326,16 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             <button
               onClick={() => setSelectedCategory(null)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${selectedCategory === null
-                ? "bg-secondary text-secondary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                selectedCategory === null
+                  ? "bg-secondary text-secondary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
             >
               {t("allFem")}
-              <span className={`text-xs px-1.5 py-0.5 rounded-full ml-1.5 inline-block ${selectedCategory === null ? "bg-white/20" : "bg-muted-foreground/20"}`}>
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ml-1.5 inline-block ${
+                selectedCategory === null ? "bg-white/20" : "bg-muted-foreground/20"
+              }`}>
                 {qassidasByAuthor.length}
               </span>
             </button>
@@ -316,13 +348,16 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
                   key={category}
                   onClick={() => setSelectedCategory(isActive ? null : category)}
                   whileTap={{ scale: 0.95 }}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${isActive
-                    ? "bg-secondary text-secondary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                    }`}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    isActive
+                      ? "bg-secondary text-secondary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
                 >
                   {category}
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full ml-1.5 inline-block ${isActive ? "bg-white/20" : "bg-muted-foreground/20"}`}>
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full ml-1.5 inline-block ${
+                    isActive ? "bg-white/20" : "bg-muted-foreground/20"
+                  }`}>
                     {count}
                   </span>
                 </motion.button>
@@ -340,13 +375,16 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             <button
               onClick={() => setSelectedAuthorId(null)}
-              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedAuthorId === null
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
+              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                selectedAuthorId === null
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
             >
               {t("all")}
-              <span className={`text-xs px-2 py-0.5 rounded-full ${selectedAuthorId === null ? "bg-white/20" : "bg-muted-foreground/20"}`}>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                selectedAuthorId === null ? "bg-white/20" : "bg-muted-foreground/20"
+              }`}>
                 {qassidasByCategory.length}
               </span>
             </button>
@@ -360,12 +398,15 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
                   <motion.button
                     onClick={() => setSelectedAuthorId(isActive ? null : author.id)}
                     whileTap={{ scale: 0.95 }}
-                    className={`flex items-center gap-2.5 pl-2 pr-3 py-2 rounded-full text-sm font-medium transition-all ${isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                      }`}
+                    className={`flex items-center gap-2.5 pl-2 pr-3 py-2 rounded-full text-sm font-medium transition-all ${
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
                   >
-                    <div className={`w-8 h-8 rounded-full overflow-hidden flex-shrink-0 ${isActive ? "ring-2 ring-white/40" : ""}`}>
+                    <div className={`w-8 h-8 rounded-full overflow-hidden flex-shrink-0 ${
+                      isActive ? "ring-2 ring-white/40" : ""
+                    }`}>
                       {author.imageUrl ? (
                         <img
                           src={author.imageUrl}
@@ -374,13 +415,17 @@ const QassidasScreen = ({ initialQassidaId }: QassidasScreenProps) => {
                           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                         />
                       ) : (
-                        <div className={`w-full h-full flex items-center justify-center text-sm font-bold ${isActive ? "bg-white/20" : "bg-primary/20 text-primary"}`}>
+                        <div className={`w-full h-full flex items-center justify-center text-sm font-bold ${
+                          isActive ? "bg-white/20" : "bg-primary/20 text-primary"
+                        }`}>
                           {author.shortName[0]}
                         </div>
                       )}
                     </div>
                     <span className="truncate max-w-[100px] text-sm">{author.shortName}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${isActive ? "bg-white/20" : "bg-muted-foreground/20"}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
+                      isActive ? "bg-white/20" : "bg-muted-foreground/20"
+                    }`}>
                       {count}
                     </span>
                   </motion.button>
