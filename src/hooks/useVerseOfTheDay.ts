@@ -1,8 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { API_BASE_URL } from "@/lib/apiUrl";
 
-const FALLBACK_XASSIDA_ID = 61; // Khilâss Zahab — fallback garanti
-const MAX_ATTEMPTS = 8;
+const MAX_VERSES_TO_CACHE = 500;
+const CACHE_DURATION = 1000 * 60 * 60;
+
+let cachedVerseData: {
+  verse: VerseOfTheDay | null;
+  cachedVerses: VerseOfTheDay[];
+  timestamp: number;
+  dayIndex: number;
+} | null = null;
+
+let isFetchingInProgress = false;
 
 export interface VerseOfTheDay {
   id: number;
@@ -10,7 +19,7 @@ export interface VerseOfTheDay {
   chapter_number: number;
   text_arabic: string;
   transcription: string;
-  translation_fr: string | null;
+  translation_fr: string;
   xassidaTitle: string;
   xassidaId: number;
 }
@@ -27,9 +36,8 @@ const getDayIndex = () => {
   return Math.floor((now.getTime() - start.getTime()) / 86400000);
 };
 
-// Déterministe mais bien distribué — même résultat pour tous les utilisateurs le même jour
-const daySeededOrder = (xassidas: XassidaMeta[], seed: number): XassidaMeta[] => {
-  const result = [...xassidas];
+const daySeededOrder = <T>(items: T[], seed: number): T[] => {
+  const result = [...items];
   for (let i = result.length - 1; i > 0; i--) {
     const j = Math.abs(((seed ^ (i * 2654435761)) >>> 0)) % (i + 1);
     [result[i], result[j]] = [result[j], result[i]];
@@ -37,78 +45,161 @@ const daySeededOrder = (xassidas: XassidaMeta[], seed: number): XassidaMeta[] =>
   return result;
 };
 
-const fetchTranslatedVerses = async (xassidaId: number, title: string): Promise<VerseOfTheDay[]> => {
-  const res = await fetch(`${API_BASE_URL}/xassidas/${xassidaId}/verses`);
-  if (!res.ok) return [];
-  const verses: VerseOfTheDay[] = await res.json();
-  return verses
-    .filter(v => v.translation_fr && v.translation_fr.trim().length > 10)
-    .map(v => ({ ...v, xassidaTitle: title, xassidaId }));
+const fetchVersesWithTranslation = async (xassidaId: number, title: string): Promise<VerseOfTheDay[]> => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/xassidas/${xassidaId}/verses`);
+    if (!res.ok) return [];
+
+    const verses = await res.json();
+
+    const validVerses = verses
+      .filter((v: any) =>
+        v.text_arabic &&
+        v.text_arabic.trim().length > 0 &&
+        v.translation_fr &&
+        v.translation_fr.trim() !== "" &&
+        v.translation_fr !== "Traduction non disponible"
+      )
+      .slice(0, MAX_VERSES_TO_CACHE)
+      .map((v: any) => ({
+        id: v.id,
+        verse_number: v.verse_number,
+        chapter_number: v.chapter_number || 1,
+        text_arabic: v.text_arabic,
+        transcription: v.transcription || "",
+        translation_fr: v.translation_fr,
+        xassidaTitle: title,
+        xassidaId: xassidaId,
+      }));
+
+    return validVerses;
+  } catch {
+    return [];
+  }
 };
 
 export const useVerseOfTheDay = () => {
   const [verse, setVerse] = useState<VerseOfTheDay | null>(null);
-  const [allVerses, setAllVerses] = useState<VerseOfTheDay[]>([]);
+  const [cachedVerses, setCachedVerses] = useState<VerseOfTheDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [offset, setOffset] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const isMounted = useRef(true);
+  const currentDayIndex = getDayIndex();
 
-  useEffect(() => {
-    fetchVerseOfDay();
-  }, []);
+  const loadVerseFromCache = () => {
+    if (cachedVerseData &&
+      cachedVerseData.dayIndex === currentDayIndex &&
+      Date.now() - cachedVerseData.timestamp < CACHE_DURATION &&
+      cachedVerseData.verse) {
+      setVerse(cachedVerseData.verse);
+      setCachedVerses(cachedVerseData.cachedVerses);
+      setLoading(false);
+      return true;
+    }
+    return false;
+  };
 
   const fetchVerseOfDay = async () => {
-    try {
-      setLoading(true);
-      const dayIndex = getDayIndex();
+    if (loadVerseFromCache()) return;
 
-      // 1. Récupérer la liste de toutes les xassidas visibles
+    if (isFetchingInProgress) {
+      const waitForFetch = setInterval(() => {
+        if (!isFetchingInProgress) {
+          clearInterval(waitForFetch);
+          loadVerseFromCache();
+        }
+      }, 100);
+      return;
+    }
+
+    try {
+      isFetchingInProgress = true;
+      if (isMounted.current) {
+        setLoading(true);
+        setError(null);
+      }
+
       const xassidasRes = await fetch(`${API_BASE_URL}/xassidas`);
-      if (!xassidasRes.ok) throw new Error("xassidas list unavailable");
+      if (!xassidasRes.ok) {
+        throw new Error(`xassidas list unavailable: ${xassidasRes.status}`);
+      }
+
       const xassidas: XassidaMeta[] = await xassidasRes.json();
 
-      // 2. Ordonner les xassidas selon le jour (déterministe)
-      const ordered = daySeededOrder(
-        xassidas.filter(x => x.actual_verse_count > 0),
-        dayIndex
+      const xassidasWithTranslations = await Promise.all(
+        xassidas
+          .filter(x => x.actual_verse_count > 0)
+          .map(async (x) => {
+            const verses = await fetchVersesWithTranslation(x.id, x.title);
+            return { ...x, versesWithTranslation: verses };
+          })
       );
 
-      // 3. Essayer jusqu'à MAX_ATTEMPTS xassidas pour trouver des versets traduits
-      for (let attempt = 0; attempt < Math.min(MAX_ATTEMPTS, ordered.length); attempt++) {
-        const xassida = ordered[attempt];
-        const translated = await fetchTranslatedVerses(xassida.id, xassida.title);
-        if (translated.length > 0) {
-          const idx = dayIndex % translated.length;
-          setAllVerses(translated);
-          setVerse(translated[idx]);
-          setOffset(0);
-          return;
-        }
+      const validXassidas = xassidasWithTranslations.filter(x => x.versesWithTranslation.length > 0);
+
+      if (validXassidas.length === 0) {
+        throw new Error("No xassidas with translations found");
       }
 
-      // 4. Fallback garanti : Khilâss Zahab
-      const fallback = xassidas.find(x => x.id === FALLBACK_XASSIDA_ID);
-      if (fallback) {
-        const translated = await fetchTranslatedVerses(FALLBACK_XASSIDA_ID, fallback.title);
-        if (translated.length > 0) {
-          const idx = dayIndex % translated.length;
-          setAllVerses(translated);
-          setVerse(translated[idx]);
-        }
+      const ordered = daySeededOrder(validXassidas, currentDayIndex);
+      const selectedXassida = ordered[0];
+      const translatedVerses = selectedXassida.versesWithTranslation;
+
+      if (translatedVerses.length === 0) {
+        throw new Error("No translated verses in selected xassida");
       }
+
+      const verseIndex = currentDayIndex % translatedVerses.length;
+      const selectedVerse = translatedVerses[verseIndex];
+
+      cachedVerseData = {
+        verse: selectedVerse,
+        cachedVerses: translatedVerses,
+        timestamp: Date.now(),
+        dayIndex: currentDayIndex,
+      };
+
+      if (isMounted.current) {
+        setCachedVerses(translatedVerses);
+        setVerse(selectedVerse);
+        setOffset(0);
+      }
+
     } catch {
-      setVerse(null);
+      if (isMounted.current) {
+        setError("Impossible de charger le vers du jour");
+        setVerse(null);
+      }
     } finally {
-      setLoading(false);
+      isFetchingInProgress = false;
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
   };
 
   const refreshVerse = () => {
-    if (allVerses.length === 0) return;
+    if (cachedVerses.length === 0) {
+      fetchVerseOfDay();
+      return;
+    }
     const newOffset = offset + 1;
-    const idx = (getDayIndex() + newOffset) % allVerses.length;
+    const idx = (currentDayIndex + newOffset) % cachedVerses.length;
     setOffset(newOffset);
-    setVerse(allVerses[idx]);
+    setVerse(cachedVerses[idx]);
   };
 
-  return { verse, loading, refreshVerse };
+  useEffect(() => {
+    isMounted.current = true;
+    fetchVerseOfDay();
+
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  return { verse, loading, refreshVerse, error };
 };
+
+export default useVerseOfTheDay;
