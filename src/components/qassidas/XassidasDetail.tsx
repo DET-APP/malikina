@@ -63,7 +63,7 @@ declare global {
 }
 
 let _ytLoaded = false;
-let _ytReady  = false;
+let _ytReady = false;
 const _ytCallbacks: Array<() => void> = [];
 
 function loadYT() {
@@ -107,14 +107,14 @@ interface PlayerShellProps {
 const PlayerShell = ({ playing, loading, error, progress, effectiveDuration, dark: d, reciterName, chapterLabel, onToggle, onSeek }: PlayerShellProps) => {
   const elapsed = (progress / 100) * effectiveDuration;
 
-  const wrap   = d ? "bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700/60" : "bg-gradient-to-br from-secondary/8 to-secondary/20 border-secondary/25";
-  const btn    = d ? "bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 active:scale-95" : "bg-secondary/20 text-secondary hover:bg-secondary/30 active:scale-95";
-  const track  = d ? "bg-slate-700/80" : "bg-secondary/15";
-  const fill   = d ? "bg-amber-400" : "bg-secondary";
-  const thumb  = d ? "bg-amber-300 shadow-amber-900/40" : "bg-secondary shadow-secondary/30";
-  const nameC  = d ? "text-amber-100" : "text-foreground";
-  const subC   = d ? "text-amber-300/50" : "text-secondary/60";
-  const timeC  = d ? "text-amber-300/60" : "text-secondary/70";
+  const wrap = d ? "bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700/60" : "bg-gradient-to-br from-secondary/8 to-secondary/20 border-secondary/25";
+  const btn = d ? "bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 active:scale-95" : "bg-secondary/20 text-secondary hover:bg-secondary/30 active:scale-95";
+  const track = d ? "bg-slate-700/80" : "bg-secondary/15";
+  const fill = d ? "bg-amber-400" : "bg-secondary";
+  const thumb = d ? "bg-amber-300 shadow-amber-900/40" : "bg-secondary shadow-secondary/30";
+  const nameC = d ? "text-amber-100" : "text-foreground";
+  const subC = d ? "text-amber-300/50" : "text-secondary/60";
+  const timeC = d ? "text-amber-300/60" : "text-secondary/70";
 
   if (error) {
     return (
@@ -139,8 +139,8 @@ const PlayerShell = ({ playing, loading, error, progress, effectiveDuration, dar
           {loading
             ? <Loader2 className="w-5 h-5 animate-spin" />
             : playing
-            ? <Pause className="w-5 h-5 fill-current" />
-            : <Play className="w-5 h-5 fill-current ml-0.5" />}
+              ? <Pause className="w-5 h-5 fill-current" />
+              : <Play className="w-5 h-5 fill-current ml-0.5" />}
         </button>
 
         {/* Info + scrubber */}
@@ -161,11 +161,11 @@ const PlayerShell = ({ playing, loading, error, progress, effectiveDuration, dar
             {/* Playing indicator */}
             {playing && (
               <div className="flex items-end gap-[2px] h-4 flex-shrink-0">
-                {[1,2,3,4].map(i => (
+                {[1, 2, 3, 4].map(i => (
                   <div
                     key={i}
                     className={`w-[3px] rounded-full ${d ? "bg-amber-400" : "bg-secondary"}`}
-                    style={{ height: `${[40,80,60,90][i-1]}%`, animation: `pulse ${0.6 + i * 0.1}s ease-in-out infinite alternate`, transformOrigin: 'bottom' }}
+                    style={{ height: `${[40, 80, 60, 90][i - 1]}%`, animation: `pulse ${0.6 + i * 0.1}s ease-in-out infinite alternate`, transformOrigin: 'bottom' }}
                   />
                 ))}
               </div>
@@ -215,14 +215,14 @@ interface YouTubeAudioPlayerProps {
 }
 
 const YouTubeAudioPlayer = ({ videoId, dark, reciterName, chapterLabel, startTime = 0, endTime = null }: YouTubeAudioPlayerProps) => {
-  const divId  = useRef(`yt-${Math.random().toString(36).slice(2)}`).current;
+  const divId = useRef(`yt-${Math.random().toString(36).slice(2)}`).current;
   const player = useRef<any>(null);
   const ticker = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [playing,  setPlaying]  = useState(false);
+  const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const effectiveDuration = endTime !== null && endTime > startTime ? (endTime - startTime) : Math.max(0, duration - startTime);
 
@@ -314,8 +314,8 @@ const AudioPlayer = ({ url, dark, reciterName, chapterLabel, startTime = 0, endT
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const effectiveDuration = endTime !== null && endTime > startTime ? (endTime - startTime) : Math.max(0, duration - startTime);
 
@@ -373,7 +373,7 @@ const fallbackCopy = (text: string, onSuccess: () => void) => {
   document.body.appendChild(ta);
   ta.focus();
   ta.select();
-  try { document.execCommand("copy"); onSuccess(); } catch {}
+  try { document.execCommand("copy"); onSuccess(); } catch { }
   document.body.removeChild(ta);
 };
 
@@ -381,16 +381,16 @@ const fallbackCopy = (text: string, onSuccess: () => void) => {
 
 const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigateToXassida }: XassidasDetailProps) => {
   const { language } = useLanguage();
-  const [fontSize, setFontSize]           = useState(20);
-  const [darkMode, setDarkMode]           = useState(false);
-  const [showTranscription, setShowTr]    = useState(false);
-  const [showTranslation, setShowTl]      = useState(false);
-  const [visibleCount, setVisibleCount]   = useState(PAGE_SIZE);
+  const [fontSize, setFontSize] = useState(20);
+  const [darkMode, setDarkMode] = useState(false);
+  const [showTranscription, setShowTr] = useState(false);
+  const [showTranslation, setShowTl] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(null);
-  const [copiedId, setCopiedId]           = useState<string | null>(null);
-  const [selectedChapter, setChapter]     = useState<number | null>(null);
-  const [verseSearch, setVerseSearch]     = useState("");
-  const [showSearch, setShowSearch]       = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedChapter, setChapter] = useState<number | null>(null);
+  const [verseSearch, setVerseSearch] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
   const [globalSearchResults, setGlobalSearchResults] = useState<Qassida[]>([]);
 
   const [showWolof, setShowWolof] = useState(false);
@@ -401,14 +401,14 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
   const { xassidas: allXassidas } = useXassidas();
   const favorite = isFavorite(selectedQassida.id);
 
-  const author      = authorsData.find((a) => a.fullName === selectedQassida.author);
-  const enriched    = enrichedQassidasData[selectedQassida.id];
+  const author = authorsData.find((a) => a.fullName === selectedQassida.author);
+  const enriched = enrichedQassidasData[selectedQassida.id];
   const { data: apiDetail, isLoading: loadingVerses } = useXassidasDetail(selectedQassida.apiId || null);
   const apiVerses: XassidaVerse[] = Array.isArray(apiDetail?.verses) ? apiDetail.verses : [];
 
-  const hasTranscription  = apiVerses.some((v) => v.transcription);
-  const hasTranslation    = apiVerses.some((v) => v.translation_fr || v.translation_en);
-  const hasTranslationWo  = apiVerses.some((v) => v.translation_wo);
+  const hasTranscription = apiVerses.some((v) => v.transcription);
+  const hasTranslation = apiVerses.some((v) => v.translation_fr || v.translation_en);
+  const hasTranslationWo = apiVerses.some((v) => v.translation_wo);
 
   // Group by chapter
   const byChapter = apiVerses.reduce<Record<number, XassidaVerse[]>>((acc, v) => {
@@ -427,9 +427,9 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
       if (verseSearch) {
         // Search with accent-insensitive matching
         return searchMatch(v.text_arabic, verseSearch) ||
-               searchMatch(v.transcription, verseSearch) ||
-               searchMatch(v.translation_fr, verseSearch) ||
-               searchMatch(v.translation_wo, verseSearch);
+          searchMatch(v.transcription, verseSearch) ||
+          searchMatch(v.translation_fr, verseSearch) ||
+          searchMatch(v.translation_wo, verseSearch);
       }
       return true;
     })
@@ -456,7 +456,8 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
   useEffect(() => {
     if (pendingScrollKey.current) return;
     setVisibleCount(PAGE_SIZE);
-  }, [selectedQassida.id, selectedChapter, verseSearch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedQassida.id]);
 
   // Fetch all audios for this xassida (new multi-reciter system)
   const { data: xassidaAudios = [] } = useQuery<XassidaAudio[]>({
@@ -482,7 +483,7 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
       const youtubeUrls = xassidaAudios
         .filter(a => a.youtube_id)
         .map(a => `https://www.youtube.com/watch?v=${a.youtube_id}`);
-      
+
       if (youtubeUrls.length > 0) {
         navigator.serviceWorker.controller?.postMessage({
           type: 'CACHE_URLS',
@@ -514,7 +515,7 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
   const legacyAudio = useMemo(() => {
     if (xassidaAudios.length > 0) return null;
     if (apiDetail?.youtube_id) return { youtube_id: apiDetail.youtube_id, audio_url: null };
-    if (apiDetail?.audio_url)  return { youtube_id: null, audio_url: apiDetail.audio_url };
+    if (apiDetail?.audio_url) return { youtube_id: null, audio_url: apiDetail.audio_url };
     if (selectedQassida.audioUrl) return { youtube_id: null, audio_url: selectedQassida.audioUrl };
     return null;
   }, [xassidaAudios, apiDetail, selectedQassida.audioUrl]);
@@ -588,13 +589,13 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
 
     // Search for matching xassidas in other records
     const matchingXassidas = allXassidas.filter(
-      (xassida) => 
+      (xassida) =>
         xassida.id !== selectedQassida.id && (
           searchMatch(xassida.title, verseSearch) ||
           searchMatch(xassida.author, verseSearch)
         )
     );
-    
+
     setGlobalSearchResults(matchingXassidas);
   }, [verseSearch, filtered.length, selectedQassida.id, allXassidas]);
 
@@ -602,21 +603,21 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
 
   // Theme tokens
   const d = darkMode;
-  const bg        = d ? "bg-slate-900"                    : "bg-background";
-  const card      = d ? "bg-slate-800/60 border-slate-700" : "bg-card border-border/30";
-  const header    = d ? "from-amber-950 via-orange-950 to-amber-900" : "from-secondary via-secondary to-secondary/80";
-  const headSub   = d ? "text-amber-200/70"               : "text-white/75";
-  const headMut   = d ? "text-amber-200/50"               : "text-white/55";
-  const ctrl      = d ? "bg-slate-800/80 border-slate-700" : "bg-muted/60 border-border/20";
-  const ctrlBtn   = d ? "text-amber-300 hover:bg-slate-700" : "text-muted-foreground hover:bg-muted";
-  const active    = d ? "bg-amber-700/40 text-amber-200"  : "bg-primary/15 text-primary";
-  const arabicTxt = d ? "text-amber-50"                   : "text-foreground";
-  const translit  = d ? "text-amber-400/80"               : "text-secondary/80";
-  const trFr      = d ? "text-amber-200/70"               : "text-muted-foreground";
-  const badge     = d ? "bg-amber-900/50 text-amber-300"  : "bg-primary/10 text-primary";
-  const chSep     = d ? "text-amber-500/60"               : "text-muted-foreground/60";
-  const searchBg  = d ? "bg-slate-800 border-slate-600 text-amber-50 placeholder:text-amber-300/40" : "bg-background border-border text-foreground placeholder:text-muted-foreground/60";
-  const chPill    = (active: boolean) => active
+  const bg = d ? "bg-slate-900" : "bg-background";
+  const card = d ? "bg-slate-800/60 border-slate-700" : "bg-card border-border/30";
+  const header = d ? "from-amber-950 via-orange-950 to-amber-900" : "from-secondary via-secondary to-secondary/80";
+  const headSub = d ? "text-amber-200/70" : "text-white/75";
+  const headMut = d ? "text-amber-200/50" : "text-white/55";
+  const ctrl = d ? "bg-slate-800/80 border-slate-700" : "bg-muted/60 border-border/20";
+  const ctrlBtn = d ? "text-amber-300 hover:bg-slate-700" : "text-muted-foreground hover:bg-muted";
+  const active = d ? "bg-amber-700/40 text-amber-200" : "bg-primary/15 text-primary";
+  const arabicTxt = d ? "text-amber-50" : "text-foreground";
+  const translit = d ? "text-amber-400/80" : "text-secondary/80";
+  const trFr = d ? "text-amber-200/70" : "text-muted-foreground";
+  const badge = d ? "bg-amber-900/50 text-amber-300" : "bg-primary/10 text-primary";
+  const chSep = d ? "text-amber-500/60" : "text-muted-foreground/60";
+  const searchBg = d ? "bg-slate-800 border-slate-600 text-amber-50 placeholder:text-amber-300/40" : "bg-background border-border text-foreground placeholder:text-muted-foreground/60";
+  const chPill = (active: boolean) => active
     ? (d ? "bg-amber-700/50 text-amber-100" : "bg-primary text-primary-foreground")
     : (d ? "text-amber-300/70 hover:bg-slate-700/60" : "text-muted-foreground hover:bg-muted");
 
@@ -676,13 +677,13 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                   const title = selectedQassida.title;
                   const text = selectedQassida.arabic ? `${selectedQassida.arabic}\n${title}` : title;
                   if (navigator.share) {
-                    try { await navigator.share({ title, text, url: window.location.href }); } catch {}
+                    try { await navigator.share({ title, text, url: window.location.href }); } catch { }
                   } else {
                     const toCopy = `${text}\nhttps://malikina.vercel.app`;
                     if (navigator.clipboard && window.isSecureContext) {
-                      await navigator.clipboard.writeText(toCopy).catch(() => fallbackCopy(toCopy, () => {}));
+                      await navigator.clipboard.writeText(toCopy).catch(() => fallbackCopy(toCopy, () => { }));
                     } else {
-                      fallbackCopy(toCopy, () => {});
+                      fallbackCopy(toCopy, () => { });
                     }
                     setShared(true);
                     setTimeout(() => setShared(false), 2000);
@@ -712,11 +713,10 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                   <button
                     key={a.id}
                     onClick={() => setSelectedAudioId(a.id)}
-                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                      activeAudio?.id === a.id
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${activeAudio?.id === a.id
                         ? d ? 'bg-amber-500 text-white shadow-md' : 'bg-secondary text-white shadow-md'
                         : d ? 'bg-slate-700/60 text-amber-200/70 hover:bg-slate-700' : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                    }`}
+                      }`}
                   >
                     {a.reciter_name}{a.label ? ` · ${a.label}` : ''}
                   </button>
@@ -922,12 +922,12 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                   )}
                 </motion.div>
               )}
-              
+
               {verseSearch && (
                 <p className={`text-xs mt-1.5 px-1 ${d ? "text-amber-300/50" : "text-muted-foreground/60"}`}>
-                  {filtered.length > 0 ? `${filtered.length} résultat${filtered.length !== 1 ? "s" : ""}` : 
-                   globalSearchResults.length > 0 ? `Pas trouvé ici • ${globalSearchResults.length} autre${globalSearchResults.length > 1 ? "s" : ""} xassida${globalSearchResults.length > 1 ? "s" : ""}` :
-                   "Aucun résultat"}
+                  {filtered.length > 0 ? `${filtered.length} résultat${filtered.length !== 1 ? "s" : ""}` :
+                    globalSearchResults.length > 0 ? `Pas trouvé ici • ${globalSearchResults.length} autre${globalSearchResults.length > 1 ? "s" : ""} xassida${globalSearchResults.length > 1 ? "s" : ""}` :
+                      "Aucun résultat"}
                 </p>
               )}
             </motion.div>
@@ -997,11 +997,10 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                         <button
                           onClick={() => copyVerse(verse)}
                           title="Copier le verset"
-                          className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs transition-colors ${
-                            isCopied
+                          className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs transition-colors ${isCopied
                               ? (d ? "bg-green-800/40 text-green-300" : "bg-green-500/15 text-green-600")
                               : ctrlBtn
-                          }`}
+                            }`}
                         >
                           {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                           <span>{isCopied ? "Copié !" : "Copier"}</span>
@@ -1015,19 +1014,19 @@ const XassidasDetail = ({ selectedQassida, onBack, onNext, onPrevious, onNavigat
                       <p className={`text-right font-arabic leading-loose ${arabicTxt}`} style={{ fontSize: `${fontSize}px` }} dir="rtl">
                         {verse.text_arabic.includes('|')
                           ? verse.text_arabic.split('|').map((part, i, arr) => (
-                              <span key={i}>
-                                {part.trim()}
-                                {i < arr.length - 1 && (
-                                  <span
-                                    className="inline-block mx-3 text-primary font-bold select-none align-middle"
-                                    style={{ fontSize: `${Math.round(fontSize * 0.7)}px` }}
-                                    aria-hidden
-                                  >
-                                    ◆
-                                  </span>
-                                )}
-                              </span>
-                            ))
+                            <span key={i}>
+                              {part.trim()}
+                              {i < arr.length - 1 && (
+                                <span
+                                  className="inline-block mx-3 text-primary font-bold select-none align-middle"
+                                  style={{ fontSize: `${Math.round(fontSize * 0.7)}px` }}
+                                  aria-hidden
+                                >
+                                  ◆
+                                </span>
+                              )}
+                            </span>
+                          ))
                           : verse.text_arabic}
                       </p>
 

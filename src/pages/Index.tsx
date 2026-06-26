@@ -1,3 +1,4 @@
+// src/pages/Index.tsx
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import SplashScreen from "@/components/SplashScreen";
