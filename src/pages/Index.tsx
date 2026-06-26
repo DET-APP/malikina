@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import SplashScreen from "@/components/SplashScreen";
 import BottomNavigation from "@/components/BottomNavigation";
-import FloatingMenu from "@/components/FloatingMenu";
+// import FloatingMenu from "@/components/FloatingMenu"; // ← import commenté
 import HomeScreen from "@/components/screens/HomeScreen";
 import PrayerScreen from "@/components/screens/PrayerScreen";
 import QuranScreen from "@/components/screens/QuranScreen";
@@ -146,11 +146,12 @@ const Index = () => {
             </AnimatePresence>
           </main>
 
-          {activeScreen !== 'chatbot' && (
+          {/* FloatingMenu masqué – plus aucun bouton flottant */}
+          {/* {activeScreen !== 'chatbot' && (
             <FloatingMenu
               onNavigate={handleSimpleNavigate}
             />
-          )}
+          )} */}
 
           <BottomNavigation
             activeScreen={["calendar", "quran", "news", "admin-xassidas", "about", "faq", "contribution"].includes(activeScreen) ? "home" : activeScreen as any}

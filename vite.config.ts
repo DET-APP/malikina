@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => ({
       filename: "service-worker.js",
       manifest: false,
       devOptions: {
-        enabled: mode === "development",
+        enabled: false,
         type: "module",
         navigateFallback: "index.html",
       },

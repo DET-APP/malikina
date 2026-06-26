@@ -1,3 +1,4 @@
+// src/hooks/useQassidasHistory.ts
 import { useState, useEffect } from 'react';
 
 export interface QassidasHistoryItem {
@@ -15,7 +16,6 @@ export const useQassidasHistory = () => {
   const [history, setHistory] = useState<QassidasHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Charger l'historique au montage
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
@@ -30,34 +30,25 @@ export const useQassidasHistory = () => {
     setIsLoading(false);
   }, []);
 
-  // Ajouter une Qassida à l'historique
   const addToHistory = (qassida: QassidasHistoryItem) => {
     setHistory((prev) => {
-      // Supprimer si elle existe déjà
       const filtered = prev.filter((item) => item.id !== qassida.id);
-      
-      // Ajouter en début avec timestamp actuel
       const updated = [
         { ...qassida, lastViewed: Date.now() },
         ...filtered,
       ].slice(0, MAX_HISTORY);
-
-      // Sauvegarder
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      
       return updated;
     });
   };
 
-  // Effacer l'historique
   const clearHistory = () => {
     setHistory([]);
     localStorage.removeItem(STORAGE_KEY);
   };
 
-  // Obtenir les Qassidas favoris par défaut (si historique vide)
   const getFeaturedQassidas = (allQassidas: QassidasHistoryItem[]) => {
-    return allQassidas.filter((q) => q.id <= 7).slice(0, 6); // Les 7 premières
+    return allQassidas.filter((q) => q.id <= 7).slice(0, 6);
   };
 
   return {
