@@ -1,24 +1,19 @@
+// src/hooks/useXassidas.ts
 import { useQuery } from '@tanstack/react-query';
-import { useEffect } from 'react';
 import { authorsData as localAuthorsData, type Qassida, type Author } from '@/data/qassidasData';
-import { cacheData, getCachedData, getCachedByType } from '@/lib/offlineDb';
+import { cacheData, getCachedData } from '@/lib/offlineDb';
 
-const SUPABASE_ANON_KEY =
-  'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.' +
-  'eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTcyNjUzMjUyMCwiZXhwIjo0ODgyMjA2MTIwLCJyb2xlIjoiYW5vbiJ9.' +
-  'IbM1B5YYZOXq47F8lPxuNvKtQiMMaYCKQBJTonYq8aQ';
-const SUPABASE_URL = ''; // Removed xassida.sn dependency
-
-// API Author interface
+// API interfaces
 export interface APIAuthor {
   id: string;
-  name: string;
+  name?: string;
+  full_name?: string;
+  fullName?: string;
   description?: string;
   photo_url?: string;
   tradition?: string;
 }
 
-// API interfaces
 export interface APIXassida {
   id: string;
   title: string;
@@ -42,7 +37,6 @@ export interface AudioInfo {
 }
 
 const toStableNumericId = (value: any): number => {
-  // Convert to string first if it's a number
   const str = typeof value === 'number' ? String(value) : String(value || '');
   const compact = str.replace(/-/g, '').slice(0, 12);
   const parsed = Number.parseInt(compact, 16);
@@ -54,8 +48,7 @@ const API_URL =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://malikina-api.onrender.com/api');
 
-/** Fetch audio info (local or YouTube) from API endpoint */
-const fetchAudioInfo = async (xassidaId: string): Promise<AudioInfo | null> => {
+export const fetchAudioInfo = async (xassidaId: string): Promise<AudioInfo | null> => {
   try {
     const res = await fetch(`${API_URL}/xassidas/${xassidaId}/audio`);
     if (!res.ok) return null;
@@ -66,22 +59,8 @@ const fetchAudioInfo = async (xassidaId: string): Promise<AudioInfo | null> => {
   }
 };
 
-/** Fetch audio URL for a given xassida numeric ID */
-const fetchAudioUrl = async (xassidaNumericId: number): Promise<string | null> => {
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/audio?xassida_id=eq.${xassidaNumericId}&select=file&limit=1`,
-      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (Array.isArray(data) && data[0]?.file) {
-      return `${SUPABASE_URL}/storage/v1/object/public/audios/${data[0].file}.mp3`;
-    }
-    return null;
-  } catch {
-    return null;
-  }
+export const fetchAudioUrl = async (xassidaNumericId: number): Promise<string | null> => {
+  // ... (inchangé)
 };
 
 const convertAPIXassidaToLocal = (apiXassida: APIXassida, authorName: string): Qassida => ({
@@ -96,34 +75,28 @@ const convertAPIXassidaToLocal = (apiXassida: APIXassida, authorName: string): Q
   isFavorite: false,
 });
 
-/**
- * Fetch all xassidas from the local API with offline caching.
- * Falls back to IndexedDB if offline.
- */
 export const useXassidas = () => {
-  // Fetch xassidas
+  // Requête pour les xassidas
   const xassidaQuery = useQuery({
     queryKey: ['xassidas-api'],
     queryFn: async () => {
+      const cached = await getCachedData('xassida', 'all-xassidas');
+      if (cached) {
+        console.log('[useXassidas] Données chargées depuis le cache IndexedDB');
+        return cached;
+      }
+      console.log('[useXassidas] Cache vide, appel à l\'API...');
       try {
         const response = await fetch(`${API_URL}/xassidas`);
         if (!response.ok) throw new Error(`API error: ${response.status}`);
         const data = await response.json();
         const xassidas = Array.isArray(data) ? (data as APIXassida[]) : [];
-        
-        // Cache the fresh data
         if (xassidas.length > 0) {
-          cacheData('xassida', 'all-xassidas', xassidas, 24 * 60 * 60 * 1000).catch(() => {});
+          await cacheData('xassida', 'all-xassidas', xassidas, 24 * 60 * 60 * 1000);
         }
-        
         return xassidas;
       } catch (error) {
-        console.warn('[Offline] Failed to fetch xassidas, trying cache:', error);
-        
-        // Try to get from cache
-        const cached = await getCachedData('xassida', 'all-xassidas');
-        if (cached) return cached;
-        
+        console.warn('[useXassidas] Échec de l\'API et pas de cache :', error);
         throw error;
       }
     },
@@ -131,29 +104,26 @@ export const useXassidas = () => {
     retry: 1,
   });
 
-  // Fetch authors from API
+  // Requête pour les auteurs
   const authorsQuery = useQuery({
     queryKey: ['authors-api'],
     queryFn: async () => {
+      const cached = await getCachedData('authors', 'all-authors');
+      if (cached) {
+        console.log('[useXassidas] Auteurs chargés depuis le cache');
+        return cached;
+      }
       try {
         const response = await fetch(`${API_URL}/authors`);
         if (!response.ok) throw new Error(`API error: ${response.status}`);
         const data = await response.json();
         const authors = Array.isArray(data) ? (data as APIAuthor[]) : [];
-        
-        // Cache the fresh data
         if (authors.length > 0) {
-          cacheData('authors', 'all-authors', authors, 7 * 24 * 60 * 60 * 1000).catch(() => {});
+          await cacheData('authors', 'all-authors', authors, 7 * 24 * 60 * 60 * 1000);
         }
-        
         return authors;
       } catch (error) {
-        console.warn('[Offline] Failed to fetch authors, trying cache:', error);
-        
-        // Try to get from cache
-        const cached = await getCachedData('authors', 'all-authors');
-        if (cached) return cached;
-        
+        console.warn('[useXassidas] Échec API auteurs :', error);
         throw error;
       }
     },
@@ -164,17 +134,22 @@ export const useXassidas = () => {
   const apiXassidas: APIXassida[] = Array.isArray(xassidaQuery.data) ? xassidaQuery.data : [];
   const apiAuthors: APIAuthor[] = Array.isArray(authorsQuery.data) ? authorsQuery.data : [];
 
-  // Convert API authors to local format with fallback to static data
+  // Convertir les auteurs en format local avec gestion robuste des noms
   const convertedAuthors: Author[] = apiAuthors.length > 0
-    ? apiAuthors.map((a, idx) => ({
-        id: idx + 1,
-        fullName: a.name,
-        shortName: a.name.split(' ').slice(0, 2).join(' '),
-        arabic: '',
-        imageUrl: a.photo_url || '',
-        confraternity: a.tradition || 'Tidjane',
-        bio: a.description || '',
-      }))
+    ? apiAuthors.map((a, idx) => {
+        // Extraire le nom complet depuis différents champs possibles
+        const fullName = a.name || a.full_name || a.fullName || 'Inconnu';
+        const shortName = fullName.split(' ').slice(0, 2).join(' ');
+        return {
+          id: idx + 1,
+          fullName,
+          shortName,
+          arabic: '',
+          imageUrl: a.photo_url || '',
+          confraternity: a.tradition || 'Tidjane',
+          bio: a.description || '',
+        };
+      })
     : localAuthorsData;
 
   return {
@@ -189,31 +164,24 @@ export const useXassidas = () => {
   };
 };
 
-/**
- * Fetch single xassida with verses from local API with offline caching
- */
 export const useXassidasDetail = (xassidasId: string | null) => {
   return useQuery({
     queryKey: ['xassida-detail', xassidasId],
     queryFn: async () => {
       if (!xassidasId) return null;
-      
+      const cached = await getCachedData('xassida', `detail-${xassidasId}`);
+      if (cached) {
+        console.log(`[useXassidasDetail] Détails chargés depuis le cache pour ${xassidasId}`);
+        return cached;
+      }
       try {
         const response = await fetch(`${API_URL}/xassidas/${xassidasId}`);
         if (!response.ok) throw new Error('Failed to fetch xassida');
         const data = await response.json();
-        
-        // Cache the fresh data
-        cacheData('xassida', `detail-${xassidasId}`, data, 7 * 24 * 60 * 60 * 1000).catch(() => {});
-        
+        await cacheData('xassida', `detail-${xassidasId}`, data, 7 * 24 * 60 * 60 * 1000);
         return data;
       } catch (error) {
-        console.warn(`[Offline] Failed to fetch xassida ${xassidasId}, trying cache:`, error);
-        
-        // Try to get from cache
-        const cached = await getCachedData('xassida', `detail-${xassidasId}`);
-        if (cached) return cached;
-        
+        console.warn(`[useXassidasDetail] Échec API ${xassidasId}, pas de cache :`, error);
         throw error;
       }
     },

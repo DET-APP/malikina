@@ -1,14 +1,40 @@
+// src/components/OfflineIndicator.tsx
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wifi, WifiOff } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface OfflineIndicatorProps {
   isOnline: boolean;
 }
 
 export const OfflineIndicator = ({ isOnline }: OfflineIndicatorProps) => {
+  const [showOnlineMessage, setShowOnlineMessage] = useState(false);
+  const [showOfflineMessage, setShowOfflineMessage] = useState(false);
+
+  useEffect(() => {
+    if (isOnline) {
+      // Passer en ligne : afficher le message en ligne, cacher hors ligne
+      setShowOfflineMessage(false);
+      setShowOnlineMessage(true);
+      const timer = setTimeout(() => {
+        setShowOnlineMessage(false);
+      }, 5000); // 5 secondes
+      return () => clearTimeout(timer);
+    } else {
+      // Passer hors ligne : afficher le message hors ligne, cacher en ligne
+      setShowOnlineMessage(false);
+      setShowOfflineMessage(true);
+      const timer = setTimeout(() => {
+        setShowOfflineMessage(false);
+      }, 5000); // 5 secondes (ajustez selon vos besoins)
+      return () => clearTimeout(timer);
+    }
+  }, [isOnline]);
+
   return (
     <AnimatePresence>
-      {!isOnline && (
+      {/* Message hors ligne - apparaît temporairement lors de la perte de connexion */}
+      {!isOnline && showOfflineMessage && (
         <motion.div
           initial={{ y: -100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -23,8 +49,9 @@ export const OfflineIndicator = ({ isOnline }: OfflineIndicatorProps) => {
           </div>
         </motion.div>
       )}
-      
-      {isOnline && (
+
+      {/* Message en ligne - apparaît temporairement lors du rétablissement de la connexion */}
+      {isOnline && showOnlineMessage && (
         <motion.div
           initial={{ y: -100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}

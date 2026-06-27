@@ -1,4 +1,5 @@
 /**
+ * src/lib/offlineDb.ts
  * IndexedDB wrapper for offline-first data persistence
  * Stores xassidas, verses, and metadata for offline access
  */
@@ -91,6 +92,7 @@ export const cacheData = async (
 
 /**
  * Retrieve cached data from IndexedDB
+ * ✅ Transaction passée en readwrite pour permettre la suppression des entrées expirées
  */
 export const getCachedData = async (
   type: 'xassida' | 'verses' | 'audios' | 'authors',
@@ -98,7 +100,7 @@ export const getCachedData = async (
 ): Promise<any | null> => {
   try {
     const database = await initOfflineDb();
-    const transaction = database.transaction('cache', 'readonly');
+    const transaction = database.transaction('cache', 'readwrite'); // ← modifié
     const store = transaction.objectStore('cache');
 
     return new Promise((resolve, reject) => {
@@ -131,13 +133,14 @@ export const getCachedData = async (
 
 /**
  * Get all cached items of a specific type
+ * ✅ Transaction passée en readwrite pour permettre la suppression des entrées expirées
  */
 export const getCachedByType = async (
   type: 'xassida' | 'verses' | 'audios' | 'authors'
 ): Promise<any[]> => {
   try {
     const database = await initOfflineDb();
-    const transaction = database.transaction('cache', 'readonly');
+    const transaction = database.transaction('cache', 'readwrite'); // ← modifié
     const store = transaction.objectStore('cache');
     const index = store.index('type');
 
