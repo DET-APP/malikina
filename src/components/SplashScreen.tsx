@@ -1,7 +1,7 @@
-// src/components/SplashScreen.tsx
 import { motion } from "framer-motion";
 import { useEffect } from "react";
 import logo from "@/assets/logo.png";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -13,7 +13,6 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
     return () => clearTimeout(timer);
   }, [onComplete]);
 
-  // SplashScreen avec fond blanc élégant
   return (
     <motion.div
       className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white"
@@ -21,7 +20,6 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
       exit={{ opacity: 0, scale: 0.97 }}
       transition={{ duration: 0.45 }}
     >
-      {/* Pattern décoratif discret */}
       <div className="absolute inset-0 opacity-5" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000000' fill-opacity='1' fill-rule='evenodd'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")`,
       }} />
@@ -50,19 +48,12 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
       </motion.div>
 
       <motion.div
-        className="absolute bottom-16 flex gap-2"
+        className="absolute bottom-16"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1, duration: 0.4 }}
       >
-        {[0, 1, 2].map((i) => (
-          <motion.div
-            key={i}
-            className="w-2 h-2 rounded-full bg-primary/50"
-            animate={{ scale: [1, 1.5, 1], opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-          />
-        ))}
+        <LoadingSpinner size="md" />
       </motion.div>
     </motion.div>
   );

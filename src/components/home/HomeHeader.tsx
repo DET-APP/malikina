@@ -1,10 +1,8 @@
-// src/components/home/HomeHeader.tsx
 import { motion } from "framer-motion";
 import { Bell } from "lucide-react";
 import logo from "@/assets/logo.png";
 import NotificationDropdown from "@/components/home/NotificationDropdown";
 import { Notification } from "@/hooks/useNotifications";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface HomeHeaderProps {
@@ -40,7 +38,6 @@ const HomeHeader = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
-            {/* Pattern Overlay */}
             <div className="absolute inset-0 opacity-10">
                 <div className="absolute inset-0" style={{
                     backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M0 20L20 0h20v20L20 40H0V20z'/%3E%3C/g%3E%3C/svg%3E")`,
@@ -55,46 +52,40 @@ const HomeHeader = ({
                     </h1>
                 </div>
 
-                {/* Language switcher + notifications */}
-                <div className="flex items-center gap-2">
-                    <LanguageSwitcher variant="light" />
-                    <div className="relative">
-                        <motion.button
-                            onClick={onToggleNotifications}
-                            className="relative w-10 h-10 bg-card/20 rounded-full flex items-center justify-center"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.95 }}
-                        >
-                            <Bell className="w-5 h-5 text-primary-foreground" />
-                            {unreadCount > 0 && (
-                                <motion.span
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    className="absolute -top-1 -right-1 w-5 h-5 bg-secondary rounded-full text-xs flex items-center justify-center text-secondary-foreground font-bold"
-                                >
-                                    {unreadCount > 9 ? '9+' : unreadCount}
-                                </motion.span>
-                            )}
-                        </motion.button>
-
-                        {/* Dropdown notifications */}
-                        {showNotifications && (
-                            <NotificationDropdown
-                                notifications={notifications}
-                                onClose={() => onToggleNotifications()}
-                                onNotificationClick={onNotificationClick}
-                                onMarkAllAsRead={onMarkAllAsRead}
-                                onDeleteNotification={onDeleteNotification}
-                                onViewAll={onViewAll}
-                                getNotificationIcon={getNotificationIcon}
-                                getNotificationColor={getNotificationColor}
-                            />
+                <div className="relative">
+                    <motion.button
+                        onClick={onToggleNotifications}
+                        className="relative w-10 h-10 bg-card/20 rounded-full flex items-center justify-center"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                    >
+                        <Bell className="w-5 h-5 text-primary-foreground" />
+                        {unreadCount > 0 && (
+                            <motion.span
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="absolute -top-1 -right-1 w-5 h-5 bg-secondary rounded-full text-xs flex items-center justify-center text-secondary-foreground font-bold"
+                            >
+                                {unreadCount > 9 ? '9+' : unreadCount}
+                            </motion.span>
                         )}
-                    </div>
+                    </motion.button>
+
+                    {showNotifications && (
+                        <NotificationDropdown
+                            notifications={notifications}
+                            onClose={() => onToggleNotifications()}
+                            onNotificationClick={onNotificationClick}
+                            onMarkAllAsRead={onMarkAllAsRead}
+                            onDeleteNotification={onDeleteNotification}
+                            onViewAll={onViewAll}
+                            getNotificationIcon={getNotificationIcon}
+                            getNotificationColor={getNotificationColor}
+                        />
+                    )}
                 </div>
             </div>
 
-            {/* Logo Card */}
             <motion.div
                 className="absolute -bottom-16 left-6 right-6 bg-gradient-to-br from-card via-card to-primary/5 rounded-xl shadow-lg border border-primary/20 backdrop-blur-sm"
                 initial={{ opacity: 0, y: 20 }}

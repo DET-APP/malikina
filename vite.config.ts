@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => ({
       '/api': {
         target: 'https://165-245-211-201.sslip.io',  // API distante
         changeOrigin: true,
+        secure: false,
       },
     },
   },
@@ -23,7 +24,7 @@ export default defineConfig(({ mode }) => ({
       filename: "service-worker.js",
       manifest: false,
       devOptions: {
-        enabled: mode === "development",
+        enabled: false,
         type: "module",
         navigateFallback: "index.html",
       },
