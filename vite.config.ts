@@ -10,8 +10,9 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'https://165-245-211-201.sslip.io',
         changeOrigin: true,
+        secure: false,
       },
     },
   },
@@ -23,7 +24,7 @@ export default defineConfig(({ mode }) => ({
       filename: "service-worker.js",
       manifest: false,
       devOptions: {
-        enabled: mode === "development",
+        enabled: false,
         type: "module",
         navigateFallback: "index.html",
       },
