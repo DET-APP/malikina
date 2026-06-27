@@ -9,7 +9,7 @@ interface VerseOfTheDayProps {
   verse: VerseOfTheDayType | null;
   loading: boolean;
   onRefresh: () => void;
-  onNavigate: (screen: string, surahId?: number, verseNumber?: number) => void;
+  onNavigate: (screen: string, surahId?: number, verseNumber?: number, qassidaId?: number) => void;
   itemVariants: any;
   error?: string | null;
 }
@@ -79,7 +79,7 @@ const VerseOfTheDay = ({ verse, loading, onRefresh, onNavigate, itemVariants, er
     return (
       <motion.section variants={itemVariants}>
         <div className="rounded-2xl p-6">
-          <LoadingSpinner size="md" />
+          <LoadingSpinner />
         </div>
       </motion.section>
     );
@@ -92,6 +92,11 @@ const VerseOfTheDay = ({ verse, loading, onRefresh, onNavigate, itemVariants, er
   const truncateTitle = (title: string, maxLength: number = 25) => {
     if (title.length <= maxLength) return title;
     return title.substring(0, maxLength) + "...";
+  };
+
+  const handleNavigateToXassida = () => {
+    sessionStorage.setItem('pendingXassidaTitle', verse.xassidaTitle);
+    onNavigate("qassidas");
   };
 
   return (
@@ -193,8 +198,7 @@ const VerseOfTheDay = ({ verse, loading, onRefresh, onNavigate, itemVariants, er
                 </AnimatePresence>
               </div>
 
-              {/* Bouton Partager - même design que Copier */}
-              {/* Bouton Partager - tooltip décalé vers la gauche */}
+              {/* Bouton Partager */}
               <div className="relative">
                 <motion.button
                   onClick={handleShare}
@@ -244,7 +248,7 @@ const VerseOfTheDay = ({ verse, loading, onRefresh, onNavigate, itemVariants, er
           </div>
 
           <motion.button
-            onClick={() => onNavigate("qassidas")}
+            onClick={handleNavigateToXassida}
             className="w-full bg-primary/10 text-primary py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}

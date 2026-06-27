@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { API_BASE_URL } from "@/lib/apiUrl";
 
 const MAX_VERSES_TO_CACHE = 500;
-const CACHE_DURATION = 1000 * 60 * 60;
+const CACHE_DURATION = 1000 * 60 * 60; // 1 heure
 
 let cachedVerseData: {
   verse: VerseOfTheDay | null;
@@ -22,6 +22,7 @@ export interface VerseOfTheDay {
   translation_fr: string;
   xassidaTitle: string;
   xassidaId: number;
+  apiId: string;
 }
 
 interface XassidaMeta {
@@ -70,6 +71,7 @@ const fetchVersesWithTranslation = async (xassidaId: number, title: string): Pro
         translation_fr: v.translation_fr,
         xassidaTitle: title,
         xassidaId: xassidaId,
+        apiId: String(xassidaId),
       }));
 
     return validVerses;
