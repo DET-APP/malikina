@@ -1,3 +1,4 @@
+// src/components/shared/LoadingSpinner.tsx
 import { motion } from "framer-motion";
 
 interface LoadingSpinnerProps {
@@ -5,26 +6,14 @@ interface LoadingSpinnerProps {
   size?: "sm" | "md" | "lg";
 }
 
-export const LoadingSpinner = ({ message, size = "md" }: LoadingSpinnerProps) => {
-  const dotSizes = {
-    sm: "w-1.5 h-1.5",
-    md: "w-2 h-2",
-    lg: "w-3 h-3",
-  };
-
-  const dotGaps = {
-    sm: "gap-1.5",
-    md: "gap-2",
-    lg: "gap-3",
-  };
-
+export const LoadingSpinner = ({ message }: LoadingSpinnerProps) => {
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-8">
-      <div className={`flex ${dotGaps[size]}`}>
+      <div className="flex gap-2">
         {[0, 1, 2].map((i) => (
           <motion.div
             key={i}
-            className={`${dotSizes[size]} rounded-full bg-primary/50`}
+            className="w-2 h-2 rounded-full bg-primary/50"
             animate={{
               scale: [1, 1.5, 1],
               opacity: [0.4, 1, 0.4],

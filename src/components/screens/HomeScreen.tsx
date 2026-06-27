@@ -31,6 +31,8 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
   } = useNotifications(onNavigate);
 
   const { nextPrayer, loading: prayerLoading } = usePrayerTimes(toast);
+
+  // Hook du vers du jour (réactivé)
   const { verse, loading: verseLoading, refreshVerse, error: verseError } = useVerseOfTheDay();
 
   const containerVariants = {
@@ -80,6 +82,7 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
           allQassidas={qassidasWithHistory}
         />
 
+        {/* Vers du jour - réactivé */}
         <VerseOfTheDay
           verse={verse}
           loading={verseLoading}

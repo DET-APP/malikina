@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     proxy: {
       '/api': {
-        target: 'https://165-245-211-201.sslip.io',
+        target: 'https://165-245-211-201.sslip.io',  // API distante
         changeOrigin: true,
         secure: false,
       },
