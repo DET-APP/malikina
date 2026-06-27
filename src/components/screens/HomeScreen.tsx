@@ -1,4 +1,3 @@
-// src/components/screens/HomeScreen.tsx
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";

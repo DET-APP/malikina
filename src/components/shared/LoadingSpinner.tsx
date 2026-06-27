@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 
 interface LoadingSpinnerProps {
   message?: string;
+  size?: "sm" | "md" | "lg";
 }
 
 export const LoadingSpinner = ({ message }: LoadingSpinnerProps) => {
