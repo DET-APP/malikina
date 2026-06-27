@@ -100,9 +100,9 @@ export const qassidasData: Qassida[] = [
   { id: 6, title: "Khilâsou Dhahab", arabic: "خِلَاصُ الذَّهَبِ", author: "Seydi El Hadji Malick Sy", confraternity: "Tidjane", isFavorite: true, audioUrl: "https://example.com/audio/khilasou.mp3" },
   
   // Serigne Cheikh Anta Diop (remplace Babacar Sy)
-  { id: 7, title: "Djawarihoul Maarifah", arabic: "جَوَاهِرُ الْمَعَارِفِ", author: "Serigne Cheikh Anta Diop", confraternity: "Tidjane", isFavorite: true, audioUrl: "https://example.com/audio/djawarih.mp3" },
-  { id: 8, title: "Sakku Minal Hamd", arabic: "سَاكُّ مِنَ الْحَمْدِ", author: "Serigne Cheikh Anta Diop", confraternity: "Tidjane", isFavorite: false, audioUrl: "https://example.com/audio/sakku.mp3" },
-  { id: 9, title: "Tanwîrou Soukouk", arabic: "تَنْوِيرُ الصُّكُوكِ", author: "Serigne Cheikh Anta Diop", confraternity: "Tidjane", isFavorite: true, audioUrl: "https://example.com/audio/tanwir.mp3" },
+  //{ id: 7, title: "Djawarihoul Maarifah", arabic: "جَوَاهِرُ الْمَعَارِفِ", author: "Serigne Cheikh Anta Diop", confraternity: "Tidjane", isFavorite: true, audioUrl: "https://example.com/audio/djawarih.mp3" },
+  //{ id: 8, title: "Sakku Minal Hamd", arabic: "سَاكُّ مِنَ الْحَمْدِ", author: "Serigne Cheikh Anta Diop", confraternity: "Tidjane", isFavorite: false, audioUrl: "https://example.com/audio/sakku.mp3" },
+  //{ id: 9, title: "Tanwîrou Soukouk", arabic: "تَنْوِيرُ الصُّكُوكِ", author: "Serigne Cheikh Anta Diop", confraternity: "Tidjane", isFavorite: true, audioUrl: "https://example.com/audio/tanwir.mp3" },
   
   // Serigne Cheikh Tidiane Sy
   { id: 10, title: "Abuna", arabic: "أَبُونَا", author: "Serigne Cheikh Tidiane Sy", confraternity: "Tidjane", isFavorite: true, audioUrl: "https://example.com/audio/abuna.mp3" },

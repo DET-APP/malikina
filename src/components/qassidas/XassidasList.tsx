@@ -53,8 +53,8 @@ const XassidasList = ({ qassidas, viewMode, onQassidasSelect }: XassidasListProp
       animate="visible"
     >
       {viewMode === "grid" ? (
-        // Vue en grille
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        // Vue en grille - 2 colonnes
+        <div className="grid grid-cols-2 gap-4">
           {qassidas.map((qassida) => {
             const authorDisplay = getAuthorDisplay(qassida.author);
             return (
@@ -74,11 +74,15 @@ const XassidasList = ({ qassidas, viewMode, onQassidasSelect }: XassidasListProp
                 </div>
 
                 <div className="min-w-0">
-                  {qassida.arabic && (
-                    <p className="text-lg font-arabic text-primary mb-2 text-right leading-relaxed line-clamp-2">
-                      {qassida.arabic}
-                    </p>
-                  )}
+                  {/* Nom arabe : toujours un conteneur avec hauteur minimale */}
+                  <div className="min-h-[2.5rem] mb-2 flex items-end justify-end">
+                    {qassida.arabic && (
+                      <p className="text-lg font-arabic text-primary text-right leading-relaxed line-clamp-2">
+                        {qassida.arabic}
+                      </p>
+                    )}
+                  </div>
+
                   <p className="font-semibold text-foreground text-base mb-1 line-clamp-2 break-words">
                     {qassida.title}
                   </p>
@@ -116,11 +120,15 @@ const XassidasList = ({ qassidas, viewMode, onQassidasSelect }: XassidasListProp
                 </div>
 
                 <div className="flex-1 text-left min-w-0">
-                  {qassida.arabic && (
-                    <p className="font-arabic text-lg text-primary leading-relaxed mb-1 line-clamp-1">
-                      {qassida.arabic}
-                    </p>
-                  )}
+                  {/* Nom arabe : conteneur avec hauteur minimale */}
+                  <div className="min-h-[2.5rem] mb-1">
+                    {qassida.arabic && (
+                      <p className="font-arabic text-lg text-primary leading-relaxed line-clamp-1">
+                        {qassida.arabic}
+                      </p>
+                    )}
+                  </div>
+
                   <p className="font-semibold text-foreground truncate">{qassida.title}</p>
                   <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                     <span className="truncate max-w-[140px]">{authorDisplay.shortName}</span>

@@ -52,22 +52,40 @@ const HomeHeader = ({
                     </h1>
                 </div>
 
-                <div className="relative">
-                    <motion.button
-                        onClick={onToggleNotifications}
-                        className="relative w-10 h-10 bg-card/20 rounded-full flex items-center justify-center"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        <Bell className="w-5 h-5 text-primary-foreground" />
-                        {unreadCount > 0 && (
-                            <motion.span
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                className="absolute -top-1 -right-1 w-5 h-5 bg-secondary rounded-full text-xs flex items-center justify-center text-secondary-foreground font-bold"
-                            >
-                                {unreadCount > 9 ? '9+' : unreadCount}
-                            </motion.span>
+                {/* Language switcher + notifications */}
+                <div className="flex items-center gap-2">
+                    {/* <LanguageSwitcher variant="light" /> */}  {/* ← Bouton de traduction masqué */}
+                    <div className="relative">
+                        <motion.button
+                            onClick={onToggleNotifications}
+                            className="relative w-10 h-10 bg-card/20 rounded-full flex items-center justify-center"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            <Bell className="w-5 h-5 text-primary-foreground" />
+                            {unreadCount > 0 && (
+                                <motion.span
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    className="absolute -top-1 -right-1 w-5 h-5 bg-secondary rounded-full text-xs flex items-center justify-center text-secondary-foreground font-bold"
+                                >
+                                    {unreadCount > 9 ? '9+' : unreadCount}
+                                </motion.span>
+                            )}
+                        </motion.button>
+
+                        {/* Dropdown notifications */}
+                        {showNotifications && (
+                            <NotificationDropdown
+                                notifications={notifications}
+                                onClose={() => onToggleNotifications()}
+                                onNotificationClick={onNotificationClick}
+                                onMarkAllAsRead={onMarkAllAsRead}
+                                onDeleteNotification={onDeleteNotification}
+                                onViewAll={onViewAll}
+                                getNotificationIcon={getNotificationIcon}
+                                getNotificationColor={getNotificationColor}
+                            />
                         )}
                     </motion.button>
 
