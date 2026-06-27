@@ -1,3 +1,4 @@
+// src/components/BottomNavigation.tsx
 import { Home, Clock, Scale, BookMarked, MessageCircle } from "lucide-react";
 import { useLanguage, TranslationKey } from "@/contexts/LanguageContext";
 
@@ -20,28 +21,33 @@ const BottomNavigation = ({ activeScreen, onNavigate }: BottomNavigationProps) =
   const { t } = useLanguage();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t border-border">
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
-        {navItems.map((item) => {
-          const isActive = activeScreen === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => onNavigate(item.id)}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 h-full relative transition-colors duration-200 ${
-                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <item.icon className={`w-5 h-5 ${isActive ? "stroke-[2.5]" : ""}`} />
-              <span className={`text-[10px] font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>
-                {t(item.labelKey)}
-              </span>
-              {isActive && (
-                <div className="absolute bottom-0 w-10 h-0.5 bg-primary rounded-t-full" />
-              )}
-            </button>
-          );
-        })}
+    <nav className="fixed bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none">
+      {/* Barre transparente flottante – comme WhatsApp */}
+      <div className="pointer-events-auto w-full max-w-lg mx-4 mb-4 bg-background/40 backdrop-blur-xl rounded-3xl shadow-sm border border-white/10">
+        <div className="flex items-center justify-around h-14 px-2">
+          {navItems.map((item) => {
+            const isActive = activeScreen === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => onNavigate(item.id)}
+                className={`flex-1 flex flex-col items-center justify-center gap-0.5 h-full relative transition-all duration-200 rounded-xl ${
+                  isActive ? "text-primary" : "text-muted-foreground/70 hover:text-foreground"
+                }`}
+              >
+                <item.icon className={`w-5 h-5 transition-all ${isActive ? "stroke-[2.5]" : ""}`} />
+                <span className={`text-[10px] font-medium transition-all ${
+                  isActive ? "text-primary font-semibold" : "text-muted-foreground/70"
+                }`}>
+                  {t(item.labelKey)}
+                </span>
+                {isActive && (
+                  <div className="absolute -top-0.5 w-6 h-0.5 bg-primary rounded-full" />
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );
